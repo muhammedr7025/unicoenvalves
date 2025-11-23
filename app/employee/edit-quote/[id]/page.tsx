@@ -132,7 +132,7 @@ export default function EditQuotePage() {
         setProducts(loadedQuote.products);
         setDiscount(loadedQuote.discount);
         setTax(loadedQuote.tax);
-        setNotes(loadedQuote.notes);
+        setNotes(loadedQuote.notes || '');
         setStatus(loadedQuote.status);
       } else {
         alert('Quote not found');
@@ -348,9 +348,10 @@ export default function EditQuotePage() {
       return;
     }
 
+    const { id: _, ...productData } = currentProduct;
     const product: QuoteProduct = {
+      ...(productData as Omit<Required<QuoteProduct>, 'id'>),
       id: editingProductIndex !== null ? products[editingProductIndex].id : `product-${Date.now()}`,
-      ...(currentProduct as Required<QuoteProduct>),
     };
 
     if (editingProductIndex !== null) {

@@ -290,9 +290,10 @@ const handleRatingChange = async (rating: string) => {
       return;
     }
 
+    const { id: _, ...productData } = currentProduct;
     const product: QuoteProduct = {
+      ...(productData as Omit<Required<QuoteProduct>, 'id'>),
       id: `product-${Date.now()}`,
-      ...(currentProduct as Required<QuoteProduct>),
     };
 
     setProducts([...products, product]);
