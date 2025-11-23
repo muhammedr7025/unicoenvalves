@@ -11,7 +11,7 @@ import {
   import { Customer } from '@/types';
   
   export async function createCustomer(
-    customer: Omit<Customer, 'id' | 'createdAt'>,
+    customer: Omit<Customer, 'id' | 'createdAt' | 'createdBy'>,
     userId: string
   ): Promise<void> {
     try {
