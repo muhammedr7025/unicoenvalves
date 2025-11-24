@@ -203,8 +203,16 @@ export interface QuoteProduct {
   
   // Cost Breakdown (NEW)
   manufacturingCost: number; // Body + Actuator + Tubing + Testing
+  manufacturingProfitPercentage?: number; // NEW
+  manufacturingProfitAmount?: number; // NEW
+  manufacturingCostWithProfit?: number; // NEW
+  
   boughtoutItemCost: number; // Accessories total
-  unitCost: number; // Manufacturing + Boughtout
+  boughtoutProfitPercentage?: number; // NEW
+  boughtoutProfitAmount?: number; // NEW
+  boughtoutCostWithProfit?: number; // NEW
+  
+  unitCost: number; // Manufacturing + Boughtout (with profit)
   
   // Product Totals
   productTotalCost: number; // Same as unitCost

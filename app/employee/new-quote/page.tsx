@@ -73,6 +73,12 @@ export default function NewQuotePage() {
   const [tubingAndFittingItems, setTubingAndFittingItems] = useState<TubingAndFittingItem[]>([]);
   const [testingItems, setTestingItems] = useState<TestingItem[]>([]);
   const [accessoryItems, setAccessoryItems] = useState<AccessoryItem[]>([]);
+  const [showAccessoryPriceInput, setShowAccessoryPriceInput] = useState<string | null>(null);
+  const [customAccessoryPrice, setCustomAccessoryPrice] = useState<{[key: string]: number}>({});
+
+  // profit percentage states
+  const [manufacturingProfit, setManufacturingProfit] = useState(0);
+  const [boughtoutProfit, setBoughtoutProfit] = useState(0);
 
   // Temporary states for adding new items
   const [newTubingTitle, setNewTubingTitle] = useState('');
@@ -290,14 +296,34 @@ export default function NewQuotePage() {
     setAccessoryItems(accessoryItems.filter(item => item.id !== id));
   };
 
-  const toggleDefaultAccessory = (title: string, price: number) => {
+  const toggleDefaultAccessory = (title: string, price?: number) => {
     const exists = accessoryItems.find(item => item.title === title);
     
     if (exists) {
       removeAccessoryItem(exists.id);
+      // Remove from custom prices
+      const newPrices = { ...customAccessoryPrice };
+      delete newPrices[title];
+      setCustomAccessoryPrice(newPrices);
     } else {
-      addAccessoryItem(title, price, true);
+      if (price !== undefined) {
+        addAccessoryItem(title, price, true);
+      } else {
+        // Show price input
+        setShowAccessoryPriceInput(title);
+      }
     }
+  };
+  
+  const handleDefaultAccessoryPriceSubmit = (title: string) => {
+    const price = customAccessoryPrice[title];
+    if (!price || price <= 0) {
+      alert('Please enter a valid price');
+      return;
+    }
+    
+    addAccessoryItem(title, price, true);
+    setShowAccessoryPriceInput(null);
   };
 
   const calculateProductPrice = async () => {
@@ -416,62 +442,77 @@ export default function NewQuotePage() {
         }
       }
 
-      // Calculate additional modules totals
-      const tubingAndFittingTotal = tubingAndFittingItems.reduce((sum, item) => sum + item.price, 0);
-      const testingTotal = testingItems.reduce((sum, item) => sum + item.price, 0);
-      const accessoriesTotal = accessoryItems.reduce((sum, item) => sum + item.price, 0);
+    // Calculate additional modules totals
+    const tubingAndFittingTotal = tubingAndFittingItems.reduce((sum, item) => sum + item.price, 0);
+    const testingTotal = testingItems.reduce((sum, item) => sum + item.price, 0);
+    const accessoriesTotal = accessoryItems.reduce((sum, item) => sum + item.price, 0);
 
-      // Cost Breakdown Calculations
-      const manufacturingCost = bodySubAssemblyTotal + 
-                               (actuatorSubAssemblyTotal || 0) + 
-                               tubingAndFittingTotal + 
-                               testingTotal;
+    // Base costs (without profit)
+    const baseManufacturingCost = bodySubAssemblyTotal + 
+                                  (actuatorSubAssemblyTotal || 0) + 
+                                  tubingAndFittingTotal + 
+                                  testingTotal;
 
-      const boughtoutItemCost = accessoriesTotal;
-      const unitCost = manufacturingCost + boughtoutItemCost;
-      const productTotalCost = unitCost;
+    const baseBoughtoutItemCost = accessoriesTotal;
 
-      setCurrentProduct({
-        ...currentProduct,
-        // Body sub-assembly
-        bodyWeight,
-        bodyMaterialPrice: bodyMaterial.pricePerKg,
-        bodyTotalCost,
-        bonnetWeight,
-        bonnetMaterialPrice: bonnetMaterial.pricePerKg,
-        bonnetTotalCost,
-        plugWeight,
-        plugMaterialPrice: plugMaterial.pricePerKg,
-        plugTotalCost,
-        seatWeight,
-        seatMaterialPrice: seatMaterial.pricePerKg,
-        seatTotalCost,
-        stemWeight,
-        stemMaterialPrice: stemMaterial.pricePerKg,
-        stemTotalCost,
-        cageFixedPrice: currentProduct.hasCage ? cageFixedPrice : undefined,
-        cageTotalCost: currentProduct.hasCage ? cageTotalCost : undefined,
-        bodySubAssemblyTotal,
-        // Actuator sub-assembly
-        actuatorFixedPrice: currentProduct.hasActuator ? actuatorFixedPrice : undefined,
-        handwheelFixedPrice: currentProduct.hasHandwheel ? handwheelFixedPrice : undefined,
-        actuatorSubAssemblyTotal: currentProduct.hasActuator ? actuatorSubAssemblyTotal : undefined,
-        // Additional modules
-        tubingAndFitting: tubingAndFittingItems,
-        tubingAndFittingTotal,
-        testing: testingItems,
-        testingTotal,
-        accessories: accessoryItems,
-        accessoriesTotal,
-        // Cost breakdown
-        manufacturingCost,
-        boughtoutItemCost,
-        unitCost,
-        productTotalCost,
-        lineTotal: productTotalCost * (currentProduct.quantity || 1),
-      });
+    // Calculate profit amounts
+    const manufacturingProfitAmount = (baseManufacturingCost * manufacturingProfit) / 100;
+    const boughtoutProfitAmount = (baseBoughtoutItemCost * boughtoutProfit) / 100;
 
-      alert('Price calculated successfully!');
+    // Costs with profit
+    const manufacturingCostWithProfit = baseManufacturingCost + manufacturingProfitAmount;
+    const boughtoutCostWithProfit = baseBoughtoutItemCost + boughtoutProfitAmount;
+
+    const unitCost = manufacturingCostWithProfit + boughtoutCostWithProfit;
+    const productTotalCost = unitCost;
+
+    setCurrentProduct({
+      ...currentProduct,
+      // Body sub-assembly (existing fields)
+      bodyWeight,
+      bodyMaterialPrice: bodyMaterial.pricePerKg,
+      bodyTotalCost,
+      bonnetWeight,
+      bonnetMaterialPrice: bonnetMaterial.pricePerKg,
+      bonnetTotalCost,
+      plugWeight,
+      plugMaterialPrice: plugMaterial.pricePerKg,
+      plugTotalCost,
+      seatWeight,
+      seatMaterialPrice: seatMaterial.pricePerKg,
+      seatTotalCost,
+      stemWeight,
+      stemMaterialPrice: stemMaterial.pricePerKg,
+      stemTotalCost,
+      cageFixedPrice: currentProduct.hasCage ? cageFixedPrice : undefined,
+      cageTotalCost: currentProduct.hasCage ? cageTotalCost : undefined,
+      bodySubAssemblyTotal,
+      // Actuator sub-assembly (existing fields)
+      actuatorFixedPrice: currentProduct.hasActuator ? actuatorFixedPrice : undefined,
+      handwheelFixedPrice: currentProduct.hasHandwheel ? handwheelFixedPrice : undefined,
+      actuatorSubAssemblyTotal: currentProduct.hasActuator ? actuatorSubAssemblyTotal : undefined,
+      // Additional modules
+      tubingAndFitting: tubingAndFittingItems,
+      tubingAndFittingTotal,
+      testing: testingItems,
+      testingTotal,
+      accessories: accessoryItems,
+      accessoriesTotal,
+      // Cost breakdown with profit
+      manufacturingCost: baseManufacturingCost,
+      manufacturingProfitPercentage: manufacturingProfit,
+      manufacturingProfitAmount,
+      manufacturingCostWithProfit,
+      boughtoutItemCost: baseBoughtoutItemCost,
+      boughtoutProfitPercentage: boughtoutProfit,
+      boughtoutProfitAmount,
+      boughtoutCostWithProfit,
+      unitCost,
+      productTotalCost,
+      lineTotal: productTotalCost * (currentProduct.quantity || 1),
+    });
+
+    alert('Price calculated successfully!');
     } catch (error) {
       console.error('Calculation error:', error);
       alert('Failed to calculate price');
@@ -1233,25 +1274,65 @@ export default function NewQuotePage() {
                 <div className="border-2 border-pink-200 rounded-lg p-6 mb-6 bg-pink-50">
                   <h3 className="text-xl font-bold mb-4 text-pink-900">🎯 Accessories</h3>
                   
-                  {/* Default Accessories - Checkboxes */}
+                  {/* Default Accessories - Checkboxes with Custom Price Input */}
                   <div className="bg-white rounded-lg p-4 mb-4">
-                    <p className="text-sm font-medium mb-3">Default Accessories (Optional)</p>
+                    <p className="text-sm font-medium mb-3">Default Accessories (Optional - Enter Custom Price)</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {DEFAULT_ACCESSORIES.map((title) => {
                         const isChecked = accessoryItems.some(item => item.title === title);
+                        const showInput = showAccessoryPriceInput === title;
+                        
                         return (
-                          <label key={title} className="flex items-center cursor-pointer p-2 hover:bg-gray-50 rounded">
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={(e) => {
-                                const defaultPrice = 1000; // Set a default price or prompt user
-                                toggleDefaultAccessory(title, defaultPrice);
-                              }}
-                              className="mr-2 w-4 h-4"
-                            />
-                            <span className="text-sm">{title}</span>
-                          </label>
+                          <div key={title}>
+                            <label className="flex items-center cursor-pointer p-2 hover:bg-gray-50 rounded">
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setShowAccessoryPriceInput(title);
+                                  } else {
+                                    toggleDefaultAccessory(title);
+                                  }
+                                }}
+                                className="mr-2 w-4 h-4"
+                              />
+                              <span className="text-sm">{title}</span>
+                            </label>
+                            
+                            {showInput && (
+                              <div className="ml-6 mt-2 flex items-center space-x-2">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  placeholder="Enter price"
+                                  value={customAccessoryPrice[title] || ''}
+                                  onChange={(e) => setCustomAccessoryPrice({
+                                    ...customAccessoryPrice,
+                                    [title]: parseFloat(e.target.value) || 0
+                                  })}
+                                  className="flex-1 px-3 py-1 border rounded text-sm"
+                                  autoFocus
+                                />
+                                <button
+                                  onClick={() => handleDefaultAccessoryPriceSubmit(title)}
+                                  className="bg-pink-600 text-white px-3 py-1 rounded text-xs hover:bg-pink-700"
+                                >
+                                  Add
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setShowAccessoryPriceInput(null);
+                                    const checkbox = document.querySelector(`input[type="checkbox"][value="${title}"]`) as HTMLInputElement;
+                                    if (checkbox) checkbox.checked = false;
+                                  }}
+                                  className="text-gray-600 hover:text-gray-800 text-xs"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         );
                       })}
                     </div>
@@ -1323,6 +1404,59 @@ export default function NewQuotePage() {
                       <p className="text-sm">No accessories selected</p>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* PROFIT PERCENTAGE SECTION */}
+              {currentProduct.size && currentProduct.rating && (
+                <div className="border-2 border-indigo-200 rounded-lg p-6 mb-6 bg-indigo-50">
+                  <h3 className="text-xl font-bold mb-4 text-indigo-900">💼 Profit Margin</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <label className="block text-sm font-semibold mb-2 text-blue-900">
+                        Manufacturing Cost Profit (%)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        value={manufacturingProfit}
+                        onChange={(e) => setManufacturingProfit(parseFloat(e.target.value) || 0)}
+                        className="w-full px-4 py-3 border rounded-lg text-lg font-semibold"
+                        placeholder="0"
+                      />
+                      <p className="text-xs text-gray-500 mt-2">
+                        Applied to: Body + Actuator + Tubing & Fitting + Testing
+                      </p>
+                    </div>
+
+                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <label className="block text-sm font-semibold mb-2 text-pink-900">
+                        Boughtout Items Profit (%)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        value={boughtoutProfit}
+                        onChange={(e) => setBoughtoutProfit(parseFloat(e.target.value) || 0)}
+                        className="w-full px-4 py-3 border rounded-lg text-lg font-semibold"
+                        placeholder="0"
+                      />
+                      <p className="text-xs text-gray-500 mt-2">
+                        Applied to: Accessories
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 bg-indigo-100 p-4 rounded-lg">
+                    <p className="text-sm text-indigo-900">
+                      <strong>Note:</strong> Profit percentages will be calculated after you click "Calculate Price"
+                    </p>
+                  </div>
                 </div>
               )}
 
@@ -1524,30 +1658,63 @@ export default function NewQuotePage() {
                     )}
                   </div>
 
-                  {/* Cost Summary */}
-                  <div className="bg-gradient-to-r from-blue-100 to-green-100 p-6 rounded-lg border-2 border-blue-300">
-                    <h5 className="font-bold text-lg mb-4 text-gray-900">📊 Cost Summary</h5>
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center text-base">
-                        <span className="font-semibold text-gray-700">Manufacturing Cost:</span>
-                        <span className="font-bold text-blue-700">
-                          ₹{currentProduct.manufacturingCost?.toLocaleString('en-IN')}
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-600 pl-4">
-                        (Body + Actuator + Tubing & Fitting + Testing)
-                      </p>
+{/* Cost Summary */}
+<div className="bg-gradient-to-r from-blue-100 to-green-100 p-6 rounded-lg border-2 border-blue-300">
+  <h5 className="font-bold text-lg mb-4 text-gray-900">📊 Cost Summary</h5>
+  <div className="space-y-3">
+    {/* Manufacturing Cost */}
+    <div>
+      <div className="flex justify-between items-center text-base">
+        <span className="font-semibold text-gray-700">Manufacturing Cost (Base):</span>
+        <span className="font-bold text-blue-700">
+          ₹{currentProduct.manufacturingCost?.toLocaleString('en-IN')}
+        </span>
+      </div>
+      <p className="text-xs text-gray-600 pl-4">
+        (Body + Actuator + Tubing & Fitting + Testing)
+      </p>
+      
+      {currentProduct.manufacturingProfitPercentage && currentProduct.manufacturingProfitPercentage > 0 && (
+        <>
+          <div className="flex justify-between items-center text-sm text-blue-600 mt-1 pl-4">
+            <span>+ Profit ({currentProduct.manufacturingProfitPercentage}%):</span>
+            <span>₹{currentProduct.manufacturingProfitAmount?.toLocaleString('en-IN')}</span>
+          </div>
+          <div className="flex justify-between items-center text-base font-semibold text-blue-800 mt-1 pl-4 pt-1 border-t border-blue-200">
+            <span>Manufacturing Cost (with profit):</span>
+            <span>₹{currentProduct.manufacturingCostWithProfit?.toLocaleString('en-IN')}</span>
+          </div>
+        </>
+      )}
+    </div>
 
-                      <div className="flex justify-between items-center text-base pt-2">
-                        <span className="font-semibold text-gray-700">Boughtout Item Cost:</span>
-                        <span className="font-bold text-pink-700">
-                          ₹{currentProduct.boughtoutItemCost?.toLocaleString('en-IN')}
-                        </span>
+                      {/* Boughtout Item Cost */}
+                      <div className="pt-3 border-t border-gray-300">
+                        <div className="flex justify-between items-center text-base">
+                          <span className="font-semibold text-gray-700">Boughtout Item Cost (Base):</span>
+                          <span className="font-bold text-pink-700">
+                            ₹{currentProduct.boughtoutItemCost?.toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-600 pl-4">
+                          (Accessories)
+                        </p>
+                        
+                        {currentProduct.boughtoutProfitPercentage && currentProduct.boughtoutProfitPercentage > 0 && (
+                          <>
+                            <div className="flex justify-between items-center text-sm text-pink-600 mt-1 pl-4">
+                              <span>+ Profit ({currentProduct.boughtoutProfitPercentage}%):</span>
+                              <span>₹{currentProduct.boughtoutProfitAmount?.toLocaleString('en-IN')}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-base font-semibold text-pink-800 mt-1 pl-4 pt-1 border-t border-pink-200">
+                              <span>Boughtout Cost (with profit):</span>
+                              <span>₹{currentProduct.boughtoutCostWithProfit?.toLocaleString('en-IN')}</span>
+                            </div>
+                          </>
+                        )}
                       </div>
-                      <p className="text-xs text-gray-600 pl-4">
-                        (Accessories)
-                      </p>
 
+                      {/* Unit Cost */}
                       <div className="flex justify-between items-center text-lg pt-4 border-t-2 border-gray-400">
                         <span className="font-bold text-gray-900">Unit Cost:</span>
                         <span className="font-bold text-green-700 text-xl">
@@ -1555,14 +1722,16 @@ export default function NewQuotePage() {
                         </span>
                       </div>
                       <p className="text-xs text-gray-600 pl-4">
-                        (Manufacturing Cost + Boughtout Item Cost)
+                        (Manufacturing Cost + Boughtout Item Cost) with profit
                       </p>
 
+                      {/* Quantity */}
                       <div className="flex justify-between items-center text-xl pt-4 border-t-2 border-green-400">
                         <span className="font-bold text-gray-900">Quantity:</span>
                         <span className="font-bold text-gray-900">×{currentProduct.quantity}</span>
                       </div>
 
+                      {/* Line Total */}
                       <div className="flex justify-between items-center text-2xl pt-4 border-t-4 border-green-600">
                         <span className="font-bold text-gray-900">Line Total:</span>
                         <span className="font-bold text-green-600">
