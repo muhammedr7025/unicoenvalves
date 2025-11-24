@@ -12,7 +12,8 @@ import {
   clearAllPricingData,
 } from '@/lib/firebase/pricingService';
 import { generateExcelTemplate, parseExcelFile } from '@/utils/excelTemplate';
-
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase/config';
 export default function PricingPage() {
   const [stats, setStats] = useState({
     materials: 0,
@@ -20,7 +21,10 @@ export default function PricingPage() {
     bodyWeights: 0,
     bonnetWeights: 0,
     componentWeights: 0,
+    stemWeights: 0,
     cagePrices: 0,
+    actuatorModels: 0,
+    handwheelPrices: 0,
   });
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -32,25 +36,45 @@ export default function PricingPage() {
 
   const fetchStats = async () => {
     setLoading(true);
-    const [materials, series, bodyWeights, bonnetWeights, componentWeights, cagePrices] =
-      await Promise.all([
+    try {
+      const [
+        materialsData,
+        seriesData,
+        bodyWeightsData,
+        bonnetWeightsData,
+        componentWeightsData,
+        stemWeightsData,
+        cagePricesData,
+        actuatorModelsData,
+        handwheelPricesData,
+      ] = await Promise.all([
         getAllMaterials(),
         getAllSeries(),
-        getAllBodyWeights(),
-        getAllBonnetWeights(),
-        getAllComponentWeights(),
-        getAllCagePrices(),
+        getDocs(collection(db, 'bodyWeights')),
+        getDocs(collection(db, 'bonnetWeights')),
+        getDocs(collection(db, 'componentWeights')),
+        getDocs(collection(db, 'stemWeights')),
+        getDocs(collection(db, 'cagePricesBySeat')),
+        getDocs(collection(db, 'actuatorModels')),
+        getDocs(collection(db, 'handwheelPrices')),
       ]);
-
-    setStats({
-      materials: materials.length,
-      series: series.length,
-      bodyWeights: bodyWeights.length,
-      bonnetWeights: bonnetWeights.length,
-      componentWeights: componentWeights.length,
-      cagePrices: cagePrices.length,
-    });
-    setLoading(false);
+  
+      setStats({
+        materials: materialsData.length,
+        series: seriesData.length,
+        bodyWeights: bodyWeightsData.size,
+        bonnetWeights: bonnetWeightsData.size,
+        componentWeights: componentWeightsData.size,
+        stemWeights: stemWeightsData.size,
+        cagePrices: cagePricesData.size,
+        actuatorModels: actuatorModelsData.size,
+        handwheelPrices: handwheelPricesData.size,
+      });
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDownloadTemplate = () => {
@@ -152,21 +176,80 @@ export default function PricingPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        {statCards.map((stat, index) => (
-          <div key={index} className="bg-white rounded-xl shadow-sm p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">{stat.title}</p>
-                <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
-              </div>
-              <div className={`w-12 h-12 rounded-lg ${stat.color} flex items-center justify-center text-2xl`}>
-                {stat.icon}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+  {/* Statistics */}
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+  <div className="bg-white rounded-lg shadow-sm p-6">
+    <div className="flex items-center justify-between mb-2">
+      <p className="text-sm text-gray-600">Materials</p>
+      <span className="text-2xl">⚙️</span>
+    </div>
+    <p className="text-3xl font-bold text-indigo-600">{stats.materials}</p>
+  </div>
+
+  <div className="bg-white rounded-lg shadow-sm p-6">
+    <div className="flex items-center justify-between mb-2">
+      <p className="text-sm text-gray-600">Series</p>
+      <span className="text-2xl">📋</span>
+    </div>
+    <p className="text-3xl font-bold text-indigo-600">{stats.series}</p>
+  </div>
+
+  <div className="bg-white rounded-lg shadow-sm p-6">
+    <div className="flex items-center justify-between mb-2">
+      <p className="text-sm text-gray-600">Body Weights</p>
+      <span className="text-2xl">🔩</span>
+    </div>
+    <p className="text-3xl font-bold text-indigo-600">{stats.bodyWeights}</p>
+  </div>
+
+  <div className="bg-white rounded-lg shadow-sm p-6">
+    <div className="flex items-center justify-between mb-2">
+      <p className="text-sm text-gray-600">Bonnet Weights</p>
+      <span className="text-2xl">🔧</span>
+    </div>
+    <p className="text-3xl font-bold text-indigo-600">{stats.bonnetWeights}</p>
+  </div>
+
+  <div className="bg-white rounded-lg shadow-sm p-6">
+    <div className="flex items-center justify-between mb-2">
+      <p className="text-sm text-gray-600">Component Weights</p>
+      <span className="text-2xl">⚡</span>
+    </div>
+    <p className="text-3xl font-bold text-indigo-600">{stats.componentWeights}</p>
+  </div>
+
+  <div className="bg-white rounded-lg shadow-sm p-6">
+    <div className="flex items-center justify-between mb-2">
+      <p className="text-sm text-gray-600">Stem Weights</p>
+      <span className="text-2xl">📏</span>
+    </div>
+    <p className="text-3xl font-bold text-indigo-600">{stats.stemWeights}</p>
+  </div>
+
+  <div className="bg-white rounded-lg shadow-sm p-6">
+    <div className="flex items-center justify-between mb-2">
+      <p className="text-sm text-gray-600">Cage Prices</p>
+      <span className="text-2xl">🔒</span>
+    </div>
+    <p className="text-3xl font-bold text-indigo-600">{stats.cagePrices}</p>
+  </div>
+
+  <div className="bg-white rounded-lg shadow-sm p-6">
+    <div className="flex items-center justify-between mb-2">
+      <p className="text-sm text-gray-600">Actuator Models</p>
+      <span className="text-2xl">⚙️</span>
+    </div>
+    <p className="text-3xl font-bold text-purple-600">{stats.actuatorModels}</p>
+  </div>
+
+  <div className="bg-white rounded-lg shadow-sm p-6">
+    <div className="flex items-center justify-between mb-2">
+      <p className="text-sm text-gray-600">Handwheel Prices</p>
+      <span className="text-2xl">🎡</span>
+    </div>
+    <p className="text-3xl font-bold text-purple-600">{stats.handwheelPrices}</p>
+  </div>
+</div>
 
       {/* Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

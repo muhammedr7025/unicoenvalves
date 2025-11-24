@@ -7,9 +7,6 @@ import { getAllCustomers } from '@/lib/firebase/customerService';
 import { getAllMaterials, getAllSeries } from '@/lib/firebase/pricingService';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
-import { generateQuoteNumber } from '@/utils/quoteNumber';
-
-import { createQuote } from '@/lib/firebase/quoteService';
 import {
   getAvailableSizes,
   getAvailableRatings,
@@ -19,7 +16,13 @@ import {
   getBodyWeight,
   getBonnetWeight,
   getComponentWeight,
-  getCagePrice,
+  getStemWeight,
+  getCagePriceBySeat,
+  getAvailableActuatorTypes,
+  getAvailableActuatorSeries,
+  getAvailableActuatorModels,
+  getActuatorPrice,
+  getHandwheelPrice,
 } from '@/lib/firebase/productConfigHelper';
 import { Customer, Material, Series, QuoteProduct } from '@/types';
 import { calculateQuoteTotals } from '@/utils/priceCalculator';
@@ -37,15 +40,22 @@ export default function NewQuotePage() {
   const [currentProduct, setCurrentProduct] = useState<Partial<QuoteProduct>>({
     quantity: 1,
     hasCage: false,
+    hasActuator: false,
+    hasHandwheel: false,
   });
 
+  // Dynamic options for body sub-assembly
   const [availableSizes, setAvailableSizes] = useState<string[]>([]);
   const [availableRatings, setAvailableRatings] = useState<string[]>([]);
   const [availableEndConnectTypes, setAvailableEndConnectTypes] = useState<string[]>([]);
   const [availableBonnetTypes, setAvailableBonnetTypes] = useState<string[]>([]);
   const [availablePlugTypes, setAvailablePlugTypes] = useState<string[]>([]);
   const [availableSeatTypes, setAvailableSeatTypes] = useState<string[]>([]);
-  const [availableStemTypes, setAvailableStemTypes] = useState<string[]>([]);
+
+  // Dynamic options for actuator sub-assembly
+  const [availableActuatorTypes, setAvailableActuatorTypes] = useState<string[]>([]);
+  const [availableActuatorSeries, setAvailableActuatorSeries] = useState<string[]>([]);
+  const [availableActuatorModels, setAvailableActuatorModels] = useState<string[]>([]);
 
   const [discount, setDiscount] = useState(0);
   const [tax, setTax] = useState(18);
@@ -61,138 +71,136 @@ export default function NewQuotePage() {
 
   const fetchInitialData = async () => {
     setLoading(true);
-    const [customersData, materialsData, seriesData] = await Promise.all([
+    const [customersData, materialsData, seriesData, actuatorTypes] = await Promise.all([
       getAllCustomers(),
       getAllMaterials(),
       getAllSeries(),
+      getAvailableActuatorTypes(),
     ]);
     setCustomers(customersData);
     setMaterials(materialsData.filter(m => m.isActive));
     setSeries(seriesData.filter(s => s.isActive));
+    setAvailableActuatorTypes(actuatorTypes);
     setLoading(false);
   };
 
-// REPLACE WITH THIS:
+  useEffect(() => {
+    if (currentProduct.seriesNumber) {
+      fetchAvailableSizes(currentProduct.seriesNumber);
+    }
+  }, [currentProduct.seriesNumber]);
 
-const fetchAvailableSizes = async (seriesNumber: string) => {
-  console.log('Fetching sizes for seriesNumber:', seriesNumber);
-  try {
+  useEffect(() => {
+    if (currentProduct.seriesNumber && currentProduct.size) {
+      fetchAvailableRatings(currentProduct.seriesNumber, currentProduct.size);
+    }
+  }, [currentProduct.seriesNumber, currentProduct.size]);
+
+  useEffect(() => {
+    if (currentProduct.seriesNumber && currentProduct.size && currentProduct.rating) {
+      fetchDependentOptions(currentProduct.seriesNumber, currentProduct.size, currentProduct.rating);
+    }
+  }, [currentProduct.seriesNumber, currentProduct.size, currentProduct.rating]);
+
+  useEffect(() => {
+    if (currentProduct.actuatorType) {
+      fetchActuatorSeries(currentProduct.actuatorType);
+    }
+  }, [currentProduct.actuatorType]);
+
+  useEffect(() => {
+    if (currentProduct.actuatorType && currentProduct.actuatorSeries) {
+      fetchActuatorModels(currentProduct.actuatorType, currentProduct.actuatorSeries);
+    }
+  }, [currentProduct.actuatorType, currentProduct.actuatorSeries]);
+
+  const fetchAvailableSizes = async (seriesNumber: string) => {
     const sizes = await getAvailableSizes(seriesNumber);
-    console.log('Available sizes:', sizes);
     setAvailableSizes(sizes);
-  } catch (error) {
-    console.error('Error fetching sizes:', error);
-  }
-};
+  };
 
-const fetchAvailableRatings = async (seriesNumber: string, size: string) => {
-  console.log('Fetching ratings for:', seriesNumber, size);
-  try {
+  const fetchAvailableRatings = async (seriesNumber: string, size: string) => {
     const ratings = await getAvailableRatings(seriesNumber, size);
-    console.log('Available ratings:', ratings);
     setAvailableRatings(ratings);
-  } catch (error) {
-    console.error('Error fetching ratings:', error);
-  }
-};
+  };
 
-const fetchDependentOptions = async (seriesNumber: string, size: string, rating: string) => {
-  console.log('Fetching component options for:', seriesNumber, size, rating);
-  try {
-    const [endConnects, bonnets, plugs, seats, stems] = await Promise.all([
+  const fetchDependentOptions = async (seriesNumber: string, size: string, rating: string) => {
+    const [endConnects, bonnets, plugs, seats] = await Promise.all([
       getAvailableEndConnectTypes(seriesNumber, size, rating),
       getAvailableBonnetTypes(seriesNumber, size, rating),
       getAvailableComponentTypes(seriesNumber, 'plug', size, rating),
       getAvailableComponentTypes(seriesNumber, 'seat', size, rating),
-      getAvailableComponentTypes(seriesNumber, 'stem', size, rating),
     ]);
-
-    console.log('Available options:', { endConnects, bonnets, plugs, seats, stems });
 
     setAvailableEndConnectTypes(endConnects);
     setAvailableBonnetTypes(bonnets);
     setAvailablePlugTypes(plugs);
     setAvailableSeatTypes(seats);
-    setAvailableStemTypes(stems);
-  } catch (error) {
-    console.error('Error fetching component options:', error);
-  }
-};
+  };
 
-const handleSeriesChange = async (seriesId: string) => {
-  console.log('Series changed to:', seriesId);
-  const selectedSeries = series.find(s => s.id === seriesId);
-  if (!selectedSeries) return;
+  const fetchActuatorSeries = async (type: string) => {
+    const series = await getAvailableActuatorSeries(type);
+    setAvailableActuatorSeries(series);
+  };
 
-  console.log('Selected series data:', selectedSeries);
+  const fetchActuatorModels = async (type: string, series: string) => {
+    const models = await getAvailableActuatorModels(type, series);
+    setAvailableActuatorModels(models);
+  };
 
-  // Reset everything first
-  setCurrentProduct({
-    quantity: 1,
-    seriesId,
-    seriesNumber: selectedSeries.seriesNumber,
-    productType: selectedSeries.productType,
-    hasCage: selectedSeries.hasCage,
-  });
-  
-  setAvailableSizes([]);
-  setAvailableRatings([]);
-  setAvailableEndConnectTypes([]);
-  setAvailableBonnetTypes([]);
-  setAvailablePlugTypes([]);
-  setAvailableSeatTypes([]);
-  setAvailableStemTypes([]);
+  const handleSeriesChange = async (seriesId: string) => {
+    const selectedSeries = series.find(s => s.id === seriesId);
+    if (!selectedSeries) return;
 
-  // Fetch available sizes using seriesNumber, not seriesId
-  await fetchAvailableSizes(selectedSeries.seriesNumber);
-};
+    setCurrentProduct({
+      quantity: 1,
+      seriesId,
+      seriesNumber: selectedSeries.seriesNumber,
+      productType: selectedSeries.productType,
+      hasCage: selectedSeries.hasCage,
+      hasActuator: false,
+      hasHandwheel: false,
+    });
+    
+    setAvailableSizes([]);
+    setAvailableRatings([]);
+    await fetchAvailableSizes(selectedSeries.seriesNumber);
+  };
 
-const handleSizeChange = async (size: string) => {
-  console.log('Size changed to:', size);
-  setCurrentProduct({ 
-    ...currentProduct, 
-    size,
-    rating: undefined
-  });
-  
-  setAvailableRatings([]);
-  setAvailableEndConnectTypes([]);
-  setAvailableBonnetTypes([]);
-  setAvailablePlugTypes([]);
-  setAvailableSeatTypes([]);
-  setAvailableStemTypes([]);
+  const handleSizeChange = async (size: string) => {
+    setCurrentProduct({ 
+      ...currentProduct, 
+      size,
+      rating: undefined
+    });
+    
+    setAvailableRatings([]);
+    if (currentProduct.seriesNumber) {
+      await fetchAvailableRatings(currentProduct.seriesNumber, size);
+    }
+  };
 
-  if (currentProduct.seriesNumber) {
-    await fetchAvailableRatings(currentProduct.seriesNumber, size);
-  }
-};
+  const handleRatingChange = async (rating: string) => {
+    setCurrentProduct({ 
+      ...currentProduct, 
+      rating 
+    });
 
-const handleRatingChange = async (rating: string) => {
-  console.log('Rating changed to:', rating);
-  setCurrentProduct({ 
-    ...currentProduct, 
-    rating 
-  });
-
-  if (currentProduct.seriesNumber && currentProduct.size) {
-    await fetchDependentOptions(currentProduct.seriesNumber, currentProduct.size, rating);
-  }
-};
-
-
-
-// REMOVE THE OLD useEffect HOOKS - WE DON'T NEED THEM ANYMORE
+    if (currentProduct.seriesNumber && currentProduct.size) {
+      await fetchDependentOptions(currentProduct.seriesNumber, currentProduct.size, rating);
+    }
+  };
 
   const calculateProductPrice = async () => {
     // Validation
-    if (!currentProduct.seriesId || !currentProduct.size || !currentProduct.rating) {
+    if (!currentProduct.seriesNumber || !currentProduct.size || !currentProduct.rating) {
       alert('Please select Series, Size, and Rating');
       return;
     }
 
     if (!currentProduct.bodyEndConnectType || !currentProduct.bonnetType ||
-        !currentProduct.plugType || !currentProduct.seatType || !currentProduct.stemType) {
-      alert('Please select all component types');
+        !currentProduct.plugType || !currentProduct.seatType) {
+      alert('Please select all body component types');
       return;
     }
 
@@ -203,15 +211,25 @@ const handleRatingChange = async (rating: string) => {
       return;
     }
 
+    // Actuator validation
+    if (currentProduct.hasActuator) {
+      if (!currentProduct.actuatorType || !currentProduct.actuatorSeries || 
+          !currentProduct.actuatorModel || !currentProduct.actuatorStandard) {
+        alert('Please complete actuator configuration');
+        return;
+      }
+    }
+
     setCalculating(true);
 
     try {
+      // Get body sub-assembly weights
       const [bodyWeight, bonnetWeight, plugWeight, seatWeight, stemWeight] = await Promise.all([
-        getBodyWeight(currentProduct.seriesNumber!, currentProduct.size!, currentProduct.rating!, currentProduct.bodyEndConnectType!),
-        getBonnetWeight(currentProduct.seriesNumber!, currentProduct.size!, currentProduct.rating!, currentProduct.bonnetType!),
-        getComponentWeight(currentProduct.seriesNumber!, 'plug', currentProduct.size!, currentProduct.rating!, currentProduct.plugType!),
-        getComponentWeight(currentProduct.seriesNumber!, 'seat', currentProduct.size!, currentProduct.rating!, currentProduct.seatType!),
-        getComponentWeight(currentProduct.seriesNumber!, 'stem', currentProduct.size!, currentProduct.rating!, currentProduct.stemType!),
+        getBodyWeight(currentProduct.seriesNumber, currentProduct.size, currentProduct.rating, currentProduct.bodyEndConnectType),
+        getBonnetWeight(currentProduct.seriesNumber, currentProduct.size, currentProduct.rating, currentProduct.bonnetType),
+        getComponentWeight(currentProduct.seriesNumber, 'plug', currentProduct.size, currentProduct.rating, currentProduct.plugType),
+        getComponentWeight(currentProduct.seriesNumber, 'seat', currentProduct.size, currentProduct.rating, currentProduct.seatType),
+        getStemWeight(currentProduct.seriesNumber, currentProduct.size, currentProduct.rating),
       ]);
 
       const bodyMaterial = materials.find(m => m.id === currentProduct.bodyMaterialId);
@@ -232,28 +250,68 @@ const handleRatingChange = async (rating: string) => {
         return;
       }
 
+      // Calculate body sub-assembly costs
       const bodyTotalCost = bodyWeight * bodyMaterial.pricePerKg;
       const bonnetTotalCost = bonnetWeight * bonnetMaterial.pricePerKg;
       const plugTotalCost = plugWeight * plugMaterial.pricePerKg;
       const seatTotalCost = seatWeight * seatMaterial.pricePerKg;
       const stemTotalCost = stemWeight * stemMaterial.pricePerKg;
 
+      // Cage price (based on seat type)
       let cageTotalCost = 0;
       let cageFixedPrice = 0;
       
-      if (currentProduct.hasCage) {
-        const cagePrice = await getCagePrice(currentProduct.seriesNumber!, currentProduct.size!);
+      if (currentProduct.hasCage && currentProduct.seatType) {
+        const cagePrice = await getCagePriceBySeat(
+          currentProduct.seriesNumber, 
+          currentProduct.size, 
+          currentProduct.seatType
+        );
         if (cagePrice) {
           cageFixedPrice = cagePrice;
           cageTotalCost = cagePrice;
         }
       }
 
-      const productTotalCost = bodyTotalCost + bonnetTotalCost + plugTotalCost + 
-                               seatTotalCost + stemTotalCost + cageTotalCost;
+      const bodySubAssemblyTotal = bodyTotalCost + bonnetTotalCost + plugTotalCost + 
+                                    seatTotalCost + stemTotalCost + cageTotalCost;
+
+      // Calculate actuator sub-assembly
+      let actuatorFixedPrice = 0;
+      let handwheelFixedPrice = 0;
+      let actuatorSubAssemblyTotal = 0;
+
+      if (currentProduct.hasActuator && currentProduct.actuatorType && 
+          currentProduct.actuatorSeries && currentProduct.actuatorModel && 
+          currentProduct.actuatorStandard) {
+        
+        const actuatorPrice = await getActuatorPrice(
+          currentProduct.actuatorType,
+          currentProduct.actuatorSeries,
+          currentProduct.actuatorModel,
+          currentProduct.actuatorStandard
+        );
+
+        if (actuatorPrice) {
+          actuatorFixedPrice = actuatorPrice;
+          actuatorSubAssemblyTotal += actuatorPrice;
+        }
+
+        // Handwheel
+        if (currentProduct.hasHandwheel && currentProduct.actuatorModel) {
+          const handwheelPrice = await getHandwheelPrice(currentProduct.actuatorModel);
+          if (handwheelPrice) {
+            handwheelFixedPrice = handwheelPrice;
+            actuatorSubAssemblyTotal += handwheelPrice;
+          }
+        }
+      }
+
+      const productTotalCost = bodySubAssemblyTotal + actuatorSubAssemblyTotal;
 
       setCurrentProduct({
         ...currentProduct,
+        // Body sub-assembly
         bodyWeight,
         bodyMaterialPrice: bodyMaterial.pricePerKg,
         bodyTotalCost,
@@ -271,6 +329,12 @@ const handleRatingChange = async (rating: string) => {
         stemTotalCost,
         cageFixedPrice: currentProduct.hasCage ? cageFixedPrice : undefined,
         cageTotalCost: currentProduct.hasCage ? cageTotalCost : undefined,
+        bodySubAssemblyTotal,
+        // Actuator sub-assembly
+        actuatorFixedPrice: currentProduct.hasActuator ? actuatorFixedPrice : undefined,
+        handwheelFixedPrice: currentProduct.hasHandwheel ? handwheelFixedPrice : undefined,
+        actuatorSubAssemblyTotal: currentProduct.hasActuator ? actuatorSubAssemblyTotal : undefined,
+        // Total
         productTotalCost,
         lineTotal: productTotalCost * (currentProduct.quantity || 1),
       });
@@ -289,25 +353,26 @@ const handleRatingChange = async (rating: string) => {
       alert('Please calculate the price first');
       return;
     }
-
-    const { id: _, ...productData } = currentProduct;
+  
+    const { id, ...productData } = currentProduct; // Remove id if exists
+    
     const product: QuoteProduct = {
-      ...(productData as Omit<Required<QuoteProduct>, 'id'>),
       id: `product-${Date.now()}`,
-    };
-
+      ...(productData as Required<Omit<QuoteProduct, 'id'>>),
+    } as QuoteProduct;
+  
     setProducts([...products, product]);
     
     // Reset form
-    setCurrentProduct({ quantity: 1, hasCage: false });
+    setCurrentProduct({ 
+      quantity: 1, 
+      hasCage: false,
+      hasActuator: false,
+      hasHandwheel: false,
+    });
     setShowProductConfig(false);
     setAvailableSizes([]);
     setAvailableRatings([]);
-    setAvailableEndConnectTypes([]);
-    setAvailableBonnetTypes([]);
-    setAvailablePlugTypes([]);
-    setAvailableSeatTypes([]);
-    setAvailableStemTypes([]);
   };
 
   const removeProduct = (productId: string) => {
@@ -315,27 +380,16 @@ const handleRatingChange = async (rating: string) => {
   };
 
   const handleSaveQuote = async () => {
-    if (!selectedCustomer) {
-      alert('Please select a customer');
+    if (!selectedCustomer || products.length === 0 || !user) {
+      alert('Please complete all required fields');
       return;
     }
-  
-    if (products.length === 0) {
-      alert('Please add at least one product');
-      return;
-    }
-  
-    if (!user) {
-      alert('User not authenticated');
-      return;
-    }
-  
+
     setLoading(true);
-  
+
     try {
-      const quoteTotals = calculateQuoteTotals(products, discount, tax);
+      const totals = calculateQuoteTotals(products, discount, tax);
       
-      // Generate quote number manually (temporary)
       const now = new Date();
       const currentMonth = now.getMonth();
       const currentYear = now.getFullYear();
@@ -354,15 +408,11 @@ const handleRatingChange = async (rating: string) => {
       const fyStart2Digit = fyStartYear.toString().slice(-2);
       const fyEnd2Digit = fyEndYear.toString().slice(-2);
       const fyCode = `${fyStart2Digit}${fyEnd2Digit}`;
-      const sequenceStr = Date.now().toString().slice(-4); // Temporary sequence
-      const quoteNumber = await generateQuoteNumber();
-  
-      console.log('About to write to Firestore with quote number:', quoteNumber);
-      console.log('User ID (createdBy):', user.id);
-  
-      // Direct Firestore write
+      const sequenceStr = Date.now().toString().slice(-4);
+      const quoteNumber = `UC-EN-${fyCode}-${sequenceStr}`;
+
       const quotesRef = collection(db, 'quotes');
-      const docRef = await addDoc(quotesRef, {
+      await addDoc(quotesRef, {
         quoteNumber: quoteNumber,
         customerId: selectedCustomer.id,
         customerName: selectedCustomer.name,
@@ -373,6 +423,7 @@ const handleRatingChange = async (rating: string) => {
           seriesNumber: p.seriesNumber,
           size: p.size,
           rating: p.rating,
+          // Body sub-assembly
           bodyEndConnectType: p.bodyEndConnectType,
           bodyMaterialId: p.bodyMaterialId,
           bodyWeight: p.bodyWeight,
@@ -393,7 +444,6 @@ const handleRatingChange = async (rating: string) => {
           seatWeight: p.seatWeight,
           seatMaterialPrice: p.seatMaterialPrice,
           seatTotalCost: p.seatTotalCost,
-          stemType: p.stemType,
           stemMaterialId: p.stemMaterialId,
           stemWeight: p.stemWeight,
           stemMaterialPrice: p.stemMaterialPrice,
@@ -401,16 +451,28 @@ const handleRatingChange = async (rating: string) => {
           hasCage: p.hasCage,
           cageFixedPrice: p.cageFixedPrice || null,
           cageTotalCost: p.cageTotalCost || null,
+          bodySubAssemblyTotal: p.bodySubAssemblyTotal,
+          // Actuator sub-assembly
+          hasActuator: p.hasActuator,
+          actuatorType: p.actuatorType || null,
+          actuatorSeries: p.actuatorSeries || null,
+          actuatorModel: p.actuatorModel || null,
+          actuatorStandard: p.actuatorStandard || null,
+          actuatorFixedPrice: p.actuatorFixedPrice || null,
+          hasHandwheel: p.hasHandwheel || false,
+          handwheelFixedPrice: p.handwheelFixedPrice || null,
+          actuatorSubAssemblyTotal: p.actuatorSubAssemblyTotal || 0,
+          // Totals
           productTotalCost: p.productTotalCost,
           quantity: p.quantity,
           lineTotal: p.lineTotal,
         })),
-        subtotal: quoteTotals.subtotal,
+        subtotal: totals.subtotal,
         discount: discount,
-        discountAmount: quoteTotals.discountAmount,
+        discountAmount: totals.discountAmount,
         tax: tax,
-        taxAmount: quoteTotals.taxAmount,
-        total: quoteTotals.total,
+        taxAmount: totals.taxAmount,
+        total: totals.total,
         status: status,
         createdBy: user.id,
         createdByName: user.name,
@@ -419,14 +481,10 @@ const handleRatingChange = async (rating: string) => {
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
       });
-  
-      console.log('Quote created successfully with ID:', docRef.id);
+
       alert('Quote created successfully!');
       router.push('/employee');
     } catch (error: any) {
-      console.error('Save quote error:', error);
-      console.error('Error code:', error.code);
-      console.error('Error message:', error.message);
       alert('Failed to create quote: ' + error.message);
     } finally {
       setLoading(false);
@@ -490,8 +548,8 @@ const handleRatingChange = async (rating: string) => {
         </div>
       )}
 
-      {/* Step 2: Add Products */}
-      {currentStep === 2 && (
+     {/* Step 2: Add Products */}
+     {currentStep === 2 && (
         <div className="space-y-6">
           {/* Selected Customer Info */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -524,7 +582,7 @@ const handleRatingChange = async (rating: string) => {
           {/* Product Configuration Form */}
           {showProductConfig && (
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-xl font-bold mb-6">Configure Product</h2>
+              <h2 className="text-2xl font-bold mb-6">Configure Product</h2>
               
               {/* Basic Selection */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -544,49 +602,26 @@ const handleRatingChange = async (rating: string) => {
                   </select>
                 </div>
 
-                {/* REPLACE THE SIZE SELECT WITH THIS: */}
-<div>
-  <label className="block text-sm font-medium mb-2">Size *</label>
-  <select
-    value={currentProduct.size || ''}
-    onChange={(e) => handleSizeChange(e.target.value)}
-    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
-    disabled={!availableSizes.length}
-  >
-    <option value="">Select Size</option>
-    {availableSizes.map((size) => (
-      <option key={size} value={size}>{size}</option>
-    ))}
-  </select>
-  {!availableSizes.length && currentProduct.seriesId && (
-    <p className="text-xs text-red-500 mt-1">No sizes available for this series</p>
-  )}
-</div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Size *</label>
+                  <select
+                    value={currentProduct.size || ''}
+                    onChange={(e) => handleSizeChange(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                    disabled={!availableSizes.length}
+                  >
+                    <option value="">Select Size</option>
+                    {availableSizes.map((size) => (
+                      <option key={size} value={size}>{size}</option>
+                    ))}
+                  </select>
+                </div>
 
-{/* REPLACE THE RATING SELECT WITH THIS: */}
-<div>
-  <label className="block text-sm font-medium mb-2">Rating *</label>
-  <select
-    value={currentProduct.rating || ''}
-    onChange={(e) => handleRatingChange(e.target.value)}
-    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
-    disabled={!availableRatings.length}
-  >
-    <option value="">Select Rating</option>
-    {availableRatings.map((rating) => (
-      <option key={rating} value={rating}>{rating}</option>
-    ))}
-  </select>
-  {!availableRatings.length && currentProduct.size && (
-    <p className="text-xs text-red-500 mt-1">No ratings available for this size</p>
-  )}
-</div>
-{/* 
                 <div>
                   <label className="block text-sm font-medium mb-2">Rating *</label>
                   <select
                     value={currentProduct.rating || ''}
-                    onChange={(e) => setCurrentProduct({ ...currentProduct, rating: e.target.value })}
+                    onChange={(e) => handleRatingChange(e.target.value)}
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
                     disabled={!availableRatings.length}
                   >
@@ -595,18 +630,18 @@ const handleRatingChange = async (rating: string) => {
                       <option key={rating} value={rating}>{rating}</option>
                     ))}
                   </select>
-                </div> */}
+                </div>
               </div>
 
-              {/* Component Configuration */}
+              {/* BODY SUB-ASSEMBLY */}
               {currentProduct.size && currentProduct.rating && (
-                <>
-                  <h3 className="font-semibold mb-4">Component Configuration</h3>
+                <div className="border-2 border-blue-200 rounded-lg p-6 mb-6 bg-blue-50">
+                  <h3 className="text-xl font-bold mb-4 text-blue-900">🔧 Body Sub-Assembly</h3>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Body */}
-                    <div className="border rounded-lg p-4">
-                      <h4 className="font-semibold mb-3">Body</h4>
+                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <h4 className="font-semibold mb-3 text-gray-900">Body</h4>
                       <div className="space-y-3">
                         <div>
                           <label className="block text-sm mb-1">End Connect Type *</label>
@@ -638,8 +673,8 @@ const handleRatingChange = async (rating: string) => {
                     </div>
 
                     {/* Bonnet */}
-                    <div className="border rounded-lg p-4">
-                      <h4 className="font-semibold mb-3">Bonnet</h4>
+                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <h4 className="font-semibold mb-3 text-gray-900">Bonnet</h4>
                       <div className="space-y-3">
                         <div>
                           <label className="block text-sm mb-1">Bonnet Type *</label>
@@ -671,8 +706,8 @@ const handleRatingChange = async (rating: string) => {
                     </div>
 
                     {/* Plug */}
-                    <div className="border rounded-lg p-4">
-                      <h4 className="font-semibold mb-3">Plug</h4>
+                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <h4 className="font-semibold mb-3 text-gray-900">Plug</h4>
                       <div className="space-y-3">
                         <div>
                           <label className="block text-sm mb-1">Plug Type *</label>
@@ -704,8 +739,8 @@ const handleRatingChange = async (rating: string) => {
                     </div>
 
                     {/* Seat */}
-                    <div className="border rounded-lg p-4">
-                      <h4 className="font-semibold mb-3">Seat</h4>
+                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <h4 className="font-semibold mb-3 text-gray-900">Seat</h4>
                       <div className="space-y-3">
                         <div>
                           <label className="block text-sm mb-1">Seat Type *</label>
@@ -737,22 +772,9 @@ const handleRatingChange = async (rating: string) => {
                     </div>
 
                     {/* Stem */}
-                    <div className="border rounded-lg p-4">
-                      <h4 className="font-semibold mb-3">Stem</h4>
+                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <h4 className="font-semibold mb-3 text-gray-900">Stem</h4>
                       <div className="space-y-3">
-                        <div>
-                          <label className="block text-sm mb-1">Stem Type *</label>
-                          <select
-                            value={currentProduct.stemType || ''}
-                            onChange={(e) => setCurrentProduct({ ...currentProduct, stemType: e.target.value as any })}
-                            className="w-full px-3 py-2 border rounded-lg text-sm"
-                          >
-                            <option value="">Select</option>
-                            {availableStemTypes.map((type) => (
-                              <option key={type} value={type}>{type}</option>
-                            ))}
-                          </select>
-                        </div>
                         <div>
                           <label className="block text-sm mb-1">Material *</label>
                           <select
@@ -765,13 +787,31 @@ const handleRatingChange = async (rating: string) => {
                               <option key={m.id} value={m.id}>{m.name} (₹{m.pricePerKg}/kg)</option>
                             ))}
                           </select>
+                          <p className="text-xs text-gray-500 mt-1">
+                            * Stem price = Size × Rating × Material price
+                          </p>
                         </div>
                       </div>
                     </div>
 
+                    {/* Cage (if applicable) */}
+                    {currentProduct.hasCage && currentProduct.seatType && (
+                      <div className="bg-white rounded-lg p-4 border border-green-200">
+                        <h4 className="font-semibold mb-3 text-gray-900">Cage</h4>
+                        <div className="bg-green-50 p-3 rounded">
+                          <p className="text-sm text-green-800">
+                            ✓ Cage available for {currentProduct.seatType}
+                          </p>
+                          <p className="text-xs text-green-600 mt-1">
+                            Price will be calculated based on seat type
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Quantity */}
-                    <div className="border rounded-lg p-4">
-                      <h4 className="font-semibold mb-3">Quantity</h4>
+                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <h4 className="font-semibold mb-3 text-gray-900">Quantity</h4>
                       <input
                         type="number"
                         min="1"
@@ -781,7 +821,134 @@ const handleRatingChange = async (rating: string) => {
                       />
                     </div>
                   </div>
-                </>
+                </div>
+              )}
+
+              {/* ACTUATOR SUB-ASSEMBLY */}
+              {currentProduct.size && currentProduct.rating && (
+                <div className="border-2 border-purple-200 rounded-lg p-6 mb-6 bg-purple-50">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-bold text-purple-900">⚙️ Actuator Sub-Assembly</h3>
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={currentProduct.hasActuator || false}
+                        onChange={(e) => setCurrentProduct({ 
+                          ...currentProduct, 
+                          hasActuator: e.target.checked,
+                          hasHandwheel: false,
+                        })}
+                        className="mr-2 w-5 h-5"
+                      />
+                      <span className="text-sm font-medium">Add Actuator</span>
+                    </label>
+                  </div>
+
+                  {currentProduct.hasActuator && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Actuator Type */}
+                      <div className="bg-white rounded-lg p-4 border border-gray-200">
+                        <label className="block text-sm font-medium mb-2">Actuator Type *</label>
+                        <select
+                          value={currentProduct.actuatorType || ''}
+                          onChange={(e) => {
+                            setCurrentProduct({ 
+                              ...currentProduct, 
+                              actuatorType: e.target.value,
+                              actuatorSeries: undefined,
+                              actuatorModel: undefined,
+                            });
+                            setAvailableActuatorSeries([]);
+                            setAvailableActuatorModels([]);
+                          }}
+                          className="w-full px-3 py-2 border rounded-lg"
+                        >
+                          <option value="">Select Type</option>
+                          {availableActuatorTypes.map((type) => (
+                            <option key={type} value={type}>{type}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Actuator Series */}
+                      <div className="bg-white rounded-lg p-4 border border-gray-200">
+                        <label className="block text-sm font-medium mb-2">Actuator Series *</label>
+                        <select
+                          value={currentProduct.actuatorSeries || ''}
+                          onChange={(e) => {
+                            setCurrentProduct({ 
+                              ...currentProduct, 
+                              actuatorSeries: e.target.value,
+                              actuatorModel: undefined,
+                            });
+                            setAvailableActuatorModels([]);
+                          }}
+                          className="w-full px-3 py-2 border rounded-lg"
+                          disabled={!availableActuatorSeries.length}
+                        >
+                          <option value="">Select Series</option>
+                          {availableActuatorSeries.map((series) => (
+                            <option key={series} value={series}>{series}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Actuator Model */}
+                      <div className="bg-white rounded-lg p-4 border border-gray-200">
+                        <label className="block text-sm font-medium mb-2">Actuator Model *</label>
+                        <select
+                          value={currentProduct.actuatorModel || ''}
+                          onChange={(e) => setCurrentProduct({ ...currentProduct, actuatorModel: e.target.value })}
+                          className="w-full px-3 py-2 border rounded-lg"
+                          disabled={!availableActuatorModels.length}
+                        >
+                          <option value="">Select Model</option>
+                          {availableActuatorModels.map((model) => (
+                            <option key={model} value={model}>{model}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Standard/Special */}
+                      <div className="bg-white rounded-lg p-4 border border-gray-200">
+                        <label className="block text-sm font-medium mb-2">Configuration *</label>
+                        <select
+                          value={currentProduct.actuatorStandard || ''}
+                          onChange={(e) => setCurrentProduct({ ...currentProduct, actuatorStandard: e.target.value as 'standard' | 'special' })}
+                          className="w-full px-3 py-2 border rounded-lg"
+                        >
+                          <option value="">Select Configuration</option>
+                          <option value="standard">Standard</option>
+                          <option value="special">Special</option>
+                        </select>
+                      </div>
+
+                      {/* Handwheel */}
+                      {currentProduct.actuatorModel && (
+                        <div className="bg-white rounded-lg p-4 border border-gray-200 col-span-2">
+                          <label className="flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={currentProduct.hasHandwheel || false}
+                              onChange={(e) => setCurrentProduct({ ...currentProduct, hasHandwheel: e.target.checked })}
+                              className="mr-2 w-5 h-5"
+                            />
+                            <span className="text-sm font-medium">Add Handwheel (Optional)</span>
+                          </label>
+                          <p className="text-xs text-gray-500 mt-2">
+                            Handwheel price depends on actuator model
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {!currentProduct.hasActuator && (
+                    <div className="text-center py-8 text-gray-500">
+                      <p>Enable "Add Actuator" to configure actuator options</p>
+                    </div>
+                  )}
+                </div>
               )}
 
               {/* Action Buttons */}
@@ -789,7 +956,7 @@ const handleRatingChange = async (rating: string) => {
                 <button
                   onClick={() => {
                     setShowProductConfig(false);
-                    setCurrentProduct({ quantity: 1, hasCage: false });
+                    setCurrentProduct({ quantity: 1, hasCage: false, hasActuator: false, hasHandwheel: false });
                   }}
                   className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
                 >
@@ -809,24 +976,68 @@ const handleRatingChange = async (rating: string) => {
                     onClick={addProductToQuote}
                     className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
                   >
-                    Add to Quote (₹{currentProduct.lineTotal?.toLocaleString()})
+                    Add to Quote (₹{currentProduct.lineTotal?.toLocaleString('en-IN')})
                   </button>
                 )}
               </div>
 
               {/* Price Breakdown */}
               {currentProduct.productTotalCost && (
-                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                  <h4 className="font-semibold mb-2">Price Breakdown</h4>
-                  <div className="text-sm space-y-1">
-                    <p>Body: ₹{currentProduct.bodyTotalCost?.toFixed(2)}</p>
-                    <p>Bonnet: ₹{currentProduct.bonnetTotalCost?.toFixed(2)}</p>
-                    <p>Plug: ₹{currentProduct.plugTotalCost?.toFixed(2)}</p>
-                    <p>Seat: ₹{currentProduct.seatTotalCost?.toFixed(2)}</p>
-                    <p>Stem: ₹{currentProduct.stemTotalCost?.toFixed(2)}</p>
-                    {currentProduct.cageTotalCost && <p>Cage: ₹{currentProduct.cageTotalCost?.toFixed(2)}</p>}
-                    <p className="font-bold pt-2 border-t">Total: ₹{currentProduct.productTotalCost?.toFixed(2)}</p>
-                    <p className="font-bold">Line Total (×{currentProduct.quantity}): ₹{currentProduct.lineTotal?.toFixed(2)}</p>
+                <div className="mt-6 p-6 bg-gradient-to-br from-green-50 to-blue-50 rounded-lg border-2 border-green-200">
+                  <h4 className="font-bold text-lg mb-4 text-gray-900">💰 Price Breakdown</h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Body Sub-Assembly */}
+                    <div className="bg-white p-4 rounded-lg">
+                      <h5 className="font-semibold text-blue-900 mb-2">Body Sub-Assembly</h5>
+                      <div className="text-sm space-y-1">
+                        <p>Body: ₹{currentProduct.bodyTotalCost?.toFixed(2)}</p>
+                        <p>Bonnet: ₹{currentProduct.bonnetTotalCost?.toFixed(2)}</p>
+                        <p>Plug: ₹{currentProduct.plugTotalCost?.toFixed(2)}</p>
+                        <p>Seat: ₹{currentProduct.seatTotalCost?.toFixed(2)}</p>
+                        <p>Stem: ₹{currentProduct.stemTotalCost?.toFixed(2)}</p>
+                        {currentProduct.cageTotalCost && (
+                          <p>Cage: ₹{currentProduct.cageTotalCost?.toFixed(2)}</p>
+                        )}
+                        <p className="font-bold pt-2 border-t text-blue-900">
+                          Subtotal: ₹{currentProduct.bodySubAssemblyTotal?.toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Actuator Sub-Assembly */}
+                    {currentProduct.hasActuator && currentProduct.actuatorSubAssemblyTotal && (
+                      <div className="bg-white p-4 rounded-lg">
+                        <h5 className="font-semibold text-purple-900 mb-2">Actuator Sub-Assembly</h5>
+                        <div className="text-sm space-y-1">
+                          <p>Actuator: ₹{currentProduct.actuatorFixedPrice?.toFixed(2)}</p>
+                          {currentProduct.hasHandwheel && currentProduct.handwheelFixedPrice && (
+                            <p>Handwheel: ₹{currentProduct.handwheelFixedPrice?.toFixed(2)}</p>
+                          )}
+                          <p className="font-bold pt-2 border-t text-purple-900">
+                            Subtotal: ₹{currentProduct.actuatorSubAssemblyTotal?.toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Grand Total */}
+                  <div className="mt-4 pt-4 border-t-2 border-green-300">
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg font-bold text-gray-900">Product Total:</span>
+                      <span className="text-2xl font-bold text-green-600">
+                        ₹{currentProduct.productTotalCost?.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center mt-2">
+                      <span className="text-lg font-bold text-gray-900">
+                        Line Total (×{currentProduct.quantity}):
+                      </span>
+                      <span className="text-2xl font-bold text-green-700">
+                        ₹{currentProduct.lineTotal?.toFixed(2)}
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -834,18 +1045,21 @@ const handleRatingChange = async (rating: string) => {
           )}
 
           {/* Products List */}
-          {products.length > 0 && (
+          {products.length > 0 && !showProductConfig && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h3 className="text-lg font-bold mb-4">Products Added ({products.length})</h3>
               <div className="space-y-4">
                 {products.map((product) => (
-                  <div key={product.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div key={product.id} className="flex items-center justify-between p-4 border-2 rounded-lg hover:border-green-300">
                     <div>
                       <p className="font-semibold">{product.seriesNumber} - Size {product.size} - Rating {product.rating}</p>
-                      <p className="text-sm text-gray-600">Qty: {product.quantity} × ₹{product.productTotalCost.toFixed(2)}</p>
+                      <p className="text-sm text-gray-600">
+                        Qty: {product.quantity} | Body: ₹{product.bodySubAssemblyTotal.toFixed(2)}
+                        {product.hasActuator && ` | Actuator: ₹${product.actuatorSubAssemblyTotal?.toFixed(2)}`}
+                      </p>
                     </div>
                     <div className="flex items-center space-x-4">
-                      <p className="font-bold">₹{product.lineTotal.toLocaleString()}</p>
+                      <p className="font-bold text-lg">₹{product.lineTotal.toLocaleString('en-IN')}</p>
                       <button
                         onClick={() => removeProduct(product.id)}
                         className="text-red-600 hover:text-red-800"
@@ -859,9 +1073,9 @@ const handleRatingChange = async (rating: string) => {
               
               <button
                 onClick={() => setCurrentStep(3)}
-                className="mt-6 bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700"
+                className="mt-6 w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-medium"
               >
-                Continue to Review
+                Continue to Review →
               </button>
             </div>
           )}
@@ -882,9 +1096,18 @@ const handleRatingChange = async (rating: string) => {
             <div>
               <p className="text-sm text-gray-600 mb-2">Products ({products.length})</p>
               {products.map((product) => (
-                <p key={product.id} className="text-sm">
-                  {product.seriesNumber} - {product.size}/{product.rating} (×{product.quantity}) - ₹{product.lineTotal.toLocaleString()}
-                </p>
+                <div key={product.id} className="text-sm mb-2 p-3 bg-gray-50 rounded">
+                  <p className="font-medium">
+                    {product.seriesNumber} - {product.size}/{product.rating} (×{product.quantity})
+                  </p>
+                  <p className="text-gray-600">
+                    Body Sub-Assembly: ₹{product.bodySubAssemblyTotal.toLocaleString('en-IN')}
+                    {product.hasActuator && ` | Actuator: ₹${product.actuatorSubAssemblyTotal?.toLocaleString('en-IN')}`}
+                  </p>
+                  <p className="font-semibold text-green-700">
+                    Total: ₹{product.lineTotal.toLocaleString('en-IN')}
+                  </p>
+                </div>
               ))}
             </div>
 
@@ -938,21 +1161,21 @@ const handleRatingChange = async (rating: string) => {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span>Subtotal:</span>
-                  <span>₹{totals.subtotal.toLocaleString()}</span>
+                  <span>₹{totals.subtotal.toLocaleString('en-IN')}</span>
                 </div>
                 {discount > 0 && (
                   <div className="flex justify-between text-red-600">
                     <span>Discount ({discount}%):</span>
-                    <span>-₹{totals.discountAmount.toLocaleString()}</span>
+                    <span>-₹{totals.discountAmount.toLocaleString('en-IN')}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
                   <span>Tax ({tax}%):</span>
-                  <span>₹{totals.taxAmount.toLocaleString()}</span>
+                  <span>₹{totals.taxAmount.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between text-lg font-bold pt-2 border-t">
                   <span>Total:</span>
-                  <span>₹{totals.total.toLocaleString()}</span>
+                  <span>₹{totals.total.toLocaleString('en-IN')}</span>
                 </div>
               </div>
             </div>
@@ -968,7 +1191,7 @@ const handleRatingChange = async (rating: string) => {
             <button
               onClick={handleSaveQuote}
               disabled={loading}
-              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+              className="flex-1 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
             >
               {loading ? 'Saving...' : 'Save Quote'}
             </button>
@@ -978,3 +1201,5 @@ const handleRatingChange = async (rating: string) => {
     </div>
   );
 }
+ 
+  

@@ -9,6 +9,8 @@ export interface ExcelData {
   seatWeights: any[];
   stemWeights: any[];
   cagePrices: any[];
+  actuatorModels: any[];
+  handwheelPrices: any[];
 }
 
 export function generateExcelTemplate(): void {
@@ -38,10 +40,10 @@ export function generateExcelTemplate(): void {
   // Sheet 3: Body Weights
   const bodyWeightsData = [
     ['Series Number', 'Size', 'Rating', 'End Connect Type', 'Weight (kg)'],
-    ['91000', '1/2', '150', 'Type1', '2.5'],
-    ['91000', '1/2', '150', 'Type2', '2.8'],
-    ['91000', '3/4', '150', 'Type1', '3.2'],
-    ['91000', '1', '300', 'Type1', '4.5'],
+    ['91000', '1/2', '150', 'Flanged', '2.5'],
+    ['91000', '1/2', '150', 'Threaded', '2.8'],
+    ['91000', '3/4', '150', 'Flanged', '3.2'],
+    ['91000', '1', '300', 'Flanged', '4.5'],
   ];
   const bodyWeightsWs = XLSX.utils.aoa_to_sheet(bodyWeightsData);
   XLSX.utils.book_append_sheet(wb, bodyWeightsWs, 'Body Weights');
@@ -49,9 +51,9 @@ export function generateExcelTemplate(): void {
   // Sheet 4: Bonnet Weights
   const bonnetWeightsData = [
     ['Series Number', 'Size', 'Rating', 'Bonnet Type', 'Weight (kg)'],
-    ['91000', '1/2', '150', 'Type1', '1.5'],
-    ['91000', '1/2', '150', 'Type2', '1.8'],
-    ['91000', '3/4', '150', 'Type1', '2.2'],
+    ['91000', '1/2', '150', 'Standard', '1.5'],
+    ['91000', '1/2', '150', 'Extended', '1.8'],
+    ['91000', '3/4', '150', 'Standard', '2.2'],
   ];
   const bonnetWeightsWs = XLSX.utils.aoa_to_sheet(bonnetWeightsData);
   XLSX.utils.book_append_sheet(wb, bonnetWeightsWs, 'Bonnet Weights');
@@ -59,8 +61,8 @@ export function generateExcelTemplate(): void {
   // Sheet 5: Plug Weights
   const plugWeightsData = [
     ['Series Number', 'Size', 'Rating', 'Plug Type', 'Weight (kg)'],
-    ['91000', '1/2', '150', 'Type1', '0.5'],
-    ['91000', '1/2', '150', 'Type2', '0.6'],
+    ['91000', '1/2', '150', 'Standard', '0.5'],
+    ['91000', '1/2', '150', 'Modified', '0.6'],
   ];
   const plugWeightsWs = XLSX.utils.aoa_to_sheet(plugWeightsData);
   XLSX.utils.book_append_sheet(wb, plugWeightsWs, 'Plug Weights');
@@ -68,30 +70,59 @@ export function generateExcelTemplate(): void {
   // Sheet 6: Seat Weights
   const seatWeightsData = [
     ['Series Number', 'Size', 'Rating', 'Seat Type', 'Weight (kg)'],
-    ['91000', '1/2', '150', 'Type1', '0.4'],
-    ['91000', '1/2', '150', 'Type2', '0.5'],
+    ['91000', '1/2', '150', 'Soft Seat', '0.4'],
+    ['91000', '1/2', '150', 'Metal Seat', '0.5'],
   ];
   const seatWeightsWs = XLSX.utils.aoa_to_sheet(seatWeightsData);
   XLSX.utils.book_append_sheet(wb, seatWeightsWs, 'Seat Weights');
   
-  // Sheet 7: Stem Weights
+  // Sheet 7: Stem Weights (NO TYPE - just size and rating)
   const stemWeightsData = [
-    ['Series Number', 'Size', 'Rating', 'Stem Type', 'Weight (kg)'],
-    ['91000', '1/2', '150', 'Type1', '0.3'],
-    ['91000', '1/2', '150', 'Type2', '0.35'],
+    ['Series Number', 'Size', 'Rating', 'Weight (kg)'],
+    ['91000', '1/2', '150', '0.15'],
+    ['91000', '1/2', '300', '0.18'],
+    ['91000', '3/4', '150', '0.20'],
+    ['92000', '1', '150', '0.25'],
   ];
   const stemWeightsWs = XLSX.utils.aoa_to_sheet(stemWeightsData);
   XLSX.utils.book_append_sheet(wb, stemWeightsWs, 'Stem Weights');
   
-  // Sheet 8: Cage Prices (only for series with cage support)
+  // Sheet 8: Cage Prices by Seat Type
   const cagePricesData = [
-    ['Series Number', 'Size', 'Fixed Price'],
-    ['92000', '1/2', '5000'],
-    ['92000', '3/4', '6500'],
-    ['93000', '1', '7500'],
+    ['Series Number', 'Size', 'Seat Type', 'Fixed Price'],
+    ['92000', '1/2', 'Soft Seat', '5000'],
+    ['92000', '3/4', 'Soft Seat', '6000'],
+    ['92000', '1', 'Metal Seat', '7000'],
+    ['93000', '1/2', 'Soft Seat', '5500'],
   ];
   const cagePricesWs = XLSX.utils.aoa_to_sheet(cagePricesData);
   XLSX.utils.book_append_sheet(wb, cagePricesWs, 'Cage Prices');
+  
+  // Sheet 9: Actuator Models
+  const actuatorModelsData = [
+    ['Type', 'Series', 'Model', 'Standard/Special', 'Fixed Price', 'Active'],
+    ['Pneumatic', 'Series A', 'PA-100', 'standard', '15000', 'TRUE'],
+    ['Pneumatic', 'Series A', 'PA-200', 'standard', '18000', 'TRUE'],
+    ['Pneumatic', 'Series A', 'PA-300', 'special', '22000', 'TRUE'],
+    ['Electric', 'Series B', 'EB-100', 'standard', '25000', 'TRUE'],
+    ['Electric', 'Series B', 'EB-200', 'special', '30000', 'TRUE'],
+    ['Manual', 'Series C', 'MC-50', 'standard', '8000', 'TRUE'],
+  ];
+  const actuatorModelsWs = XLSX.utils.aoa_to_sheet(actuatorModelsData);
+  XLSX.utils.book_append_sheet(wb, actuatorModelsWs, 'Actuator Models');
+  
+  // Sheet 10: Handwheel Prices
+  const handwheelPricesData = [
+    ['Actuator Model', 'Fixed Price', 'Active'],
+    ['PA-100', '2000', 'TRUE'],
+    ['PA-200', '2500', 'TRUE'],
+    ['PA-300', '3000', 'TRUE'],
+    ['EB-100', '3500', 'TRUE'],
+    ['EB-200', '4000', 'TRUE'],
+    ['MC-50', '1500', 'TRUE'],
+  ];
+  const handwheelPricesWs = XLSX.utils.aoa_to_sheet(handwheelPricesData);
+  XLSX.utils.book_append_sheet(wb, handwheelPricesWs, 'Handwheel Prices');
   
   // Generate and download
   XLSX.writeFile(wb, 'Unicorn_Valves_Pricing_Template.xlsx');
@@ -115,6 +146,8 @@ export function parseExcelFile(file: File): Promise<ExcelData> {
           seatWeights: [],
           stemWeights: [],
           cagePrices: [],
+          actuatorModels: [],
+          handwheelPrices: [],
         };
         
         // Parse Materials
@@ -171,6 +204,20 @@ export function parseExcelFile(file: File): Promise<ExcelData> {
           const sheet = workbook.Sheets['Cage Prices'];
           const json = XLSX.utils.sheet_to_json(sheet);
           result.cagePrices = json;
+        }
+        
+        // Parse Actuator Models
+        if (workbook.SheetNames.includes('Actuator Models')) {
+          const sheet = workbook.Sheets['Actuator Models'];
+          const json = XLSX.utils.sheet_to_json(sheet);
+          result.actuatorModels = json;
+        }
+        
+        // Parse Handwheel Prices
+        if (workbook.SheetNames.includes('Handwheel Prices')) {
+          const sheet = workbook.Sheets['Handwheel Prices'];
+          const json = XLSX.utils.sheet_to_json(sheet);
+          result.handwheelPrices = json;
         }
         
         resolve(result);

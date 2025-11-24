@@ -1,4 +1,3 @@
-
 export type UserRole = 'admin' | 'employee';
 
 export interface User {
@@ -33,9 +32,11 @@ export interface Series {
   isActive: boolean;
 }
 
+// ADD SeatType HERE:
 export type EndConnectType = 'Type1' | 'Type2';
 export type BonnetType = 'Type1' | 'Type2' | 'Type3';
 export type PlugType = 'Type1' | 'Type2' | 'Type3';
+export type SeatType = 'Type1' | 'Type2' | 'Type3'; // ADD THIS LINE
 export type StemType = 'Type1' | 'Type2';
 
 export interface Material {
@@ -74,64 +75,93 @@ export interface ComponentWeight {
   weight: number;
 }
 
+// UPDATE CagePrice to include seatType
 export interface CagePrice {
   id: string;
   seriesId: string;
   size: string;
+  seatType: string; // ADD THIS - Cage price depends on seat type
   fixedPrice: number;
 }
 
+// ADD Actuator interfaces
+export interface ActuatorModel {
+  id: string;
+  type: string; // "Pneumatic", "Electric", "Manual"
+  series: string; // "Series A", "Series B"
+  model: string; // "PA-100", "EB-100"
+  standard: 'standard' | 'special';
+  fixedPrice: number;
+  isActive: boolean;
+}
+
+export interface HandwheelPrice {
+  id: string;
+  actuatorModel: string; // Reference to actuator model
+  fixedPrice: number;
+  isActive: boolean;
+}
+
 export interface QuoteProduct {
-  id: string; // Unique ID for this product in the quote
+  id: string;
   productType: ProductType;
   seriesId: string;
   seriesNumber: string;
-  
-  // Common specs
   size: string;
   rating: string;
   
-  // Body
+  // Body Sub-Assembly
   bodyEndConnectType: EndConnectType;
   bodyMaterialId: string;
   bodyWeight: number;
   bodyMaterialPrice: number;
   bodyTotalCost: number;
   
-  // Bonnet
   bonnetType: BonnetType;
   bonnetMaterialId: string;
   bonnetWeight: number;
   bonnetMaterialPrice: number;
   bonnetTotalCost: number;
   
-  // Plug
   plugType: PlugType;
   plugMaterialId: string;
   plugWeight: number;
   plugMaterialPrice: number;
   plugTotalCost: number;
   
-  // Seat
-  seatType: PlugType;
+  seatType: SeatType;
   seatMaterialId: string;
   seatWeight: number;
   seatMaterialPrice: number;
   seatTotalCost: number;
   
-  // Stem
-  stemType: StemType;
   stemMaterialId: string;
   stemWeight: number;
   stemMaterialPrice: number;
   stemTotalCost: number;
   
-  // Cage (optional)
   hasCage: boolean;
   cageFixedPrice?: number;
   cageTotalCost?: number;
   
-  // Total for this product
+  // Body Sub-Assembly Total
+  bodySubAssemblyTotal: number;
+  
+  // Actuator Sub-Assembly
+  hasActuator: boolean;
+  actuatorType?: string; // e.g., "Pneumatic", "Electric", "Manual"
+  actuatorSeries?: string; // e.g., "Series A", "Series B"
+  actuatorModel?: string; // e.g., "Model X", "Model Y"
+  actuatorStandard?: 'standard' | 'special';
+  actuatorFixedPrice?: number;
+  
+  hasHandwheel?: boolean;
+  handwheelFixedPrice?: number;
+  
+  // Actuator Sub-Assembly Total
+  actuatorSubAssemblyTotal?: number;
+  
+  // Product Totals
   productTotalCost: number;
   quantity: number;
   lineTotal: number;
