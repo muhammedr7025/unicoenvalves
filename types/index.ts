@@ -102,6 +102,35 @@ export interface HandwheelPrice {
   isActive: boolean;
 }
 
+// New interfaces for additional modules
+export interface TubingAndFittingItem {
+  id: string;
+  title: string;
+  price: number;
+}
+
+export interface TestingItem {
+  id: string;
+  title: string;
+  price: number;
+}
+
+export interface AccessoryItem {
+  id: string;
+  title: string;
+  price: number;
+  isDefault?: boolean; // For default accessories
+}
+
+// Default accessories list
+export const DEFAULT_ACCESSORIES = [
+  'Airfilter regulator',
+  'Positioner',
+  'Solenoid valve',
+  'Limit switch',
+  'Airlock',
+];
+
 export interface QuoteProduct {
   id: string;
   productType: ProductType;
@@ -109,6 +138,7 @@ export interface QuoteProduct {
   seriesNumber: string;
   size: string;
   rating: string;
+  quantity: number;
   
   // Body Sub-Assembly
   bodyEndConnectType: EndConnectType;
@@ -144,27 +174,41 @@ export interface QuoteProduct {
   cageFixedPrice?: number;
   cageTotalCost?: number;
   
-  // Body Sub-Assembly Total
   bodySubAssemblyTotal: number;
   
   // Actuator Sub-Assembly
   hasActuator: boolean;
-  actuatorType?: string; // e.g., "Pneumatic", "Electric", "Manual"
-  actuatorSeries?: string; // e.g., "Series A", "Series B"
-  actuatorModel?: string; // e.g., "Model X", "Model Y"
+  actuatorType?: string;
+  actuatorSeries?: string;
+  actuatorModel?: string;
   actuatorStandard?: 'standard' | 'special';
   actuatorFixedPrice?: number;
   
   hasHandwheel?: boolean;
   handwheelFixedPrice?: number;
   
-  // Actuator Sub-Assembly Total
   actuatorSubAssemblyTotal?: number;
   
+  // Tubing & Fitting Module
+  tubingAndFitting?: TubingAndFittingItem[];
+  tubingAndFittingTotal?: number;
+  
+  // Testing Module
+  testing?: TestingItem[];
+  testingTotal?: number;
+  
+  // Accessories Module
+  accessories?: AccessoryItem[];
+  accessoriesTotal?: number;
+  
+  // Cost Breakdown (NEW)
+  manufacturingCost: number; // Body + Actuator + Tubing + Testing
+  boughtoutItemCost: number; // Accessories total
+  unitCost: number; // Manufacturing + Boughtout
+  
   // Product Totals
-  productTotalCost: number;
-  quantity: number;
-  lineTotal: number;
+  productTotalCost: number; // Same as unitCost
+  lineTotal: number; // unitCost × quantity
 }
 
 export type QuoteStatus = 'draft' | 'sent' | 'approved' | 'rejected';

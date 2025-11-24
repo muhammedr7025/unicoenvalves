@@ -24,7 +24,16 @@ import {
   getActuatorPrice,
   getHandwheelPrice,
 } from '@/lib/firebase/productConfigHelper';
-import { Customer, Material, Series, QuoteProduct } from '@/types';
+import { 
+  Customer, 
+  Material, 
+  Series, 
+  QuoteProduct,
+  TubingAndFittingItem,
+  TestingItem,
+  AccessoryItem,
+  DEFAULT_ACCESSORIES,
+} from '@/types';
 import { calculateQuoteTotals } from '@/utils/priceCalculator';
 
 export default function NewQuotePage() {
@@ -42,6 +51,9 @@ export default function NewQuotePage() {
     hasCage: false,
     hasActuator: false,
     hasHandwheel: false,
+    tubingAndFitting: [],
+    testing: [],
+    accessories: [],
   });
 
   // Dynamic options for body sub-assembly
@@ -56,6 +68,19 @@ export default function NewQuotePage() {
   const [availableActuatorTypes, setAvailableActuatorTypes] = useState<string[]>([]);
   const [availableActuatorSeries, setAvailableActuatorSeries] = useState<string[]>([]);
   const [availableActuatorModels, setAvailableActuatorModels] = useState<string[]>([]);
+
+  // Additional modules
+  const [tubingAndFittingItems, setTubingAndFittingItems] = useState<TubingAndFittingItem[]>([]);
+  const [testingItems, setTestingItems] = useState<TestingItem[]>([]);
+  const [accessoryItems, setAccessoryItems] = useState<AccessoryItem[]>([]);
+
+  // Temporary states for adding new items
+  const [newTubingTitle, setNewTubingTitle] = useState('');
+  const [newTubingPrice, setNewTubingPrice] = useState(0);
+  const [newTestingTitle, setNewTestingTitle] = useState('');
+  const [newTestingPrice, setNewTestingPrice] = useState(0);
+  const [newAccessoryTitle, setNewAccessoryTitle] = useState('');
+  const [newAccessoryPrice, setNewAccessoryPrice] = useState(0);
 
   const [discount, setDiscount] = useState(0);
   const [tax, setTax] = useState(18);
@@ -160,6 +185,9 @@ export default function NewQuotePage() {
       hasCage: selectedSeries.hasCage,
       hasActuator: false,
       hasHandwheel: false,
+      tubingAndFitting: [],
+      testing: [],
+      accessories: [],
     });
     
     setAvailableSizes([]);
@@ -188,6 +216,87 @@ export default function NewQuotePage() {
 
     if (currentProduct.seriesNumber && currentProduct.size) {
       await fetchDependentOptions(currentProduct.seriesNumber, currentProduct.size, rating);
+    }
+  };
+
+  // Tubing & Fitting functions
+  const addTubingAndFittingItem = () => {
+    if (!newTubingTitle.trim() || newTubingPrice <= 0) {
+      alert('Please enter both title and price');
+      return;
+    }
+
+    const newItem: TubingAndFittingItem = {
+      id: `tubing-${Date.now()}`,
+      title: newTubingTitle.trim(),
+      price: newTubingPrice,
+    };
+
+    setTubingAndFittingItems([...tubingAndFittingItems, newItem]);
+    setNewTubingTitle('');
+    setNewTubingPrice(0);
+  };
+
+  const removeTubingAndFittingItem = (id: string) => {
+    setTubingAndFittingItems(tubingAndFittingItems.filter(item => item.id !== id));
+  };
+
+  // Testing functions
+  const addTestingItem = () => {
+    if (!newTestingTitle.trim() || newTestingPrice <= 0) {
+      alert('Please enter both title and price');
+      return;
+    }
+
+    const newItem: TestingItem = {
+      id: `testing-${Date.now()}`,
+      title: newTestingTitle.trim(),
+      price: newTestingPrice,
+    };
+
+    setTestingItems([...testingItems, newItem]);
+    setNewTestingTitle('');
+    setNewTestingPrice(0);
+  };
+
+  const removeTestingItem = (id: string) => {
+    setTestingItems(testingItems.filter(item => item.id !== id));
+  };
+
+  // Accessories functions
+  const addAccessoryItem = (title: string, price: number, isDefault: boolean = false) => {
+    const newItem: AccessoryItem = {
+      id: `accessory-${Date.now()}-${Math.random()}`,
+      title: title.trim(),
+      price: price,
+      isDefault: isDefault,
+    };
+
+    setAccessoryItems([...accessoryItems, newItem]);
+  };
+
+  const addCustomAccessory = () => {
+    if (!newAccessoryTitle.trim() || newAccessoryPrice <= 0) {
+      alert('Please enter both title and price');
+      return;
+    }
+
+    addAccessoryItem(newAccessoryTitle, newAccessoryPrice, false);
+    setNewAccessoryTitle('');
+    setNewAccessoryPrice(0);
+  };
+
+  const removeAccessoryItem = (id: string) => {
+    setAccessoryItems(accessoryItems.filter(item => item.id !== id));
+  };
+
+  const toggleDefaultAccessory = (title: string, price: number) => {
+    const exists = accessoryItems.find(item => item.title === title);
+    
+    if (exists) {
+      removeAccessoryItem(exists.id);
+    } else {
+      addAccessoryItem(title, price, true);
     }
   };
 
@@ -307,7 +416,20 @@ export default function NewQuotePage() {
         }
       }
 
-      const productTotalCost = bodySubAssemblyTotal + actuatorSubAssemblyTotal;
+      // Calculate additional modules totals
+      const tubingAndFittingTotal = tubingAndFittingItems.reduce((sum, item) => sum + item.price, 0);
+      const testingTotal = testingItems.reduce((sum, item) => sum + item.price, 0);
+      const accessoriesTotal = accessoryItems.reduce((sum, item) => sum + item.price, 0);
+
+      // Cost Breakdown Calculations
+      const manufacturingCost = bodySubAssemblyTotal + 
+                               (actuatorSubAssemblyTotal || 0) + 
+                               tubingAndFittingTotal + 
+                               testingTotal;
+
+      const boughtoutItemCost = accessoriesTotal;
+      const unitCost = manufacturingCost + boughtoutItemCost;
+      const productTotalCost = unitCost;
 
       setCurrentProduct({
         ...currentProduct,
@@ -334,7 +456,17 @@ export default function NewQuotePage() {
         actuatorFixedPrice: currentProduct.hasActuator ? actuatorFixedPrice : undefined,
         handwheelFixedPrice: currentProduct.hasHandwheel ? handwheelFixedPrice : undefined,
         actuatorSubAssemblyTotal: currentProduct.hasActuator ? actuatorSubAssemblyTotal : undefined,
-        // Total
+        // Additional modules
+        tubingAndFitting: tubingAndFittingItems,
+        tubingAndFittingTotal,
+        testing: testingItems,
+        testingTotal,
+        accessories: accessoryItems,
+        accessoriesTotal,
+        // Cost breakdown
+        manufacturingCost,
+        boughtoutItemCost,
+        unitCost,
         productTotalCost,
         lineTotal: productTotalCost * (currentProduct.quantity || 1),
       });
@@ -353,14 +485,12 @@ export default function NewQuotePage() {
       alert('Please calculate the price first');
       return;
     }
-  
-    const { id, ...productData } = currentProduct; // Remove id if exists
-    
+
     const product: QuoteProduct = {
+      ...currentProduct,
       id: `product-${Date.now()}`,
-      ...(productData as Required<Omit<QuoteProduct, 'id'>>),
     } as QuoteProduct;
-  
+
     setProducts([...products, product]);
     
     // Reset form
@@ -369,7 +499,13 @@ export default function NewQuotePage() {
       hasCage: false,
       hasActuator: false,
       hasHandwheel: false,
+      tubingAndFitting: [],
+      testing: [],
+      accessories: [],
     });
+    setTubingAndFittingItems([]);
+    setTestingItems([]);
+    setAccessoryItems([]);
     setShowProductConfig(false);
     setAvailableSizes([]);
     setAvailableRatings([]);
@@ -423,6 +559,7 @@ export default function NewQuotePage() {
           seriesNumber: p.seriesNumber,
           size: p.size,
           rating: p.rating,
+          quantity: p.quantity,
           // Body sub-assembly
           bodyEndConnectType: p.bodyEndConnectType,
           bodyMaterialId: p.bodyMaterialId,
@@ -462,9 +599,19 @@ export default function NewQuotePage() {
           hasHandwheel: p.hasHandwheel || false,
           handwheelFixedPrice: p.handwheelFixedPrice || null,
           actuatorSubAssemblyTotal: p.actuatorSubAssemblyTotal || 0,
+          // Additional modules
+          tubingAndFitting: p.tubingAndFitting || [],
+          tubingAndFittingTotal: p.tubingAndFittingTotal || 0,
+          testing: p.testing || [],
+          testingTotal: p.testingTotal || 0,
+          accessories: p.accessories || [],
+          accessoriesTotal: p.accessoriesTotal || 0,
+          // Cost breakdown
+          manufacturingCost: p.manufacturingCost,
+          boughtoutItemCost: p.boughtoutItemCost,
+          unitCost: p.unitCost,
           // Totals
           productTotalCost: p.productTotalCost,
-          quantity: p.quantity,
           lineTotal: p.lineTotal,
         })),
         subtotal: totals.subtotal,
@@ -485,6 +632,7 @@ export default function NewQuotePage() {
       alert('Quote created successfully!');
       router.push('/employee');
     } catch (error: any) {
+      console.error('Save error:', error);
       alert('Failed to create quote: ' + error.message);
     } finally {
       setLoading(false);
@@ -548,8 +696,9 @@ export default function NewQuotePage() {
         </div>
       )}
 
-     {/* Step 2: Add Products */}
-     {currentStep === 2 && (
+      {/* Step 2: Add Products - CONTINUED IN NEXT MESSAGE DUE TO LENGTH */}
+      {/* Step 2: Add Products */}
+      {currentStep === 2 && (
         <div className="space-y-6">
           {/* Selected Customer Info */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -808,18 +957,6 @@ export default function NewQuotePage() {
                         </div>
                       </div>
                     )}
-
-                    {/* Quantity */}
-                    <div className="bg-white rounded-lg p-4 border border-gray-200">
-                      <h4 className="font-semibold mb-3 text-gray-900">Quantity</h4>
-                      <input
-                        type="number"
-                        min="1"
-                        value={currentProduct.quantity || 1}
-                        onChange={(e) => setCurrentProduct({ ...currentProduct, quantity: parseInt(e.target.value) || 1 })}
-                        className="w-full px-3 py-2 border rounded-lg"
-                      />
-                    </div>
                   </div>
                 </div>
               )}
@@ -951,12 +1088,278 @@ export default function NewQuotePage() {
                 </div>
               )}
 
+              {/* TUBING & FITTING MODULE */}
+              {currentProduct.size && currentProduct.rating && (
+                <div className="border-2 border-orange-200 rounded-lg p-6 mb-6 bg-orange-50">
+                  <h3 className="text-xl font-bold mb-4 text-orange-900">🔧 Tubing & Fitting</h3>
+                  
+                  {/* Add New Item */}
+                  <div className="bg-white rounded-lg p-4 mb-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium mb-2">Title</label>
+                        <input
+                          type="text"
+                          value={newTubingTitle}
+                          onChange={(e) => setNewTubingTitle(e.target.value)}
+                          placeholder="e.g., Stainless Steel Tubing 1/4 inch"
+                          className="w-full px-3 py-2 border rounded-lg"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Price (₹)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={newTubingPrice}
+                          onChange={(e) => setNewTubingPrice(parseFloat(e.target.value) || 0)}
+                          className="w-full px-3 py-2 border rounded-lg"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      onClick={addTubingAndFittingItem}
+                      className="mt-3 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 text-sm"
+                    >
+                      + Add Item
+                    </button>
+                  </div>
+
+                  {/* Items List */}
+                  {tubingAndFittingItems.length > 0 && (
+                    <div className="space-y-2">
+                      {tubingAndFittingItems.map((item) => (
+                        <div key={item.id} className="bg-white p-3 rounded-lg flex justify-between items-center">
+                          <div>
+                            <p className="font-medium">{item.title}</p>
+                            <p className="text-sm text-gray-600">₹{item.price.toLocaleString('en-IN')}</p>
+                          </div>
+                          <button
+                            onClick={() => removeTubingAndFittingItem(item.id)}
+                            className="text-red-600 hover:text-red-800 text-sm"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                      <div className="bg-orange-100 p-3 rounded-lg">
+                        <p className="font-bold text-orange-900">
+                          Tubing & Fitting Total: ₹{tubingAndFittingItems.reduce((sum, item) => sum + item.price, 0).toLocaleString('en-IN')}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {tubingAndFittingItems.length === 0 && (
+                    <div className="text-center py-4 text-gray-500">
+                      <p className="text-sm">No items added yet</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TESTING MODULE */}
+              {currentProduct.size && currentProduct.rating && (
+                <div className="border-2 border-teal-200 rounded-lg p-6 mb-6 bg-teal-50">
+                  <h3 className="text-xl font-bold mb-4 text-teal-900">🔬 Testing</h3>
+                  
+                  {/* Add New Item */}
+                  <div className="bg-white rounded-lg p-4 mb-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium mb-2">Test Title</label>
+                        <input
+                          type="text"
+                          value={newTestingTitle}
+                          onChange={(e) => setNewTestingTitle(e.target.value)}
+                          placeholder="e.g., Hydrostatic Pressure Test"
+                          className="w-full px-3 py-2 border rounded-lg"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Price (₹)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={newTestingPrice}
+                          onChange={(e) => setNewTestingPrice(parseFloat(e.target.value) || 0)}
+                          className="w-full px-3 py-2 border rounded-lg"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      onClick={addTestingItem}
+                      className="mt-3 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 text-sm"
+                    >
+                      + Add Test
+                    </button>
+                  </div>
+
+                  {/* Items List */}
+                  {testingItems.length > 0 && (
+                    <div className="space-y-2">
+                      {testingItems.map((item) => (
+                        <div key={item.id} className="bg-white p-3 rounded-lg flex justify-between items-center">
+                          <div>
+                            <p className="font-medium">{item.title}</p>
+                            <p className="text-sm text-gray-600">₹{item.price.toLocaleString('en-IN')}</p>
+                          </div>
+                          <button
+                            onClick={() => removeTestingItem(item.id)}
+                            className="text-red-600 hover:text-red-800 text-sm"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                      <div className="bg-teal-100 p-3 rounded-lg">
+                        <p className="font-bold text-teal-900">
+                          Testing Total: ₹{testingItems.reduce((sum, item) => sum + item.price, 0).toLocaleString('en-IN')}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {testingItems.length === 0 && (
+                    <div className="text-center py-4 text-gray-500">
+                      <p className="text-sm">No tests added yet</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ACCESSORIES MODULE */}
+              {currentProduct.size && currentProduct.rating && (
+                <div className="border-2 border-pink-200 rounded-lg p-6 mb-6 bg-pink-50">
+                  <h3 className="text-xl font-bold mb-4 text-pink-900">🎯 Accessories</h3>
+                  
+                  {/* Default Accessories - Checkboxes */}
+                  <div className="bg-white rounded-lg p-4 mb-4">
+                    <p className="text-sm font-medium mb-3">Default Accessories (Optional)</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {DEFAULT_ACCESSORIES.map((title) => {
+                        const isChecked = accessoryItems.some(item => item.title === title);
+                        return (
+                          <label key={title} className="flex items-center cursor-pointer p-2 hover:bg-gray-50 rounded">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                const defaultPrice = 1000; // Set a default price or prompt user
+                                toggleDefaultAccessory(title, defaultPrice);
+                              }}
+                              className="mr-2 w-4 h-4"
+                            />
+                            <span className="text-sm">{title}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Add Custom Accessory */}
+                  <div className="bg-white rounded-lg p-4 mb-4">
+                    <p className="text-sm font-medium mb-3">Add Custom Accessory</p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="md:col-span-2">
+                        <label className="block text-sm mb-2">Title</label>
+                        <input
+                          type="text"
+                          value={newAccessoryTitle}
+                          onChange={(e) => setNewAccessoryTitle(e.target.value)}
+                          placeholder="e.g., Custom Mounting Bracket"
+                          className="w-full px-3 py-2 border rounded-lg"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm mb-2">Price (₹)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={newAccessoryPrice}
+                          onChange={(e) => setNewAccessoryPrice(parseFloat(e.target.value) || 0)}
+                          className="w-full px-3 py-2 border rounded-lg"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      onClick={addCustomAccessory}
+                      className="mt-3 bg-pink-600 text-white px-4 py-2 rounded-lg hover:bg-pink-700 text-sm"
+                    >
+                      + Add Custom Accessory
+                    </button>
+                  </div>
+
+                  {/* Items List */}
+                  {accessoryItems.length > 0 && (
+                    <div className="space-y-2">
+                      {accessoryItems.map((item) => (
+                        <div key={item.id} className="bg-white p-3 rounded-lg flex justify-between items-center">
+                          <div>
+                            <p className="font-medium">
+                              {item.title}
+                              {item.isDefault && <span className="ml-2 text-xs bg-pink-200 text-pink-800 px-2 py-1 rounded">Default</span>}
+                            </p>
+                            <p className="text-sm text-gray-600">₹{item.price.toLocaleString('en-IN')}</p>
+                          </div>
+                          <button
+                            onClick={() => removeAccessoryItem(item.id)}
+                            className="text-red-600 hover:text-red-800 text-sm"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                      <div className="bg-pink-100 p-3 rounded-lg">
+                        <p className="font-bold text-pink-900">
+                          Accessories Total: ₹{accessoryItems.reduce((sum, item) => sum + item.price, 0).toLocaleString('en-IN')}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {accessoryItems.length === 0 && (
+                    <div className="text-center py-4 text-gray-500">
+                      <p className="text-sm">No accessories selected</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* QUANTITY - Moved here after all modules */}
+              {currentProduct.size && currentProduct.rating && (
+                <div className="bg-white rounded-lg p-4 border-2 border-gray-300 mb-6">
+                  <label className="block text-sm font-medium mb-2">Product Quantity *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={currentProduct.quantity || 1}
+                    onChange={(e) => setCurrentProduct({ ...currentProduct, quantity: parseInt(e.target.value) || 1 })}
+                    className="w-full px-4 py-3 border rounded-lg text-lg font-semibold"
+                  />
+                  <p className="text-xs text-gray-500 mt-2">
+                    * Quantity applies to the entire configured product with all modules
+                  </p>
+                </div>
+              )}
+
               {/* Action Buttons */}
-              <div className="flex space-x-4">
+              <div className="flex space-x-4 mb-6">
                 <button
                   onClick={() => {
                     setShowProductConfig(false);
-                    setCurrentProduct({ quantity: 1, hasCage: false, hasActuator: false, hasHandwheel: false });
+                    setCurrentProduct({ 
+                      quantity: 1, 
+                      hasCage: false, 
+                      hasActuator: false, 
+                      hasHandwheel: false,
+                      tubingAndFitting: [],
+                      testing: [],
+                      accessories: [],
+                    });
+                    setTubingAndFittingItems([]);
+                    setTestingItems([]);
+                    setAccessoryItems([]);
                   }}
                   className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
                 >
@@ -981,62 +1384,191 @@ export default function NewQuotePage() {
                 )}
               </div>
 
+              {/* CONTINUE IN NEXT MESSAGE WITH PRICE BREAKDOWN */}
               {/* Price Breakdown */}
               {currentProduct.productTotalCost && (
                 <div className="mt-6 p-6 bg-gradient-to-br from-green-50 to-blue-50 rounded-lg border-2 border-green-200">
-                  <h4 className="font-bold text-lg mb-4 text-gray-900">💰 Price Breakdown</h4>
+                  <h4 className="font-bold text-xl mb-6 text-gray-900">💰 Complete Price Breakdown</h4>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
                     {/* Body Sub-Assembly */}
-                    <div className="bg-white p-4 rounded-lg">
-                      <h5 className="font-semibold text-blue-900 mb-2">Body Sub-Assembly</h5>
+                    <div className="bg-white p-4 rounded-lg shadow-sm">
+                      <h5 className="font-semibold text-blue-900 mb-3 flex items-center">
+                        <span className="text-lg mr-2">🔧</span>
+                        Body Sub-Assembly
+                      </h5>
                       <div className="text-sm space-y-1">
-                        <p>Body: ₹{currentProduct.bodyTotalCost?.toFixed(2)}</p>
-                        <p>Bonnet: ₹{currentProduct.bonnetTotalCost?.toFixed(2)}</p>
-                        <p>Plug: ₹{currentProduct.plugTotalCost?.toFixed(2)}</p>
-                        <p>Seat: ₹{currentProduct.seatTotalCost?.toFixed(2)}</p>
-                        <p>Stem: ₹{currentProduct.stemTotalCost?.toFixed(2)}</p>
+                        <p className="flex justify-between">
+                          <span>Body:</span>
+                          <span>₹{currentProduct.bodyTotalCost?.toFixed(2)}</span>
+                        </p>
+                        <p className="flex justify-between">
+                          <span>Bonnet:</span>
+                          <span>₹{currentProduct.bonnetTotalCost?.toFixed(2)}</span>
+                        </p>
+                        <p className="flex justify-between">
+                          <span>Plug:</span>
+                          <span>₹{currentProduct.plugTotalCost?.toFixed(2)}</span>
+                        </p>
+                        <p className="flex justify-between">
+                          <span>Seat:</span>
+                          <span>₹{currentProduct.seatTotalCost?.toFixed(2)}</span>
+                        </p>
+                        <p className="flex justify-between">
+                          <span>Stem:</span>
+                          <span>₹{currentProduct.stemTotalCost?.toFixed(2)}</span>
+                        </p>
                         {currentProduct.cageTotalCost && (
-                          <p>Cage: ₹{currentProduct.cageTotalCost?.toFixed(2)}</p>
+                          <p className="flex justify-between">
+                            <span>Cage:</span>
+                            <span>₹{currentProduct.cageTotalCost?.toFixed(2)}</span>
+                          </p>
                         )}
-                        <p className="font-bold pt-2 border-t text-blue-900">
-                          Subtotal: ₹{currentProduct.bodySubAssemblyTotal?.toFixed(2)}
+                        <p className="flex justify-between font-bold pt-2 border-t text-blue-900">
+                          <span>Subtotal:</span>
+                          <span>₹{currentProduct.bodySubAssemblyTotal?.toFixed(2)}</span>
                         </p>
                       </div>
                     </div>
 
                     {/* Actuator Sub-Assembly */}
                     {currentProduct.hasActuator && currentProduct.actuatorSubAssemblyTotal && (
-                      <div className="bg-white p-4 rounded-lg">
-                        <h5 className="font-semibold text-purple-900 mb-2">Actuator Sub-Assembly</h5>
+                      <div className="bg-white p-4 rounded-lg shadow-sm">
+                        <h5 className="font-semibold text-purple-900 mb-3 flex items-center">
+                          <span className="text-lg mr-2">⚙️</span>
+                          Actuator Sub-Assembly
+                        </h5>
                         <div className="text-sm space-y-1">
-                          <p>Actuator: ₹{currentProduct.actuatorFixedPrice?.toFixed(2)}</p>
+                          <p className="flex justify-between">
+                            <span>Actuator:</span>
+                            <span>₹{currentProduct.actuatorFixedPrice?.toFixed(2)}</span>
+                          </p>
                           {currentProduct.hasHandwheel && currentProduct.handwheelFixedPrice && (
-                            <p>Handwheel: ₹{currentProduct.handwheelFixedPrice?.toFixed(2)}</p>
+                            <p className="flex justify-between">
+                              <span>Handwheel:</span>
+                              <span>₹{currentProduct.handwheelFixedPrice?.toFixed(2)}</span>
+                            </p>
                           )}
-                          <p className="font-bold pt-2 border-t text-purple-900">
-                            Subtotal: ₹{currentProduct.actuatorSubAssemblyTotal?.toFixed(2)}
+                          <p className="flex justify-between font-bold pt-2 border-t text-purple-900">
+                            <span>Subtotal:</span>
+                            <span>₹{currentProduct.actuatorSubAssemblyTotal?.toFixed(2)}</span>
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Tubing & Fitting */}
+                    {currentProduct.tubingAndFittingTotal && currentProduct.tubingAndFittingTotal > 0 && (
+                      <div className="bg-white p-4 rounded-lg shadow-sm">
+                        <h5 className="font-semibold text-orange-900 mb-3 flex items-center">
+                          <span className="text-lg mr-2">🔧</span>
+                          Tubing & Fitting
+                        </h5>
+                        <div className="text-sm space-y-1">
+                          {currentProduct.tubingAndFitting?.map((item) => (
+                            <p key={item.id} className="flex justify-between">
+                              <span className="truncate mr-2">{item.title}:</span>
+                              <span>₹{item.price.toFixed(2)}</span>
+                            </p>
+                          ))}
+                          <p className="flex justify-between font-bold pt-2 border-t text-orange-900">
+                            <span>Subtotal:</span>
+                            <span>₹{currentProduct.tubingAndFittingTotal?.toFixed(2)}</span>
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Testing */}
+                    {currentProduct.testingTotal && currentProduct.testingTotal > 0 && (
+                      <div className="bg-white p-4 rounded-lg shadow-sm">
+                        <h5 className="font-semibold text-teal-900 mb-3 flex items-center">
+                          <span className="text-lg mr-2">🔬</span>
+                          Testing
+                        </h5>
+                        <div className="text-sm space-y-1">
+                          {currentProduct.testing?.map((item) => (
+                            <p key={item.id} className="flex justify-between">
+                              <span className="truncate mr-2">{item.title}:</span>
+                              <span>₹{item.price.toFixed(2)}</span>
+                            </p>
+                          ))}
+                          <p className="flex justify-between font-bold pt-2 border-t text-teal-900">
+                            <span>Subtotal:</span>
+                            <span>₹{currentProduct.testingTotal?.toFixed(2)}</span>
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Accessories */}
+                    {currentProduct.accessoriesTotal && currentProduct.accessoriesTotal > 0 && (
+                      <div className="bg-white p-4 rounded-lg shadow-sm">
+                        <h5 className="font-semibold text-pink-900 mb-3 flex items-center">
+                          <span className="text-lg mr-2">🎯</span>
+                          Accessories
+                        </h5>
+                        <div className="text-sm space-y-1">
+                          {currentProduct.accessories?.map((item) => (
+                            <p key={item.id} className="flex justify-between">
+                              <span className="truncate mr-2">{item.title}:</span>
+                              <span>₹{item.price.toFixed(2)}</span>
+                            </p>
+                          ))}
+                          <p className="flex justify-between font-bold pt-2 border-t text-pink-900">
+                            <span>Subtotal:</span>
+                            <span>₹{currentProduct.accessoriesTotal?.toFixed(2)}</span>
                           </p>
                         </div>
                       </div>
                     )}
                   </div>
 
-                  {/* Grand Total */}
-                  <div className="mt-4 pt-4 border-t-2 border-green-300">
-                    <div className="flex justify-between items-center">
-                      <span className="text-lg font-bold text-gray-900">Product Total:</span>
-                      <span className="text-2xl font-bold text-green-600">
-                        ₹{currentProduct.productTotalCost?.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center mt-2">
-                      <span className="text-lg font-bold text-gray-900">
-                        Line Total (×{currentProduct.quantity}):
-                      </span>
-                      <span className="text-2xl font-bold text-green-700">
-                        ₹{currentProduct.lineTotal?.toFixed(2)}
-                      </span>
+                  {/* Cost Summary */}
+                  <div className="bg-gradient-to-r from-blue-100 to-green-100 p-6 rounded-lg border-2 border-blue-300">
+                    <h5 className="font-bold text-lg mb-4 text-gray-900">📊 Cost Summary</h5>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center text-base">
+                        <span className="font-semibold text-gray-700">Manufacturing Cost:</span>
+                        <span className="font-bold text-blue-700">
+                          ₹{currentProduct.manufacturingCost?.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-600 pl-4">
+                        (Body + Actuator + Tubing & Fitting + Testing)
+                      </p>
+
+                      <div className="flex justify-between items-center text-base pt-2">
+                        <span className="font-semibold text-gray-700">Boughtout Item Cost:</span>
+                        <span className="font-bold text-pink-700">
+                          ₹{currentProduct.boughtoutItemCost?.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-600 pl-4">
+                        (Accessories)
+                      </p>
+
+                      <div className="flex justify-between items-center text-lg pt-4 border-t-2 border-gray-400">
+                        <span className="font-bold text-gray-900">Unit Cost:</span>
+                        <span className="font-bold text-green-700 text-xl">
+                          ₹{currentProduct.unitCost?.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-600 pl-4">
+                        (Manufacturing Cost + Boughtout Item Cost)
+                      </p>
+
+                      <div className="flex justify-between items-center text-xl pt-4 border-t-2 border-green-400">
+                        <span className="font-bold text-gray-900">Quantity:</span>
+                        <span className="font-bold text-gray-900">×{currentProduct.quantity}</span>
+                      </div>
+
+                      <div className="flex justify-between items-center text-2xl pt-4 border-t-4 border-green-600">
+                        <span className="font-bold text-gray-900">Line Total:</span>
+                        <span className="font-bold text-green-600">
+                          ₹{currentProduct.lineTotal?.toLocaleString('en-IN')}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1051,18 +1583,23 @@ export default function NewQuotePage() {
               <div className="space-y-4">
                 {products.map((product) => (
                   <div key={product.id} className="flex items-center justify-between p-4 border-2 rounded-lg hover:border-green-300">
-                    <div>
-                      <p className="font-semibold">{product.seriesNumber} - Size {product.size} - Rating {product.rating}</p>
-                      <p className="text-sm text-gray-600">
-                        Qty: {product.quantity} | Body: ₹{product.bodySubAssemblyTotal.toFixed(2)}
-                        {product.hasActuator && ` | Actuator: ₹${product.actuatorSubAssemblyTotal?.toFixed(2)}`}
-                      </p>
+                    <div className="flex-1">
+                      <p className="font-semibold text-lg">{product.seriesNumber} - Size {product.size} - Rating {product.rating}</p>
+                      <div className="text-sm text-gray-600 mt-2 space-y-1">
+                        <p>Quantity: {product.quantity}</p>
+                        <p>Manufacturing Cost: ₹{product.manufacturingCost.toLocaleString('en-IN')}</p>
+                        <p>Boughtout Items: ₹{product.boughtoutItemCost.toLocaleString('en-IN')}</p>
+                        <p className="font-semibold text-green-700">Unit Cost: ₹{product.unitCost.toLocaleString('en-IN')}</p>
+                      </div>
                     </div>
                     <div className="flex items-center space-x-4">
-                      <p className="font-bold text-lg">₹{product.lineTotal.toLocaleString('en-IN')}</p>
+                      <div className="text-right">
+                        <p className="text-xs text-gray-500">Line Total</p>
+                        <p className="font-bold text-2xl text-green-600">₹{product.lineTotal.toLocaleString('en-IN')}</p>
+                      </div>
                       <button
                         onClick={() => removeProduct(product.id)}
-                        className="text-red-600 hover:text-red-800"
+                        className="text-red-600 hover:text-red-800 px-3 py-2 border border-red-300 rounded hover:bg-red-50"
                       >
                         Remove
                       </button>
@@ -1073,7 +1610,7 @@ export default function NewQuotePage() {
               
               <button
                 onClick={() => setCurrentStep(3)}
-                className="mt-6 w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-medium"
+                className="mt-6 w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-medium text-lg"
               >
                 Continue to Review →
               </button>
@@ -1090,30 +1627,56 @@ export default function NewQuotePage() {
           <div className="space-y-4 mb-6">
             <div>
               <p className="text-sm text-gray-600">Customer</p>
-              <p className="font-semibold">{selectedCustomer?.name}</p>
+              <p className="font-semibold text-lg">{selectedCustomer?.name}</p>
             </div>
             
             <div>
               <p className="text-sm text-gray-600 mb-2">Products ({products.length})</p>
               {products.map((product) => (
-                <div key={product.id} className="text-sm mb-2 p-3 bg-gray-50 rounded">
-                  <p className="font-medium">
+                <div key={product.id} className="text-sm mb-3 p-4 bg-gray-50 rounded-lg border">
+                  <p className="font-medium text-base mb-2">
                     {product.seriesNumber} - {product.size}/{product.rating} (×{product.quantity})
                   </p>
-                  <p className="text-gray-600">
-                    Body Sub-Assembly: ₹{product.bodySubAssemblyTotal.toLocaleString('en-IN')}
-                    {product.hasActuator && ` | Actuator: ₹${product.actuatorSubAssemblyTotal?.toLocaleString('en-IN')}`}
-                  </p>
-                  <p className="font-semibold text-green-700">
-                    Total: ₹{product.lineTotal.toLocaleString('en-IN')}
-                  </p>
+                  <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+                    <p>Body Sub-Assembly: ₹{product.bodySubAssemblyTotal.toLocaleString('en-IN')}</p>
+                    {product.hasActuator && (
+                      <p>Actuator: ₹{product.actuatorSubAssemblyTotal?.toLocaleString('en-IN')}</p>
+                    )}
+                    {product.tubingAndFittingTotal && product.tubingAndFittingTotal > 0 && (
+                      <p>Tubing & Fitting: ₹{product.tubingAndFittingTotal.toLocaleString('en-IN')}</p>
+                    )}
+                    {product.testingTotal && product.testingTotal > 0 && (
+                      <p>Testing: ₹{product.testingTotal.toLocaleString('en-IN')}</p>
+                    )}
+                    {product.accessoriesTotal && product.accessoriesTotal > 0 && (
+                      <p>Accessories: ₹{product.accessoriesTotal.toLocaleString('en-IN')}</p>
+                    )}
+                  </div>
+                  <div className="mt-3 pt-3 border-t grid grid-cols-2 gap-2">
+                    <div>
+                      <p className="text-xs text-gray-500">Manufacturing Cost</p>
+                      <p className="font-semibold text-blue-700">₹{product.manufacturingCost.toLocaleString('en-IN')}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Boughtout Items</p>
+                      <p className="font-semibold text-pink-700">₹{product.boughtoutItemCost.toLocaleString('en-IN')}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Unit Cost</p>
+                      <p className="font-semibold text-green-700">₹{product.unitCost.toLocaleString('en-IN')}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Line Total</p>
+                      <p className="font-bold text-green-700 text-lg">₹{product.lineTotal.toLocaleString('en-IN')}</p>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm mb-1">Discount (%)</label>
+                <label className="block text-sm mb-1 font-medium">Discount (%)</label>
                 <input
                   type="number"
                   min="0"
@@ -1124,7 +1687,7 @@ export default function NewQuotePage() {
                 />
               </div>
               <div>
-                <label className="block text-sm mb-1">Tax (%)</label>
+                <label className="block text-sm mb-1 font-medium">Tax (%)</label>
                 <input
                   type="number"
                   min="0"
@@ -1136,17 +1699,18 @@ export default function NewQuotePage() {
             </div>
 
             <div>
-              <label className="block text-sm mb-1">Notes</label>
+              <label className="block text-sm mb-1 font-medium">Notes</label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg"
                 rows={3}
+                placeholder="Add any special instructions or notes..."
               />
             </div>
 
             <div>
-              <label className="block text-sm mb-1">Status</label>
+              <label className="block text-sm mb-1 font-medium">Status</label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as 'draft' | 'sent')}
@@ -1157,25 +1721,27 @@ export default function NewQuotePage() {
               </select>
             </div>
 
-            <div className="pt-4 border-t">
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span>Subtotal:</span>
-                  <span>₹{totals.subtotal.toLocaleString('en-IN')}</span>
-                </div>
-                {discount > 0 && (
-                  <div className="flex justify-between text-red-600">
-                    <span>Discount ({discount}%):</span>
-                    <span>-₹{totals.discountAmount.toLocaleString('en-IN')}</span>
+            <div className="pt-6 border-t-2">
+              <div className="bg-gradient-to-r from-gray-50 to-green-50 p-6 rounded-lg">
+                <div className="space-y-3">
+                  <div className="flex justify-between text-lg">
+                    <span className="font-medium">Subtotal:</span>
+                    <span className="font-semibold">₹{totals.subtotal.toLocaleString('en-IN')}</span>
                   </div>
-                )}
-                <div className="flex justify-between">
-                  <span>Tax ({tax}%):</span>
-                  <span>₹{totals.taxAmount.toLocaleString('en-IN')}</span>
-                </div>
-                <div className="flex justify-between text-lg font-bold pt-2 border-t">
-                  <span>Total:</span>
-                  <span>₹{totals.total.toLocaleString('en-IN')}</span>
+                  {discount > 0 && (
+                    <div className="flex justify-between text-lg text-red-600">
+                      <span className="font-medium">Discount ({discount}%):</span>
+                      <span className="font-semibold">-₹{totals.discountAmount.toLocaleString('en-IN')}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-lg">
+                    <span className="font-medium">Tax ({tax}%):</span>
+                    <span className="font-semibold">₹{totals.taxAmount.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between text-2xl font-bold pt-4 border-t-2 text-green-700">
+                    <span>Grand Total:</span>
+                    <span>₹{totals.total.toLocaleString('en-IN')}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1184,14 +1750,14 @@ export default function NewQuotePage() {
           <div className="flex space-x-4">
             <button
               onClick={() => setCurrentStep(2)}
-              className="px-6 py-2 border rounded-lg hover:bg-gray-50"
+              className="px-6 py-3 border rounded-lg hover:bg-gray-50 font-medium"
             >
-              Back to Products
+              ← Back to Products
             </button>
             <button
               onClick={handleSaveQuote}
               disabled={loading}
-              className="flex-1 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+              className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium text-lg"
             >
               {loading ? 'Saving...' : 'Save Quote'}
             </button>
@@ -1201,5 +1767,3 @@ export default function NewQuotePage() {
     </div>
   );
 }
- 
-  
