@@ -526,12 +526,12 @@ export default function NewQuotePage() {
       alert('Please calculate the price first');
       return;
     }
-
+  
     const product: QuoteProduct = {
       ...currentProduct,
       id: `product-${Date.now()}`,
     } as QuoteProduct;
-
+  
     setProducts([...products, product]);
     
     // Reset form
@@ -561,9 +561,9 @@ export default function NewQuotePage() {
       alert('Please complete all required fields');
       return;
     }
-
+  
     setLoading(true);
-
+  
     try {
       const totals = calculateQuoteTotals(products, discount, tax);
       
@@ -587,7 +587,7 @@ export default function NewQuotePage() {
       const fyCode = `${fyStart2Digit}${fyEnd2Digit}`;
       const sequenceStr = Date.now().toString().slice(-4);
       const quoteNumber = `UC-EN-${fyCode}-${sequenceStr}`;
-
+  
       const quotesRef = collection(db, 'quotes');
       await addDoc(quotesRef, {
         quoteNumber: quoteNumber,
@@ -601,35 +601,42 @@ export default function NewQuotePage() {
           size: p.size,
           rating: p.rating,
           quantity: p.quantity,
+          
           // Body sub-assembly
           bodyEndConnectType: p.bodyEndConnectType,
           bodyMaterialId: p.bodyMaterialId,
           bodyWeight: p.bodyWeight,
           bodyMaterialPrice: p.bodyMaterialPrice,
           bodyTotalCost: p.bodyTotalCost,
+          
           bonnetType: p.bonnetType,
           bonnetMaterialId: p.bonnetMaterialId,
           bonnetWeight: p.bonnetWeight,
           bonnetMaterialPrice: p.bonnetMaterialPrice,
           bonnetTotalCost: p.bonnetTotalCost,
+          
           plugType: p.plugType,
           plugMaterialId: p.plugMaterialId,
           plugWeight: p.plugWeight,
           plugMaterialPrice: p.plugMaterialPrice,
           plugTotalCost: p.plugTotalCost,
+          
           seatType: p.seatType,
           seatMaterialId: p.seatMaterialId,
           seatWeight: p.seatWeight,
           seatMaterialPrice: p.seatMaterialPrice,
           seatTotalCost: p.seatTotalCost,
+          
           stemMaterialId: p.stemMaterialId,
           stemWeight: p.stemWeight,
           stemMaterialPrice: p.stemMaterialPrice,
           stemTotalCost: p.stemTotalCost,
+          
           hasCage: p.hasCage,
           cageFixedPrice: p.cageFixedPrice || null,
           cageTotalCost: p.cageTotalCost || null,
           bodySubAssemblyTotal: p.bodySubAssemblyTotal,
+          
           // Actuator sub-assembly
           hasActuator: p.hasActuator,
           actuatorType: p.actuatorType || null,
@@ -640,6 +647,7 @@ export default function NewQuotePage() {
           hasHandwheel: p.hasHandwheel || false,
           handwheelFixedPrice: p.handwheelFixedPrice || null,
           actuatorSubAssemblyTotal: p.actuatorSubAssemblyTotal || 0,
+          
           // Additional modules
           tubingAndFitting: p.tubingAndFitting || [],
           tubingAndFittingTotal: p.tubingAndFittingTotal || 0,
@@ -647,13 +655,24 @@ export default function NewQuotePage() {
           testingTotal: p.testingTotal || 0,
           accessories: p.accessories || [],
           accessoriesTotal: p.accessoriesTotal || 0,
-          // Cost breakdown
-          manufacturingCost: p.manufacturingCost,
-          boughtoutItemCost: p.boughtoutItemCost,
-          unitCost: p.unitCost,
+          
+          // Cost breakdown (BASE COSTS)
+          manufacturingCost: p.manufacturingCost || 0,
+          boughtoutItemCost: p.boughtoutItemCost || 0,
+          
+          // Profit data (NEW - ADDED)
+          manufacturingProfitPercentage: p.manufacturingProfitPercentage || 0,
+          manufacturingProfitAmount: p.manufacturingProfitAmount || 0,
+          manufacturingCostWithProfit: p.manufacturingCostWithProfit || p.manufacturingCost || 0,
+          
+          boughtoutProfitPercentage: p.boughtoutProfitPercentage || 0,
+          boughtoutProfitAmount: p.boughtoutProfitAmount || 0,
+          boughtoutCostWithProfit: p.boughtoutCostWithProfit || p.boughtoutItemCost || 0,
+          
           // Totals
-          productTotalCost: p.productTotalCost,
-          lineTotal: p.lineTotal,
+          unitCost: p.unitCost || 0,
+          productTotalCost: p.productTotalCost || 0,
+          lineTotal: p.lineTotal || 0,
         })),
         subtotal: totals.subtotal,
         discount: discount,
@@ -669,7 +688,7 @@ export default function NewQuotePage() {
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
       });
-
+  
       alert('Quote created successfully!');
       router.push('/employee');
     } catch (error: any) {
