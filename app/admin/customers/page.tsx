@@ -5,6 +5,7 @@ import { getAllCustomers, createCustomer, updateCustomer, deleteCustomer } from 
 import { Customer } from '@/types';
 import { formatDate } from '@/utils/dateFormat';
 import { useAuth } from '@/lib/firebase/authContext';
+import BulkImportCustomers from '@/components/BulkImportCustomers';
 
 export default function CustomersPage() {
   const { user } = useAuth();
@@ -14,7 +15,8 @@ export default function CustomersPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  
+  const [showBulkImport, setShowBulkImport] = useState(false);
+
   // Form states
   const [formData, setFormData] = useState({
     name: '',
@@ -156,6 +158,19 @@ export default function CustomersPage() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Customer Management</h1>
           <p className="text-gray-600">Manage your customer database</p>
         </div>
+        <button
+  onClick={() => setShowBulkImport(!showBulkImport)}
+  className="bg-purple-600 text-white px-6 py-2 rounded-lg"
+>
+  Bulk Import
+</button>
+
+{showBulkImport && (
+  <BulkImportCustomers onImportComplete={() => { 
+    setShowBulkImport(false); 
+    fetchCustomers(); 
+  }} />
+)}
         <button
           onClick={() => handleOpenModal()}
           className="bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center"

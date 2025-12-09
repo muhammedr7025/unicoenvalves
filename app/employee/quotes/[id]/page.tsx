@@ -9,6 +9,7 @@ import { formatDate } from '@/utils/dateFormat';
 import Link from 'next/link';
 import { exportQuoteToExcel } from '@/utils/excelExport';
 import { getAllMaterials } from '@/lib/firebase/pricingService';
+import { generateQuotePDF } from '@/utils/quotePDFGenerator';
 import { Material } from '@/types';
 export default function ViewQuotePage() {
   const params = useParams();
@@ -16,6 +17,7 @@ export default function ViewQuotePage() {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [loading, setLoading] = useState(true);
   const [materials, setMaterials] = useState<Material[]>([]);
+  const [customerDetails, setCustomerDetails] = useState<any>(null);
   useEffect(() => {
     if (params.id) {
       fetchQuote(params.id as string);
@@ -34,6 +36,18 @@ export default function ViewQuotePage() {
   
       if (quoteDoc.exists()) {
         const data = quoteDoc.data();
+        
+        // Fetch customer details
+        if (data.customerId) {
+          const customerDoc = await getDoc(doc(db, 'customers', data.customerId));
+          if (customerDoc.exists()) {
+            setCustomerDetails({
+              id: customerDoc.id,
+              ...customerDoc.data(),
+            });
+          }
+        }
+  
         setQuote({
           id: quoteDoc.id,
           quoteNumber: data.quoteNumber,
@@ -64,6 +78,36 @@ export default function ViewQuotePage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePrintPDF = () => {
+    if (!quote || !customerDetails) {
+      alert('Quote or customer data not loaded');
+      return;
+    }
+  
+    // Enhance quote with material names
+    const enhancedQuote = {
+      ...quote,
+      products: quote.products.map(product => {
+        const bodyBonnetMaterial = materials.find(m => m.id === product.bodyBonnetMaterialId);
+        const plugMaterial = materials.find(m => m.id === product.plugMaterialId);
+        const seatMaterial = materials.find(m => m.id === product.seatMaterialId);
+        const stemMaterial = materials.find(m => m.id === product.stemMaterialId);
+        const cageMaterial = materials.find(m => m.id === product.cageMaterialId);
+  
+        return {
+          ...product,
+          bodyMaterialName: bodyBonnetMaterial?.name || 'Unknown',
+          plugMaterialName: plugMaterial?.name || 'Unknown',
+          seatMaterialName: seatMaterial?.name || 'Unknown',
+          stemMaterialName: stemMaterial?.name || 'Unknown',
+          cageMaterialName: cageMaterial?.name || '',
+        };
+      }),
+    };
+  
+    generateQuotePDF(enhancedQuote as any, customerDetails);
   };
 
   const handleExportToExcel = () => {
@@ -133,6 +177,8 @@ export default function ViewQuotePage() {
   <span className={`px-4 py-2 rounded-lg font-semibold capitalize border-2 ${getStatusColor(quote.status)}`}>
     {quote.status}
   </span>
+  
+  {/* Export to Excel Button */}
   <button
     onClick={handleExportToExcel}
     className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 flex items-center space-x-2"
@@ -142,18 +188,25 @@ export default function ViewQuotePage() {
     </svg>
     <span>Export to Excel</span>
   </button>
+
+  {/* NEW: Print PDF Button */}
+  <button
+    onClick={handlePrintPDF}
+    disabled={!customerDetails}
+    className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+  >
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+    </svg>
+    <span>Print PDF</span>
+  </button>
+  
   <Link
     href={`/employee/edit-quote/${quote.id}`}
     className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
   >
     Edit Quote
   </Link>
-  <button
-    onClick={() => window.print()}
-    className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700"
-  >
-    Print
-  </button>
 </div>
       </div>
 
