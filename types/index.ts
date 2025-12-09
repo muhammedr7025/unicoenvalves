@@ -16,9 +16,9 @@ export interface Customer {
   phone: string;
   address: string;
   country: string;
-  gst?: string; // Only for Indian customers
+  gst?: string;
   createdAt: Date;
-  createdBy: string; // User ID who created this customer
+  createdBy: string;
 }
 
 export type ProductType = 'SV' | 'CV';
@@ -26,34 +26,38 @@ export type ProductType = 'SV' | 'CV';
 export interface Series {
   id: string;
   productType: ProductType;
-  seriesNumber: string; // e.g., "91000", "92000"
+  seriesNumber: string;
   name: string;
-  hasCage: boolean; // Whether this series supports cage option
+  hasCage: boolean;
+  hasSealRing: boolean; // NEW
   isActive: boolean;
 }
 
-// ADD SeatType HERE:
 export type EndConnectType = 'Type1' | 'Type2';
 export type BonnetType = 'Type1' | 'Type2' | 'Type3';
 export type PlugType = 'Type1' | 'Type2' | 'Type3';
-export type SeatType = 'Type1' | 'Type2' | 'Type3'; // ADD THIS LINE
+export type SeatType = 'Type1' | 'Type2' | 'Type3';
 export type StemType = 'Type1' | 'Type2';
+
+// NEW: Material Groups
+export type MaterialGroup = 'BodyBonnet' | 'Plug' | 'Seat' | 'Stem' | 'Cage';
 
 export interface Material {
   id: string;
-  name: string; // e.g., "Aluminum", "Steel", "Stainless Steel"
+  name: string;
+  materialCode: string; // NEW: For lookups
   pricePerKg: number;
+  materialGroup: MaterialGroup; // NEW
   isActive: boolean;
 }
 
-// Weight data for different components
 export interface BodyWeight {
   id: string;
   seriesId: string;
-  size: string; // e.g., "1/2", "3/4", "1", "2"
-  rating: string; // e.g., "150", "300", "600"
+  size: string;
+  rating: string;
   endConnectType: EndConnectType;
-  weight: number; // in kg
+  weight: number;
 }
 
 export interface BonnetWeight {
@@ -68,28 +72,50 @@ export interface BonnetWeight {
 export interface ComponentWeight {
   id: string;
   seriesId: string;
-  componentType: 'plug' | 'seat' | 'stem';
+  componentType: 'plug' | 'seat';
   size: string;
   rating: string;
-  type: string; // PlugType or StemType
+  type: string;
   weight: number;
 }
 
-// UPDATE CagePrice to include seatType
-export interface CagePrice {
+// NEW: Stem Fixed Price (replaces weight-based calculation)
+export interface StemFixedPrice {
   id: string;
   seriesId: string;
   size: string;
-  seatType: string; // ADD THIS - Cage price depends on seat type
+  rating: string;
+  materialCode: string;
   fixedPrice: number;
+  isActive: boolean;
 }
 
-// ADD Actuator interfaces
+// NEW: Cage Weight (changed from fixed price to weight-based)
+export interface CageWeight {
+  id: string;
+  seriesId: string;
+  size: string;
+  rating: string;
+  weight: number;
+  isActive: boolean;
+}
+
+// NEW: Seal Ring Price
+export interface SealRingPrice {
+  id: string;
+  seriesId: string;
+  plugType: string;
+  size: string;
+  rating: string;
+  fixedPrice: number;
+  isActive: boolean;
+}
+
 export interface ActuatorModel {
   id: string;
-  type: string; // "Pneumatic", "Electric", "Manual"
-  series: string; // "Series A", "Series B"
-  model: string; // "PA-100", "EB-100"
+  type: string;
+  series: string;
+  model: string;
   standard: 'standard' | 'special';
   fixedPrice: number;
   isActive: boolean;
@@ -97,12 +123,11 @@ export interface ActuatorModel {
 
 export interface HandwheelPrice {
   id: string;
-  actuatorModel: string; // Reference to actuator model
+  actuatorModel: string;
   fixedPrice: number;
   isActive: boolean;
 }
 
-// New interfaces for additional modules
 export interface TubingAndFittingItem {
   id: string;
   title: string;
@@ -119,10 +144,9 @@ export interface AccessoryItem {
   id: string;
   title: string;
   price: number;
-  isDefault?: boolean; // For default accessories
+  isDefault?: boolean;
 }
 
-// Default accessories list
 export const DEFAULT_ACCESSORIES = [
   'Airfilter regulator',
   'Positioner',
@@ -140,39 +164,48 @@ export interface QuoteProduct {
   rating: string;
   quantity: number;
   
-  // Body Sub-Assembly
+  // NEW: Product Identification
+  productTag?: string; // Custom name/identifier for this product
+  
+  // Body Sub-Assembly - UPDATED with separate material groups
   bodyEndConnectType: EndConnectType;
-  bodyMaterialId: string;
+  bodyBonnetMaterialId: string; // NEW: Shared material for body & bonnet
   bodyWeight: number;
   bodyMaterialPrice: number;
   bodyTotalCost: number;
   
   bonnetType: BonnetType;
-  bonnetMaterialId: string;
   bonnetWeight: number;
   bonnetMaterialPrice: number;
   bonnetTotalCost: number;
   
   plugType: PlugType;
-  plugMaterialId: string;
+  plugMaterialId: string; // NEW: Separate material for plug
   plugWeight: number;
   plugMaterialPrice: number;
   plugTotalCost: number;
   
   seatType: SeatType;
-  seatMaterialId: string;
+  seatMaterialId: string; // NEW: Separate material for seat
   seatWeight: number;
   seatMaterialPrice: number;
   seatTotalCost: number;
   
-  stemMaterialId: string;
-  stemWeight: number;
-  stemMaterialPrice: number;
+  stemMaterialId: string; // NEW: Separate material for stem
+  stemFixedPrice: number; // NEW: Fixed price lookup
   stemTotalCost: number;
   
+  // Cage - UPDATED to weight-based calculation
   hasCage: boolean;
-  cageFixedPrice?: number;
+  cageMaterialId?: string; // NEW: Separate material for cage
+  cageWeight?: number; // NEW
+  cageMaterialPrice?: number; // NEW
   cageTotalCost?: number;
+  
+  // NEW: Seal Ring
+  hasSealRing: boolean;
+  sealRingFixedPrice?: number;
+  sealRingTotalCost?: number;
   
   bodySubAssemblyTotal: number;
   
@@ -183,66 +216,55 @@ export interface QuoteProduct {
   actuatorModel?: string;
   actuatorStandard?: 'standard' | 'special';
   actuatorFixedPrice?: number;
-  
   hasHandwheel?: boolean;
   handwheelFixedPrice?: number;
-  
   actuatorSubAssemblyTotal?: number;
   
-  // Tubing & Fitting Module
+  // Additional Modules
   tubingAndFitting?: TubingAndFittingItem[];
   tubingAndFittingTotal?: number;
-  
-  // Testing Module
   testing?: TestingItem[];
   testingTotal?: number;
-  
-  // Accessories Module
   accessories?: AccessoryItem[];
   accessoriesTotal?: number;
   
-  // Cost Breakdown (NEW)
-  manufacturingCost: number; // Body + Actuator + Tubing + Testing
-  manufacturingProfitPercentage?: number; // NEW
-  manufacturingProfitAmount?: number; // NEW
-  manufacturingCostWithProfit?: number; // NEW
+  // Cost Breakdown
+  manufacturingCost: number;
+  manufacturingProfitPercentage?: number;
+  manufacturingProfitAmount?: number;
+  manufacturingCostWithProfit?: number;
   
-  boughtoutItemCost: number; // Accessories total
-  boughtoutProfitPercentage?: number; // NEW
-  boughtoutProfitAmount?: number; // NEW
-  boughtoutCostWithProfit?: number; // NEW
+  boughtoutItemCost: number;
+  boughtoutProfitPercentage?: number;
+  boughtoutProfitAmount?: number;
+  boughtoutCostWithProfit?: number;
   
-  unitCost: number; // Manufacturing + Boughtout (with profit)
+  unitCost: number;
   
   // Product Totals
-  productTotalCost: number; // Same as unitCost
-  lineTotal: number; // unitCost × quantity
+  productTotalCost: number;
+  lineTotal: number;
 }
 
 export type QuoteStatus = 'draft' | 'sent' | 'approved' | 'rejected';
 
 export interface Quote {
   id: string;
-  quoteNumber: string; // UC-EN-2526-0001
+  quoteNumber: string;
   customerId: string;
   customerName: string;
-  
   products: QuoteProduct[];
-  
   subtotal: number;
-  discount: number; // percentage
+  discount: number;
   discountAmount: number;
-  tax: number; // percentage (GST)
+  tax: number;
   taxAmount: number;
   total: number;
-  
   status: QuoteStatus;
-  
-  createdBy: string; // Employee User ID
+  createdBy: string;
   createdByName: string;
   createdAt: Date;
   updatedAt: Date;
-  
   notes?: string;
   isArchived: boolean;
 }
