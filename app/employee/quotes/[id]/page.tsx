@@ -31,12 +31,12 @@ export default function ViewQuotePage() {
         getDoc(doc(db, 'quotes', quoteId)),
         getAllMaterials(),
       ]);
-  
+
       setMaterials(materialsData);
-  
+
       if (quoteDoc.exists()) {
         const data = quoteDoc.data();
-        
+
         // Fetch customer details
         if (data.customerId) {
           const customerDoc = await getDoc(doc(db, 'customers', data.customerId));
@@ -47,12 +47,14 @@ export default function ViewQuotePage() {
             });
           }
         }
-  
+
         setQuote({
           id: quoteDoc.id,
           quoteNumber: data.quoteNumber,
           customerId: data.customerId,
           customerName: data.customerName,
+          projectName: data.projectName || '',
+          enquiryId: data.enquiryId || '',
           products: data.products || [],
           subtotal: data.subtotal || 0,
           discount: data.discount || 0,
@@ -85,7 +87,7 @@ export default function ViewQuotePage() {
       alert('Quote or customer data not loaded');
       return;
     }
-  
+
     // Enhance quote with material names
     const enhancedQuote = {
       ...quote,
@@ -95,7 +97,7 @@ export default function ViewQuotePage() {
         const seatMaterial = materials.find(m => m.id === product.seatMaterialId);
         const stemMaterial = materials.find(m => m.id === product.stemMaterialId);
         const cageMaterial = materials.find(m => m.id === product.cageMaterialId);
-  
+
         return {
           ...product,
           bodyMaterialName: bodyBonnetMaterial?.name || 'Unknown',
@@ -106,13 +108,13 @@ export default function ViewQuotePage() {
         };
       }),
     };
-  
+
     generateQuotePDF(enhancedQuote as any, customerDetails);
   };
 
   const handleExportToExcel = () => {
     if (!quote) return;
-  
+
     // Enhance quote with material names
     const enhancedQuote = {
       ...quote,
@@ -122,7 +124,7 @@ export default function ViewQuotePage() {
         const seatMaterial = materials.find(m => m.id === product.seatMaterialId);
         const stemMaterial = materials.find(m => m.id === product.stemMaterialId);
         const cageMaterial = materials.find(m => m.id === product.cageMaterialId);
-  
+
         return {
           ...product,
           bodyMaterialName: bodyBonnetMaterial?.name || 'Unknown',
@@ -133,7 +135,7 @@ export default function ViewQuotePage() {
         };
       }),
     };
-  
+
     exportQuoteToExcel(enhancedQuote as any);
   };
 
@@ -174,45 +176,45 @@ export default function ViewQuotePage() {
           ← Back to Dashboard
         </Link>
         <div className="flex items-center space-x-4">
-  <span className={`px-4 py-2 rounded-lg font-semibold capitalize border-2 ${getStatusColor(quote.status)}`}>
-    {quote.status}
-  </span>
-  
-  {/* Export to Excel Button */}
-  <button
-    onClick={handleExportToExcel}
-    className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 flex items-center space-x-2"
-  >
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-    </svg>
-    <span>Export to Excel</span>
-  </button>
+          <span className={`px-4 py-2 rounded-lg font-semibold capitalize border-2 ${getStatusColor(quote.status)}`}>
+            {quote.status}
+          </span>
 
-  {/* NEW: Print PDF Button */}
-  <button
-    onClick={handlePrintPDF}
-    disabled={!customerDetails}
-    className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-  >
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-    </svg>
-    <span>Print PDF</span>
-  </button>
-  
-  <Link
-    href={`/employee/edit-quote/${quote.id}`}
-    className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-  >
-    Edit Quote
-  </Link>
-</div>
+          {/* Export to Excel Button */}
+          <button
+            onClick={handleExportToExcel}
+            className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 flex items-center space-x-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span>Export to Excel</span>
+          </button>
+
+          {/* NEW: Print PDF Button */}
+          <button
+            onClick={handlePrintPDF}
+            disabled={!customerDetails}
+            className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            <span>Print PDF</span>
+          </button>
+
+          <Link
+            href={`/employee/edit-quote/${quote.id}`}
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+          >
+            Edit Quote
+          </Link>
+        </div>
       </div>
 
       {/* Quote Details */}
       <div className="bg-white rounded-xl shadow-sm p-8 mb-6">
-        <div className="grid grid-cols-2 gap-8 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
           <div>
             <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Customer</h3>
             <p className="text-lg font-semibold text-gray-900">{quote.customerName}</p>
@@ -220,6 +222,14 @@ export default function ViewQuotePage() {
           <div>
             <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Created By</h3>
             <p className="text-lg text-gray-900">{quote.createdByName}</p>
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Project Name</h3>
+            <p className="text-lg text-gray-900">{quote.projectName || <span className="text-gray-400 italic">Not specified</span>}</p>
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Enquiry ID</h3>
+            <p className="text-lg text-gray-900">{quote.enquiryId || <span className="text-gray-400 italic">Not specified</span>}</p>
           </div>
         </div>
 
@@ -559,33 +569,33 @@ export default function ViewQuotePage() {
               {/* Profit Summary Badge */}
               {((product.manufacturingProfitPercentage && product.manufacturingProfitPercentage > 0) ||
                 (product.boughtoutProfitPercentage && product.boughtoutProfitPercentage > 0)) && (
-                <div className="mt-4 p-3 bg-gradient-to-r from-yellow-50 to-green-50 border-2 border-yellow-300 rounded-lg">
-                  <p className="text-sm font-semibold text-gray-800 mb-2">💰 Profit Summary:</p>
-                  <div className="grid grid-cols-2 gap-4 text-xs">
-                    {product.manufacturingProfitPercentage && product.manufacturingProfitPercentage > 0 && (
-                      <div>
-                        <p className="text-gray-600">Manufacturing Profit:</p>
-                        <p className="font-bold text-blue-700">
-                          {product.manufacturingProfitPercentage}% = ₹{product.manufacturingProfitAmount?.toLocaleString('en-IN')}
-                        </p>
-                      </div>
-                    )}
-                    {product.boughtoutProfitPercentage && product.boughtoutProfitPercentage > 0 && (
-                      <div>
-                        <p className="text-gray-600">Boughtout Profit:</p>
-                        <p className="font-bold text-pink-700">
-                          {product.boughtoutProfitPercentage}% = ₹{product.boughtoutProfitAmount?.toLocaleString('en-IN')}
-                        </p>
-                      </div>
-                    )}
+                  <div className="mt-4 p-3 bg-gradient-to-r from-yellow-50 to-green-50 border-2 border-yellow-300 rounded-lg">
+                    <p className="text-sm font-semibold text-gray-800 mb-2">💰 Profit Summary:</p>
+                    <div className="grid grid-cols-2 gap-4 text-xs">
+                      {product.manufacturingProfitPercentage && product.manufacturingProfitPercentage > 0 && (
+                        <div>
+                          <p className="text-gray-600">Manufacturing Profit:</p>
+                          <p className="font-bold text-blue-700">
+                            {product.manufacturingProfitPercentage}% = ₹{product.manufacturingProfitAmount?.toLocaleString('en-IN')}
+                          </p>
+                        </div>
+                      )}
+                      {product.boughtoutProfitPercentage && product.boughtoutProfitPercentage > 0 && (
+                        <div>
+                          <p className="text-gray-600">Boughtout Profit:</p>
+                          <p className="font-bold text-pink-700">
+                            {product.boughtoutProfitPercentage}% = ₹{product.boughtoutProfitAmount?.toLocaleString('en-IN')}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="mt-2 pt-2 border-t border-yellow-300">
+                      <p className="text-sm font-bold text-green-700">
+                        Total Profit: ₹{((product.manufacturingProfitAmount || 0) + (product.boughtoutProfitAmount || 0)).toLocaleString('en-IN')}
+                      </p>
+                    </div>
                   </div>
-                  <div className="mt-2 pt-2 border-t border-yellow-300">
-                    <p className="text-sm font-bold text-green-700">
-                      Total Profit: ₹{((product.manufacturingProfitAmount || 0) + (product.boughtoutProfitAmount || 0)).toLocaleString('en-IN')}
-                    </p>
-                  </div>
-                </div>
-              )}
+                )}
             </div>
           </div>
         ))}

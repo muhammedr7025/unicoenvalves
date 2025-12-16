@@ -19,10 +19,10 @@ const formatINR = (amount: number): string => {
 
 // Helper function to format date
 const formatDate = (date: Date): string => {
-  return date.toLocaleDateString('en-GB', { 
-    day: '2-digit', 
-    month: 'long', 
-    year: 'numeric' 
+  return date.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
   });
 };
 
@@ -33,7 +33,7 @@ export function generateQuotePDF(quote: Quote, customerDetails: any) {
   let yPos = 0;
 
   // ==================== PAGE 1: COVER LETTER ====================
-  
+
   // Add logo placeholder (you can replace with actual logo)
   doc.setFillColor(77, 45, 132); // Purple color
   doc.rect(pageWidth - 150, 30, 120, 40, 'F');
@@ -76,19 +76,19 @@ export function generateQuotePDF(quote: Quote, customerDetails: any) {
   yPos += 30;
   doc.text('Sir', 50, yPos);
 
-  // Reference
+  // Reference (Enquiry ID)
   yPos += 30;
   doc.setFont('helvetica', 'bold');
   doc.text('Ref:', 50, yPos);
   doc.setFont('helvetica', 'normal');
-  doc.text(customerDetails.enquiryRef || 'N/A', 80, yPos);
+  doc.text(quote.enquiryId || 'N/A', 80, yPos);
 
   // Project
   yPos += 20;
   doc.setFont('helvetica', 'bold');
   doc.text('Project:', 50, yPos);
   doc.setFont('helvetica', 'normal');
-  doc.text(quote.notes || 'N/A', 100, yPos);
+  doc.text(quote.projectName || 'N/A', 100, yPos);
 
   // Body text
   yPos += 30;
@@ -134,7 +134,7 @@ export function generateQuotePDF(quote: Quote, customerDetails: any) {
   doc.text(footerText, pageWidth / 2, pageHeight - 40, { align: 'center' });
 
   // ==================== PAGE 2: PRICE SUMMARY ====================
-  
+
   doc.addPage();
   yPos = 40;
 
@@ -158,8 +158,8 @@ export function generateQuotePDF(quote: Quote, customerDetails: any) {
   yPos += 30;
   const quoteDetailsData = [
     ['Customer', customerDetails.name, 'Unicorn Ref', quote.quoteNumber],
-    ['Enquiry Ref', customerDetails.enquiryRef || 'N/A', 'Date', formatDate(quote.createdAt)],
-    ['Project', quote.notes || '-', 'Revision', '0'],
+    ['Enquiry Ref', quote.enquiryId || 'N/A', 'Date', formatDate(quote.createdAt)],
+    ['Project', quote.projectName || '-', 'Revision', '0'],
   ];
 
   autoTable(doc, {

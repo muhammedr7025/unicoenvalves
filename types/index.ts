@@ -45,9 +45,8 @@ export type MaterialGroup = 'BodyBonnet' | 'Plug' | 'Seat' | 'Stem' | 'Cage';
 export interface Material {
   id: string;
   name: string;
-  materialCode: string; // NEW: For lookups
   pricePerKg: number;
-  materialGroup: MaterialGroup; // NEW
+  materialGroup: MaterialGroup;
   isActive: boolean;
 }
 
@@ -79,13 +78,13 @@ export interface ComponentWeight {
   weight: number;
 }
 
-// NEW: Stem Fixed Price (replaces weight-based calculation)
+// Stem Fixed Price (uses material name for lookup)
 export interface StemFixedPrice {
   id: string;
   seriesId: string;
   size: string;
   rating: string;
-  materialCode: string;
+  materialName: string;
   fixedPrice: number;
   isActive: boolean;
 }
@@ -163,52 +162,52 @@ export interface QuoteProduct {
   size: string;
   rating: string;
   quantity: number;
-  
+
   // NEW: Product Identification
   productTag?: string; // Custom name/identifier for this product
-  
+
   // Body Sub-Assembly - UPDATED with separate material groups
   bodyEndConnectType: EndConnectType;
   bodyBonnetMaterialId: string; // NEW: Shared material for body & bonnet
   bodyWeight: number;
   bodyMaterialPrice: number;
   bodyTotalCost: number;
-  
+
   bonnetType: BonnetType;
   bonnetWeight: number;
   bonnetMaterialPrice: number;
   bonnetTotalCost: number;
-  
+
   plugType: PlugType;
   plugMaterialId: string; // NEW: Separate material for plug
   plugWeight: number;
   plugMaterialPrice: number;
   plugTotalCost: number;
-  
+
   seatType: SeatType;
   seatMaterialId: string; // NEW: Separate material for seat
   seatWeight: number;
   seatMaterialPrice: number;
   seatTotalCost: number;
-  
+
   stemMaterialId: string; // NEW: Separate material for stem
   stemFixedPrice: number; // NEW: Fixed price lookup
   stemTotalCost: number;
-  
+
   // Cage - UPDATED to weight-based calculation
   hasCage: boolean;
   cageMaterialId?: string; // NEW: Separate material for cage
   cageWeight?: number; // NEW
   cageMaterialPrice?: number; // NEW
   cageTotalCost?: number;
-  
+
   // NEW: Seal Ring
   hasSealRing: boolean;
   sealRingFixedPrice?: number;
   sealRingTotalCost?: number;
-  
+
   bodySubAssemblyTotal: number;
-  
+
   // Actuator Sub-Assembly
   hasActuator: boolean;
   actuatorType?: string;
@@ -219,7 +218,7 @@ export interface QuoteProduct {
   hasHandwheel?: boolean;
   handwheelFixedPrice?: number;
   actuatorSubAssemblyTotal?: number;
-  
+
   // Additional Modules
   tubingAndFitting?: TubingAndFittingItem[];
   tubingAndFittingTotal?: number;
@@ -227,20 +226,20 @@ export interface QuoteProduct {
   testingTotal?: number;
   accessories?: AccessoryItem[];
   accessoriesTotal?: number;
-  
+
   // Cost Breakdown
   manufacturingCost: number;
   manufacturingProfitPercentage?: number;
   manufacturingProfitAmount?: number;
   manufacturingCostWithProfit?: number;
-  
+
   boughtoutItemCost: number;
   boughtoutProfitPercentage?: number;
   boughtoutProfitAmount?: number;
   boughtoutCostWithProfit?: number;
-  
+
   unitCost: number;
-  
+
   // Product Totals
   productTotalCost: number;
   lineTotal: number;
@@ -253,6 +252,8 @@ export interface Quote {
   quoteNumber: string;
   customerId: string;
   customerName: string;
+  projectName?: string;
+  enquiryId?: string;
   products: QuoteProduct[];
   subtotal: number;
   discount: number;

@@ -19,18 +19,16 @@ import {
   getPlugWeight,
   getSeatWeight,
   getStemFixedPrice,
-  getCageWeight,
-  getSealRingPrice,
   getAvailableActuatorTypes,
   getAvailableActuatorSeries,
   getAvailableActuatorModels,
   getActuatorPrice,
   getHandwheelPrice,
 } from '@/lib/firebase/productConfigHelper';
-import { 
-  Customer, 
-  Material, 
-  Series, 
+import {
+  Customer,
+  Material,
+  Series,
   QuoteProduct,
   TubingAndFittingItem,
   TestingItem,
@@ -46,17 +44,17 @@ export default function NewQuotePage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  
+
   // Materials by group
   const [bodyBonnetMaterials, setBodyBonnetMaterials] = useState<Material[]>([]);
   const [plugMaterials, setPlugMaterials] = useState<Material[]>([]);
   const [seatMaterials, setSeatMaterials] = useState<Material[]>([]);
   const [stemMaterials, setStemMaterials] = useState<Material[]>([]);
   const [cageMaterials, setCageMaterials] = useState<Material[]>([]);
-  
+
   const [series, setSeries] = useState<Series[]>([]);
   const [products, setProducts] = useState<QuoteProduct[]>([]);
-  
+
   const [currentProduct, setCurrentProduct] = useState<Partial<QuoteProduct>>({
     quantity: 1,
     hasCage: false,
@@ -94,7 +92,7 @@ export default function NewQuotePage() {
   const [newAccessoryTitle, setNewAccessoryTitle] = useState('');
   const [newAccessoryPrice, setNewAccessoryPrice] = useState(0);
   const [showAccessoryPriceInput, setShowAccessoryPriceInput] = useState<string | null>(null);
-  const [customAccessoryPrice, setCustomAccessoryPrice] = useState<{[key: string]: number}>({});
+  const [customAccessoryPrice, setCustomAccessoryPrice] = useState<{ [key: string]: number }>({});
 
   // Profit percentages
   const [manufacturingProfit, setManufacturingProfit] = useState(0);
@@ -103,6 +101,8 @@ export default function NewQuotePage() {
   const [discount, setDiscount] = useState(0);
   const [tax, setTax] = useState(18);
   const [notes, setNotes] = useState('');
+  const [projectName, setProjectName] = useState('');
+  const [enquiryId, setEnquiryId] = useState('');
   const [status, setStatus] = useState<'draft' | 'sent'>('draft');
   const [loading, setLoading] = useState(false);
   const [calculating, setCalculating] = useState(false);
@@ -115,13 +115,13 @@ export default function NewQuotePage() {
   const fetchInitialData = async () => {
     setLoading(true);
     const [
-      customersData, 
+      customersData,
       bodyBonnetMats,
       plugMats,
       seatMats,
       stemMats,
       cageMats,
-      seriesData, 
+      seriesData,
       actuatorTypes
     ] = await Promise.all([
       getAllCustomers(),
@@ -133,7 +133,7 @@ export default function NewQuotePage() {
       getAllSeries(),
       getAvailableActuatorTypes(),
     ]);
-    
+
     setCustomers(customersData);
     setBodyBonnetMaterials(bodyBonnetMats);
     setPlugMaterials(plugMats);
@@ -226,19 +226,19 @@ export default function NewQuotePage() {
       testing: [],
       accessories: [],
     });
-    
+
     setAvailableSizes([]);
     setAvailableRatings([]);
     await fetchAvailableSizes(selectedSeries.seriesNumber);
   };
 
   const handleSizeChange = async (size: string) => {
-    setCurrentProduct({ 
-      ...currentProduct, 
+    setCurrentProduct({
+      ...currentProduct,
       size,
       rating: undefined
     });
-    
+
     setAvailableRatings([]);
     if (currentProduct.seriesNumber) {
       await fetchAvailableRatings(currentProduct.seriesNumber, size);
@@ -246,9 +246,9 @@ export default function NewQuotePage() {
   };
 
   const handleRatingChange = async (rating: string) => {
-    setCurrentProduct({ 
-      ...currentProduct, 
-      rating 
+    setCurrentProduct({
+      ...currentProduct,
+      rating
     });
 
     if (currentProduct.seriesNumber && currentProduct.size) {
@@ -329,7 +329,7 @@ export default function NewQuotePage() {
 
   const toggleDefaultAccessory = (title: string, price?: number) => {
     const exists = accessoryItems.find(item => item.title === title);
-    
+
     if (exists) {
       removeAccessoryItem(exists.id);
       const newPrices = { ...customAccessoryPrice };
@@ -350,7 +350,7 @@ export default function NewQuotePage() {
       alert('Please enter a valid price');
       return;
     }
-    
+
     addAccessoryItem(title, price, true);
     setShowAccessoryPriceInput(null);
   };
@@ -362,13 +362,13 @@ export default function NewQuotePage() {
     }
 
     if (!currentProduct.bodyEndConnectType || !currentProduct.bonnetType ||
-        !currentProduct.plugType || !currentProduct.seatType) {
+      !currentProduct.plugType || !currentProduct.seatType) {
       alert('Please select all body component types');
       return;
     }
 
     if (!currentProduct.bodyBonnetMaterialId || !currentProduct.plugMaterialId ||
-        !currentProduct.seatMaterialId || !currentProduct.stemMaterialId) {
+      !currentProduct.seatMaterialId || !currentProduct.stemMaterialId) {
       alert('Please select materials for all components');
       return;
     }
@@ -381,8 +381,8 @@ export default function NewQuotePage() {
 
     // Actuator validation
     if (currentProduct.hasActuator) {
-      if (!currentProduct.actuatorType || !currentProduct.actuatorSeries || 
-          !currentProduct.actuatorModel || !currentProduct.actuatorStandard) {
+      if (!currentProduct.actuatorType || !currentProduct.actuatorSeries ||
+        !currentProduct.actuatorModel || !currentProduct.actuatorStandard) {
         alert('Please complete actuator configuration');
         return;
       }
@@ -392,7 +392,7 @@ export default function NewQuotePage() {
 
     try {
       // Get weights for body components
-      const [bodyWeight, bonnetWeight, plugWeight, seatWeight] = await Promise.all([
+      const [bodyWeight, bonnetWeight, plugWeightResult, seatWeightResult] = await Promise.all([
         getBodyWeight(currentProduct.seriesNumber, currentProduct.size, currentProduct.rating, currentProduct.bodyEndConnectType),
         getBonnetWeight(currentProduct.seriesNumber, currentProduct.size, currentProduct.rating, currentProduct.bonnetType),
         getPlugWeight(currentProduct.seriesNumber, currentProduct.size, currentProduct.rating, currentProduct.plugType),
@@ -405,7 +405,7 @@ export default function NewQuotePage() {
       const seatMaterial = seatMaterials.find(m => m.id === currentProduct.seatMaterialId);
       const stemMaterial = stemMaterials.find(m => m.id === currentProduct.stemMaterialId);
 
-      if (!bodyWeight || !bonnetWeight || !plugWeight || !seatWeight) {
+      if (!bodyWeight || !bonnetWeight || !plugWeightResult || !seatWeightResult) {
         alert('Weight data not found for selected configuration. Please check pricing data.');
         setCalculating(false);
         return;
@@ -417,18 +417,22 @@ export default function NewQuotePage() {
         return;
       }
 
+      // Extract weights from results
+      const plugWeight = plugWeightResult.weight;
+      const seatWeight = seatWeightResult.weight;
+
       // Calculate body sub-assembly costs
       const bodyTotalCost = bodyWeight * bodyBonnetMaterial.pricePerKg;
       const bonnetTotalCost = bonnetWeight * bodyBonnetMaterial.pricePerKg;
       const plugTotalCost = plugWeight * plugMaterial.pricePerKg;
       const seatTotalCost = seatWeight * seatMaterial.pricePerKg;
 
-      // Get stem fixed price (based on series, size, rating, material code)
+      // Get stem fixed price (based on series, size, rating, material name)
       const stemFixedPrice = await getStemFixedPrice(
         currentProduct.seriesNumber,
         currentProduct.size,
         currentProduct.rating,
-        stemMaterial.materialCode
+        stemMaterial.name
       );
 
       if (!stemFixedPrice) {
@@ -439,57 +443,44 @@ export default function NewQuotePage() {
 
       const stemTotalCost = stemFixedPrice;
 
-      // Cage calculation (weight × material)
+      // Cage calculation - now from seat weight data
       let cageTotalCost = 0;
       let cageWeight = 0;
       let cageMaterialPrice = 0;
-      
-      if (currentProduct.hasCage && currentProduct.cageMaterialId) {
-        const fetchedCageWeight = await getCageWeight(
-          currentProduct.seriesNumber, 
-          currentProduct.size, 
-          currentProduct.rating
-        );
-        
+      const hasCage = seatWeightResult.hasCage;
+
+      if (hasCage && seatWeightResult.cageWeight && currentProduct.cageMaterialId) {
         const cageMaterial = cageMaterials.find(m => m.id === currentProduct.cageMaterialId);
-        
-        if (fetchedCageWeight && cageMaterial) {
-          cageWeight = fetchedCageWeight;
+
+        if (cageMaterial) {
+          cageWeight = seatWeightResult.cageWeight;
           cageMaterialPrice = cageMaterial.pricePerKg;
           cageTotalCost = cageWeight * cageMaterialPrice;
         }
       }
 
-      // Seal ring calculation (fixed price)
+      // Seal ring calculation - now from plug weight data
       let sealRingTotalCost = 0;
       let sealRingFixedPrice = 0;
-      
-      if (currentProduct.hasSealRing) {
-        const fetchedSealRingPrice = await getSealRingPrice(
-          currentProduct.seriesNumber,
-          currentProduct.plugType,
-          currentProduct.size,
-          currentProduct.rating
-        );
-        
-        if (fetchedSealRingPrice) {
-          sealRingFixedPrice = fetchedSealRingPrice;
-          sealRingTotalCost = fetchedSealRingPrice;
-        }
+      const hasSealRing = plugWeightResult.hasSealRing;
+
+      if (hasSealRing && plugWeightResult.sealRingPrice) {
+        sealRingFixedPrice = plugWeightResult.sealRingPrice;
+        sealRingTotalCost = plugWeightResult.sealRingPrice;
       }
 
-      const bodySubAssemblyTotal = bodyTotalCost + bonnetTotalCost + plugTotalCost + 
-                                    seatTotalCost + stemTotalCost + cageTotalCost + sealRingTotalCost;
+      const bodySubAssemblyTotal = bodyTotalCost + bonnetTotalCost + plugTotalCost +
+        seatTotalCost + stemTotalCost + cageTotalCost + sealRingTotalCost;
 
       // Actuator sub-assembly
       let actuatorFixedPrice = 0;
       let handwheelFixedPrice = 0;
       let actuatorSubAssemblyTotal = 0;
 
-      if (currentProduct.hasActuator && currentProduct.actuatorType && 
-          currentProduct.actuatorSeries && currentProduct.actuatorModel && 
-          currentProduct.actuatorStandard) {
-        
+      if (currentProduct.hasActuator && currentProduct.actuatorType &&
+        currentProduct.actuatorSeries && currentProduct.actuatorModel &&
+        currentProduct.actuatorStandard) {
+
         const actuatorPrice = await getActuatorPrice(
           currentProduct.actuatorType,
           currentProduct.actuatorSeries,
@@ -517,10 +508,10 @@ export default function NewQuotePage() {
       const accessoriesTotal = accessoryItems.reduce((sum, item) => sum + item.price, 0);
 
       // Cost breakdown with profit
-      const baseManufacturingCost = bodySubAssemblyTotal + 
-                                   (actuatorSubAssemblyTotal || 0) + 
-                                   tubingAndFittingTotal + 
-                                   testingTotal;
+      const baseManufacturingCost = bodySubAssemblyTotal +
+        (actuatorSubAssemblyTotal || 0) +
+        tubingAndFittingTotal +
+        testingTotal;
 
       const baseBoughtoutItemCost = accessoriesTotal;
 
@@ -550,11 +541,13 @@ export default function NewQuotePage() {
         seatTotalCost,
         stemFixedPrice,
         stemTotalCost,
-        cageWeight: currentProduct.hasCage ? cageWeight : undefined,
-        cageMaterialPrice: currentProduct.hasCage ? cageMaterialPrice : undefined,
-        cageTotalCost: currentProduct.hasCage ? cageTotalCost : undefined,
-        sealRingFixedPrice: currentProduct.hasSealRing ? sealRingFixedPrice : undefined,
-        sealRingTotalCost: currentProduct.hasSealRing ? sealRingTotalCost : undefined,
+        hasCage: hasCage,
+        cageWeight: hasCage ? cageWeight : undefined,
+        cageMaterialPrice: hasCage ? cageMaterialPrice : undefined,
+        cageTotalCost: hasCage ? cageTotalCost : undefined,
+        hasSealRing: hasSealRing,
+        sealRingFixedPrice: hasSealRing ? sealRingFixedPrice : undefined,
+        sealRingTotalCost: hasSealRing ? sealRingTotalCost : undefined,
         bodySubAssemblyTotal,
         // Actuator sub-assembly
         actuatorFixedPrice: currentProduct.hasActuator ? actuatorFixedPrice : undefined,
@@ -602,10 +595,10 @@ export default function NewQuotePage() {
     } as QuoteProduct;
 
     setProducts([...products, product]);
-    
+
     // Reset form
-    setCurrentProduct({ 
-      quantity: 1, 
+    setCurrentProduct({
+      quantity: 1,
       hasCage: false,
       hasSealRing: false,
       hasActuator: false,
@@ -638,14 +631,14 @@ export default function NewQuotePage() {
 
     try {
       const totals = calculateQuoteTotals(products, discount, tax);
-      
+
       const now = new Date();
       const currentMonth = now.getMonth();
       const currentYear = now.getFullYear();
-      
+
       let fyStartYear: number;
       let fyEndYear: number;
-      
+
       if (currentMonth >= 3) {
         fyStartYear = currentYear;
         fyEndYear = currentYear + 1;
@@ -653,7 +646,7 @@ export default function NewQuotePage() {
         fyStartYear = currentYear - 1;
         fyEndYear = currentYear;
       }
-      
+
       const fyStart2Digit = fyStartYear.toString().slice(-2);
       const fyEnd2Digit = fyEndYear.toString().slice(-2);
       const fyCode = `${fyStart2Digit}${fyEnd2Digit}`;
@@ -747,6 +740,8 @@ export default function NewQuotePage() {
         status,
         createdBy: user.id,
         createdByName: user.name,
+        projectName: projectName || '',
+        enquiryId: enquiryId || '',
         notes: notes || '',
         isArchived: false,
         createdAt: Timestamp.now(),
@@ -763,7 +758,7 @@ export default function NewQuotePage() {
     }
   };
 
-  const totals = products.length > 0 
+  const totals = products.length > 0
     ? calculateQuoteTotals(products, discount, tax)
     : { subtotal: 0, discountAmount: 0, taxableAmount: 0, taxAmount: 0, total: 0 };
 
@@ -783,9 +778,8 @@ export default function NewQuotePage() {
         <div className="flex items-center space-x-4">
           {[1, 2, 3].map((step) => (
             <div key={step} className="flex items-center">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
-                currentStep >= step ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-600'
-              }`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${currentStep >= step ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-600'
+                }`}>
                 {step}
               </div>
               {step < 3 && <div className="w-16 h-1 bg-gray-300 mx-2"></div>}
@@ -806,9 +800,8 @@ export default function NewQuotePage() {
                   setSelectedCustomer(customer);
                   setCurrentStep(2);
                 }}
-                className={`p-4 border-2 rounded-lg cursor-pointer hover:border-green-500 transition-colors ${
-                  selectedCustomer?.id === customer.id ? 'border-green-600 bg-green-50' : 'border-gray-200'
-                }`}
+                className={`p-4 border-2 rounded-lg cursor-pointer hover:border-green-500 transition-colors ${selectedCustomer?.id === customer.id ? 'border-green-600 bg-green-50' : 'border-gray-200'
+                  }`}
               >
                 <h3 className="font-semibold text-gray-900">{customer.name}</h3>
                 <p className="text-sm text-gray-600">{customer.email}</p>
@@ -854,7 +847,7 @@ export default function NewQuotePage() {
           {showProductConfig && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-2xl font-bold mb-6">Configure Product</h2>
-              
+
               {/* Product Tag/Name */}
               <div className="mb-6 bg-yellow-50 border-2 border-yellow-200 rounded-lg p-4">
                 <label className="block text-sm font-medium mb-2">Product Tag/Name (Optional)</label>
@@ -923,7 +916,7 @@ export default function NewQuotePage() {
               {currentProduct.size && currentProduct.rating && (
                 <div className="border-2 border-blue-200 rounded-lg p-6 mb-6 bg-blue-50">
                   <h3 className="text-xl font-bold mb-4 text-blue-900">🔧 Body Sub-Assembly</h3>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Body */}
                     <div className="bg-white rounded-lg p-4 border-2 border-blue-300">
@@ -1080,7 +1073,7 @@ export default function NewQuotePage() {
                           >
                             <option value="">Select Material</option>
                             {stemMaterials.map((m) => (
-                              <option key={m.id} value={m.id}>{m.name} ({m.materialCode})</option>
+                              <option key={m.id} value={m.id}>{m.name}</option>
                             ))}
                           </select>
                           <p className="text-xs text-gray-500 mt-1">
@@ -1149,8 +1142,8 @@ export default function NewQuotePage() {
                       <input
                         type="checkbox"
                         checked={currentProduct.hasActuator || false}
-                        onChange={(e) => setCurrentProduct({ 
-                          ...currentProduct, 
+                        onChange={(e) => setCurrentProduct({
+                          ...currentProduct,
                           hasActuator: e.target.checked,
                           hasHandwheel: false,
                         })}
@@ -1167,8 +1160,8 @@ export default function NewQuotePage() {
                         <select
                           value={currentProduct.actuatorType || ''}
                           onChange={(e) => {
-                            setCurrentProduct({ 
-                              ...currentProduct, 
+                            setCurrentProduct({
+                              ...currentProduct,
                               actuatorType: e.target.value,
                               actuatorSeries: undefined,
                               actuatorModel: undefined,
@@ -1190,8 +1183,8 @@ export default function NewQuotePage() {
                         <select
                           value={currentProduct.actuatorSeries || ''}
                           onChange={(e) => {
-                            setCurrentProduct({ 
-                              ...currentProduct, 
+                            setCurrentProduct({
+                              ...currentProduct,
                               actuatorSeries: e.target.value,
                               actuatorModel: undefined,
                             });
@@ -1266,7 +1259,7 @@ export default function NewQuotePage() {
               {currentProduct.size && currentProduct.rating && (
                 <div className="border-2 border-orange-200 rounded-lg p-6 mb-6 bg-orange-50">
                   <h3 className="text-xl font-bold mb-4 text-orange-900">🔧 Tubing & Fitting</h3>
-                  
+
                   <div className="bg-white rounded-lg p-4 mb-4">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="md:col-span-2">
@@ -1334,7 +1327,7 @@ export default function NewQuotePage() {
               {currentProduct.size && currentProduct.rating && (
                 <div className="border-2 border-teal-200 rounded-lg p-6 mb-6 bg-teal-50">
                   <h3 className="text-xl font-bold mb-4 text-teal-900">🔬 Testing</h3>
-                  
+
                   <div className="bg-white rounded-lg p-4 mb-4">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="md:col-span-2">
@@ -1402,14 +1395,14 @@ export default function NewQuotePage() {
               {currentProduct.size && currentProduct.rating && (
                 <div className="border-2 border-pink-200 rounded-lg p-6 mb-6 bg-pink-50">
                   <h3 className="text-xl font-bold mb-4 text-pink-900">🎯 Accessories</h3>
-                  
+
                   <div className="bg-white rounded-lg p-4 mb-4">
                     <p className="text-sm font-medium mb-3">Default Accessories (Optional - Enter Custom Price)</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {DEFAULT_ACCESSORIES.map((title) => {
                         const isChecked = accessoryItems.some(item => item.title === title);
                         const showInput = showAccessoryPriceInput === title;
-                        
+
                         return (
                           <div key={title}>
                             <label className="flex items-center cursor-pointer p-2 hover:bg-gray-50 rounded">
@@ -1427,7 +1420,7 @@ export default function NewQuotePage() {
                               />
                               <span className="text-sm">{title}</span>
                             </label>
-                            
+
                             {showInput && (
                               <div className="ml-6 mt-2 flex items-center space-x-2">
                                 <input
@@ -1535,7 +1528,7 @@ export default function NewQuotePage() {
               {currentProduct.size && currentProduct.rating && (
                 <div className="border-2 border-indigo-200 rounded-lg p-6 mb-6 bg-indigo-50">
                   <h3 className="text-xl font-bold mb-4 text-indigo-900">💼 Profit Margin</h3>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white rounded-lg p-4 border border-gray-200">
                       <label className="block text-sm font-semibold mb-2 text-blue-900">
@@ -1606,8 +1599,8 @@ export default function NewQuotePage() {
                 <button
                   onClick={() => {
                     setShowProductConfig(false);
-                    setCurrentProduct({ 
-                      quantity: 1, 
+                    setCurrentProduct({
+                      quantity: 1,
                       hasCage: false,
                       hasSealRing: false,
                       hasActuator: false,
@@ -1626,7 +1619,7 @@ export default function NewQuotePage() {
                 >
                   Cancel
                 </button>
-                
+
                 <button
                   onClick={calculateProductPrice}
                   disabled={calculating}
@@ -1648,7 +1641,7 @@ export default function NewQuotePage() {
               {currentProduct.productTotalCost && (
                 <div className="mt-6 p-6 bg-gradient-to-br from-green-50 to-blue-50 rounded-lg border-2 border-green-200">
                   <h4 className="font-bold text-xl mb-6 text-gray-900">💰 Complete Price Breakdown</h4>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
                     {/* Body Sub-Assembly */}
                     <div className="bg-white p-4 rounded-lg shadow-sm">
@@ -1861,35 +1854,35 @@ export default function NewQuotePage() {
                   </div>
 
                   {/* Profit Summary Badge */}
-                  {((currentProduct.manufacturingProfitPercentage && currentProduct.manufacturingProfitPercentage > 0) || 
+                  {((currentProduct.manufacturingProfitPercentage && currentProduct.manufacturingProfitPercentage > 0) ||
                     (currentProduct.boughtoutProfitPercentage && currentProduct.boughtoutProfitPercentage > 0)) && (
-                    <div className="mt-4 p-4 bg-gradient-to-r from-yellow-50 to-green-50 border-2 border-yellow-300 rounded-lg">
-                      <p className="text-sm font-semibold text-gray-800 mb-2">💰 Profit Summary:</p>
-                      <div className="grid grid-cols-2 gap-4 text-xs">
-                        {currentProduct.manufacturingProfitPercentage && currentProduct.manufacturingProfitPercentage > 0 && (
-                          <div>
-                            <p className="text-gray-600">Manufacturing Profit:</p>
-                            <p className="font-bold text-blue-700">
-                              {currentProduct.manufacturingProfitPercentage}% = ₹{currentProduct.manufacturingProfitAmount?.toLocaleString('en-IN')}
-                            </p>
-                          </div>
-                        )}
-                        {currentProduct.boughtoutProfitPercentage && currentProduct.boughtoutProfitPercentage > 0 && (
-                          <div>
-                            <p className="text-gray-600">Boughtout Profit:</p>
-                            <p className="font-bold text-pink-700">
-                              {currentProduct.boughtoutProfitPercentage}% = ₹{currentProduct.boughtoutProfitAmount?.toLocaleString('en-IN')}
-                            </p>
-                          </div>
-                        )}
+                      <div className="mt-4 p-4 bg-gradient-to-r from-yellow-50 to-green-50 border-2 border-yellow-300 rounded-lg">
+                        <p className="text-sm font-semibold text-gray-800 mb-2">💰 Profit Summary:</p>
+                        <div className="grid grid-cols-2 gap-4 text-xs">
+                          {currentProduct.manufacturingProfitPercentage && currentProduct.manufacturingProfitPercentage > 0 && (
+                            <div>
+                              <p className="text-gray-600">Manufacturing Profit:</p>
+                              <p className="font-bold text-blue-700">
+                                {currentProduct.manufacturingProfitPercentage}% = ₹{currentProduct.manufacturingProfitAmount?.toLocaleString('en-IN')}
+                              </p>
+                            </div>
+                          )}
+                          {currentProduct.boughtoutProfitPercentage && currentProduct.boughtoutProfitPercentage > 0 && (
+                            <div>
+                              <p className="text-gray-600">Boughtout Profit:</p>
+                              <p className="font-bold text-pink-700">
+                                {currentProduct.boughtoutProfitPercentage}% = ₹{currentProduct.boughtoutProfitAmount?.toLocaleString('en-IN')}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                        <div className="mt-2 pt-2 border-t border-yellow-300">
+                          <p className="text-sm font-bold text-green-700">
+                            Total Profit: ₹{((currentProduct.manufacturingProfitAmount || 0) + (currentProduct.boughtoutProfitAmount || 0)).toLocaleString('en-IN')}
+                          </p>
+                        </div>
                       </div>
-                      <div className="mt-2 pt-2 border-t border-yellow-300">
-                        <p className="text-sm font-bold text-green-700">
-                          Total Profit: ₹{((currentProduct.manufacturingProfitAmount || 0) + (currentProduct.boughtoutProfitAmount || 0)).toLocaleString('en-IN')}
-                        </p>
-                      </div>
-                    </div>
-                  )}
+                    )}
                 </div>
               )}
             </div>
@@ -1976,11 +1969,40 @@ export default function NewQuotePage() {
               </button>
             </div>
 
+
             {/* Customer Info */}
             <div className="mb-6">
               <h3 className="font-semibold mb-2">Customer</h3>
               <p className="text-gray-700">{selectedCustomer?.name}</p>
               <p className="text-gray-600 text-sm">{selectedCustomer?.email}</p>
+            </div>
+
+            {/* Project & Enquiry Details */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <div>
+                <label className="block text-sm font-medium mb-2 text-blue-900">
+                  Project Name
+                </label>
+                <input
+                  type="text"
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter project name..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2 text-blue-900">
+                  Enquiry ID / Reference
+                </label>
+                <input
+                  type="text"
+                  value={enquiryId}
+                  onChange={(e) => setEnquiryId(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter enquiry reference..."
+                />
+              </div>
             </div>
 
             {/* Products Summary */}

@@ -27,7 +27,6 @@ export async function getAllMaterials(): Promise<Material[]> {
     return snapshot.docs.map((doc) => ({
       id: doc.id,
       name: doc.data().name,
-      materialCode: doc.data().materialCode,
       pricePerKg: doc.data().pricePerKg,
       materialGroup: doc.data().materialGroup || 'BodyBonnet',
       isActive: doc.data().isActive ?? true,
@@ -49,18 +48,17 @@ export async function getMaterialsByGroup(group: MaterialGroup): Promise<Materia
       where('isActive', '==', true)
     );
     const snapshot = await getDocs(q);
-    
+
     console.log(`Found ${snapshot.docs.length} materials for group ${group}`); // DEBUG
-    
+
     const materials = snapshot.docs.map((doc) => ({
       id: doc.id,
       name: doc.data().name,
-      materialCode: doc.data().materialCode,
       pricePerKg: doc.data().pricePerKg,
       materialGroup: doc.data().materialGroup,
       isActive: doc.data().isActive,
     })) as Material[];
-    
+
     console.log('Materials:', materials); // DEBUG
     return materials;
   } catch (error) {
@@ -230,11 +228,10 @@ export async function importPricingData(data: any): Promise<void> {
     await clearAllPricingData();
 
     console.log('Importing materials...');
-    // Import materials with material group and code
+    // Import materials (without material code)
     for (const item of data.materials) {
       await addDoc(collection(db, 'materials'), {
         name: String(item['Material Name']).trim(),
-        materialCode: String(item['Material Code']).trim(),
         pricePerKg: parseFloat(item['Price Per Kg (INR)']) || 0,
         materialGroup: String(item['Material Group']).trim() || 'BodyBonnet',
         isActive: String(item.Active).toUpperCase() === 'TRUE',
@@ -281,39 +278,49 @@ export async function importPricingData(data: any): Promise<void> {
     }
 
     console.log('Importing plug weights...');
-    // Import plug weights (dedicated collection)
+    // Import plug weights (now includes seal ring data)
     for (const item of data.plugWeights) {
+      const hasSealRing = String(item['Has Seal Ring'] || '').toUpperCase() === 'TRUE';
+      const sealRingPrice = hasSealRing ? (parseFloat(item['Seal Ring Price']) || 0) : null;
+
       await addDoc(collection(db, 'plugWeights'), {
         seriesId: String(item['Series Number']).trim(),
         size: String(item.Size).trim(),
         rating: String(item.Rating).trim(),
         plugType: String(item['Plug Type']).trim(),
         weight: parseFloat(item['Weight (kg)']) || 0,
+        hasSealRing: hasSealRing,
+        sealRingPrice: sealRingPrice,
         isActive: String(item.Active).toUpperCase() === 'TRUE',
       });
     }
 
     console.log('Importing seat weights...');
-    // Import seat weights (dedicated collection)
+    // Import seat weights (now includes cage data)
     for (const item of data.seatWeights) {
+      const hasCage = String(item['Has Cage'] || '').toUpperCase() === 'TRUE';
+      const cageWeight = hasCage ? (parseFloat(item['Cage Weight']) || null) : null;
+
       await addDoc(collection(db, 'seatWeights'), {
         seriesId: String(item['Series Number']).trim(),
         size: String(item.Size).trim(),
         rating: String(item.Rating).trim(),
         seatType: String(item['Seat Type']).trim(),
         weight: parseFloat(item['Weight (kg)']) || 0,
+        hasCage: hasCage,
+        cageWeight: cageWeight,
         isActive: String(item.Active).toUpperCase() === 'TRUE',
       });
     }
 
     console.log('Importing stem fixed prices...');
-    // Import stem fixed prices (changed from weights)
+    // Import stem fixed prices (uses material name for lookup)
     for (const item of data.stemFixedPrices) {
       await addDoc(collection(db, 'stemFixedPrices'), {
         seriesId: String(item['Series Number']).trim(),
         size: String(item.Size).trim(),
         rating: String(item.Rating).trim(),
-        materialCode: String(item['Material Code']).trim(),
+        materialName: String(item['Material Name']).trim(),
         fixedPrice: parseFloat(item['Fixed Price']) || 0,
         isActive: String(item.Active).toUpperCase() === 'TRUE',
       });

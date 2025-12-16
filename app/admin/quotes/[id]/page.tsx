@@ -26,7 +26,7 @@ export default function AdminViewQuotePage() {
     try {
       const quoteRef = doc(db, 'quotes', quoteId);
       const quoteDoc = await getDoc(quoteRef);
-      
+
       if (quoteDoc.exists()) {
         const data = quoteDoc.data();
         setQuote({
@@ -144,7 +144,7 @@ export default function AdminViewQuotePage() {
           <span className={`px-4 py-2 rounded-lg font-semibold capitalize border-2 ${getStatusColor(quote.status)}`}>
             Current: {quote.status}
           </span>
-          
+
           <div className="flex space-x-2">
             {quote.status !== 'draft' && (
               <button
@@ -201,7 +201,7 @@ export default function AdminViewQuotePage() {
 
         {/* Products - Detailed View */}
         <h3 className="text-2xl font-bold text-gray-900 mb-6">Products Details</h3>
-        
+
         {quote.products.map((product, index) => (
           <div key={product.id} className="mb-8 p-6 border-2 border-gray-200 rounded-lg">
             <div className="flex justify-between items-start mb-4">
@@ -226,7 +226,7 @@ export default function AdminViewQuotePage() {
                   <p className="text-xs text-blue-600">+{product.manufacturingProfitPercentage}% profit</p>
                 )}
               </div>
-              
+
               <div className="bg-pink-50 p-3 rounded-lg border border-pink-200">
                 <p className="text-xs text-pink-700 font-medium">Boughtout Items</p>
                 <p className="text-lg font-bold text-pink-900">₹{product.boughtoutItemCost?.toLocaleString('en-IN')}</p>
@@ -234,13 +234,13 @@ export default function AdminViewQuotePage() {
                   <p className="text-xs text-pink-600">+{product.boughtoutProfitPercentage}% profit</p>
                 )}
               </div>
-              
+
               <div className="bg-green-50 p-3 rounded-lg border border-green-200">
                 <p className="text-xs text-green-700 font-medium">Unit Cost</p>
                 <p className="text-lg font-bold text-green-900">₹{product.unitCost?.toLocaleString('en-IN')}</p>
                 <p className="text-xs text-green-600">with profit</p>
               </div>
-              
+
               <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
                 <p className="text-xs text-yellow-700 font-medium">Total Profit</p>
                 <p className="text-lg font-bold text-yellow-900">
@@ -280,7 +280,7 @@ export default function AdminViewQuotePage() {
                 </div>
                 <div>
                   <p className="text-gray-600">Stem:</p>
-                  <p className="text-xs text-gray-500">Weight: {product.stemWeight}kg × ₹{product.stemMaterialPrice}/kg</p>
+                  <p className="text-xs text-gray-500">Fixed Price</p>
                   <p className="text-green-700 font-semibold">₹{product.stemTotalCost.toFixed(2)}</p>
                 </div>
                 {product.hasCage && product.cageTotalCost && (
@@ -394,7 +394,7 @@ export default function AdminViewQuotePage() {
             {/* Cost Summary for this Product */}
             <div className="bg-gradient-to-r from-blue-50 to-green-50 p-6 rounded-lg border-2 border-green-200">
               <h5 className="font-bold text-lg mb-4">📊 Product Cost Summary</h5>
-              
+
               {/* Manufacturing Cost Section */}
               <div className="bg-white p-4 rounded-lg mb-4">
                 <div className="space-y-2 text-sm">
@@ -405,7 +405,7 @@ export default function AdminViewQuotePage() {
                   <p className="text-xs text-gray-500 pl-4">
                     (Body + Actuator + Tubing & Fitting + Testing)
                   </p>
-                  
+
                   {product.manufacturingProfitPercentage && product.manufacturingProfitPercentage > 0 ? (
                     <>
                       <div className="flex justify-between items-center bg-blue-50 p-2 rounded">
@@ -426,7 +426,7 @@ export default function AdminViewQuotePage() {
                   )}
                 </div>
               </div>
-              
+
               {/* Boughtout Item Cost Section */}
               <div className="bg-white p-4 rounded-lg mb-4">
                 <div className="space-y-2 text-sm">
@@ -437,7 +437,7 @@ export default function AdminViewQuotePage() {
                   <p className="text-xs text-gray-500 pl-4">
                     (Accessories)
                   </p>
-                  
+
                   {product.boughtoutProfitPercentage && product.boughtoutProfitPercentage > 0 ? (
                     <>
                       <div className="flex justify-between items-center bg-pink-50 p-2 rounded">
@@ -468,7 +468,7 @@ export default function AdminViewQuotePage() {
                 <p className="text-xs text-gray-500 pl-4">
                   (Manufacturing Cost + Boughtout Cost with profit margins)
                 </p>
-                
+
                 <div className="flex justify-between text-lg font-bold bg-gray-50 p-3 rounded">
                   <span>Quantity:</span>
                   <span>×{product.quantity}</span>
@@ -481,8 +481,8 @@ export default function AdminViewQuotePage() {
               </div>
 
               {/* Profit Summary Badge */}
-              {(product.manufacturingProfitPercentage && product.manufacturingProfitPercentage > 0) || 
-               (product.boughtoutProfitPercentage && product.boughtoutProfitPercentage > 0) ? (
+              {(product.manufacturingProfitPercentage && product.manufacturingProfitPercentage > 0) ||
+                (product.boughtoutProfitPercentage && product.boughtoutProfitPercentage > 0) ? (
                 <div className="mt-4 p-3 bg-gradient-to-r from-yellow-50 to-green-50 border-2 border-yellow-300 rounded-lg">
                   <p className="text-sm font-semibold text-gray-800 mb-2">💰 Profit Summary:</p>
                   <div className="grid grid-cols-2 gap-4 text-xs">

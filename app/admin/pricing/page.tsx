@@ -6,8 +6,6 @@ import {
   getAllSeries,
   getAllBodyWeights,
   getAllBonnetWeights,
-  getAllComponentWeights,
-  getAllCagePrices,
   importPricingData,
   clearAllPricingData,
 } from '@/lib/firebase/pricingService';
@@ -58,7 +56,7 @@ export default function PricingPage() {
         getDocs(collection(db, 'actuatorModels')),
         getDocs(collection(db, 'handwheelPrices')),
       ]);
-  
+
       setStats({
         materials: materialsData.length,
         series: seriesData.length,
@@ -91,9 +89,9 @@ export default function PricingPage() {
     try {
       // Parse Excel file
       const data = await parseExcelFile(file);
-      
+
       setUploadProgress('Validating data...');
-      
+
       // Basic validation
       if (data.materials.length === 0) {
         throw new Error('No materials found in Excel file');
@@ -103,21 +101,21 @@ export default function PricingPage() {
       }
 
       setUploadProgress('Importing data to database...');
-      
+
       // Import to Firebase
       await importPricingData(data);
-      
+
       setUploadProgress('Data imported successfully!');
-      
+
       // Refresh stats
       await fetchStats();
-      
+
       // Reset
       setTimeout(() => {
         setUploadProgress('');
         setUploading(false);
       }, 2000);
-      
+
       alert('Pricing data imported successfully!');
     } catch (error: any) {
       console.error('Import error:', error);
@@ -125,7 +123,7 @@ export default function PricingPage() {
       setUploading(false);
       setUploadProgress('');
     }
-    
+
     // Reset file input
     e.target.value = '';
   };
@@ -176,80 +174,80 @@ export default function PricingPage() {
       </div>
 
       {/* Stats Grid */}
-  {/* Statistics */}
-<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-  <div className="bg-white rounded-lg shadow-sm p-6">
-    <div className="flex items-center justify-between mb-2">
-      <p className="text-sm text-gray-600">Materials</p>
-      <span className="text-2xl">⚙️</span>
-    </div>
-    <p className="text-3xl font-bold text-indigo-600">{stats.materials}</p>
-  </div>
+      {/* Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-gray-600">Materials</p>
+            <span className="text-2xl">⚙️</span>
+          </div>
+          <p className="text-3xl font-bold text-indigo-600">{stats.materials}</p>
+        </div>
 
-  <div className="bg-white rounded-lg shadow-sm p-6">
-    <div className="flex items-center justify-between mb-2">
-      <p className="text-sm text-gray-600">Series</p>
-      <span className="text-2xl">📋</span>
-    </div>
-    <p className="text-3xl font-bold text-indigo-600">{stats.series}</p>
-  </div>
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-gray-600">Series</p>
+            <span className="text-2xl">📋</span>
+          </div>
+          <p className="text-3xl font-bold text-indigo-600">{stats.series}</p>
+        </div>
 
-  <div className="bg-white rounded-lg shadow-sm p-6">
-    <div className="flex items-center justify-between mb-2">
-      <p className="text-sm text-gray-600">Body Weights</p>
-      <span className="text-2xl">🔩</span>
-    </div>
-    <p className="text-3xl font-bold text-indigo-600">{stats.bodyWeights}</p>
-  </div>
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-gray-600">Body Weights</p>
+            <span className="text-2xl">🔩</span>
+          </div>
+          <p className="text-3xl font-bold text-indigo-600">{stats.bodyWeights}</p>
+        </div>
 
-  <div className="bg-white rounded-lg shadow-sm p-6">
-    <div className="flex items-center justify-between mb-2">
-      <p className="text-sm text-gray-600">Bonnet Weights</p>
-      <span className="text-2xl">🔧</span>
-    </div>
-    <p className="text-3xl font-bold text-indigo-600">{stats.bonnetWeights}</p>
-  </div>
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-gray-600">Bonnet Weights</p>
+            <span className="text-2xl">🔧</span>
+          </div>
+          <p className="text-3xl font-bold text-indigo-600">{stats.bonnetWeights}</p>
+        </div>
 
-  <div className="bg-white rounded-lg shadow-sm p-6">
-    <div className="flex items-center justify-between mb-2">
-      <p className="text-sm text-gray-600">Component Weights</p>
-      <span className="text-2xl">⚡</span>
-    </div>
-    <p className="text-3xl font-bold text-indigo-600">{stats.componentWeights}</p>
-  </div>
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-gray-600">Component Weights</p>
+            <span className="text-2xl">⚡</span>
+          </div>
+          <p className="text-3xl font-bold text-indigo-600">{stats.componentWeights}</p>
+        </div>
 
-  <div className="bg-white rounded-lg shadow-sm p-6">
-    <div className="flex items-center justify-between mb-2">
-      <p className="text-sm text-gray-600">Stem Weights</p>
-      <span className="text-2xl">📏</span>
-    </div>
-    <p className="text-3xl font-bold text-indigo-600">{stats.stemWeights}</p>
-  </div>
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-gray-600">Stem Weights</p>
+            <span className="text-2xl">📏</span>
+          </div>
+          <p className="text-3xl font-bold text-indigo-600">{stats.stemWeights}</p>
+        </div>
 
-  <div className="bg-white rounded-lg shadow-sm p-6">
-    <div className="flex items-center justify-between mb-2">
-      <p className="text-sm text-gray-600">Cage Prices</p>
-      <span className="text-2xl">🔒</span>
-    </div>
-    <p className="text-3xl font-bold text-indigo-600">{stats.cagePrices}</p>
-  </div>
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-gray-600">Cage Prices</p>
+            <span className="text-2xl">🔒</span>
+          </div>
+          <p className="text-3xl font-bold text-indigo-600">{stats.cagePrices}</p>
+        </div>
 
-  <div className="bg-white rounded-lg shadow-sm p-6">
-    <div className="flex items-center justify-between mb-2">
-      <p className="text-sm text-gray-600">Actuator Models</p>
-      <span className="text-2xl">⚙️</span>
-    </div>
-    <p className="text-3xl font-bold text-purple-600">{stats.actuatorModels}</p>
-  </div>
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-gray-600">Actuator Models</p>
+            <span className="text-2xl">⚙️</span>
+          </div>
+          <p className="text-3xl font-bold text-purple-600">{stats.actuatorModels}</p>
+        </div>
 
-  <div className="bg-white rounded-lg shadow-sm p-6">
-    <div className="flex items-center justify-between mb-2">
-      <p className="text-sm text-gray-600">Handwheel Prices</p>
-      <span className="text-2xl">🎡</span>
-    </div>
-    <p className="text-3xl font-bold text-purple-600">{stats.handwheelPrices}</p>
-  </div>
-</div>
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-gray-600">Handwheel Prices</p>
+            <span className="text-2xl">🎡</span>
+          </div>
+          <p className="text-3xl font-bold text-purple-600">{stats.handwheelPrices}</p>
+        </div>
+      </div>
 
       {/* Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -289,7 +287,7 @@ export default function PricingPage() {
               <p className="text-gray-600 text-sm mb-4">
                 Upload the filled Excel template. This will replace all existing pricing data.
               </p>
-              
+
               {uploading ? (
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                   <div className="flex items-center">
