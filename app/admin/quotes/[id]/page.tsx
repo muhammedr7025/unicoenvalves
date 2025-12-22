@@ -34,12 +34,15 @@ export default function AdminViewQuotePage() {
           quoteNumber: data.quoteNumber,
           customerId: data.customerId,
           customerName: data.customerName,
+          projectName: data.projectName || '',
+          enquiryId: data.enquiryId || '',
           products: data.products || [],
           subtotal: data.subtotal || 0,
           discount: data.discount || 0,
           discountAmount: data.discountAmount || 0,
           tax: data.tax || 0,
           taxAmount: data.taxAmount || 0,
+          packagingPrice: data.packagingPrice || 0,
           total: data.total || 0,
           status: data.status || 'draft',
           createdBy: data.createdBy,
@@ -47,6 +50,12 @@ export default function AdminViewQuotePage() {
           createdAt: data.createdAt?.toDate() || new Date(),
           updatedAt: data.updatedAt?.toDate() || new Date(),
           notes: data.notes || '',
+          // Commercial Terms
+          priceType: data.priceType || 'Ex-Works INR each net',
+          validity: data.validity || '30 days from the date of quote',
+          delivery: data.delivery || '24 working weeks from the date of advance payment and approved technical documents (whichever comes later)',
+          warranty: data.warranty || 'UVPL Standard Warranty - 18 months from shipping or 12 months from installation (on material & workmanship)',
+          payment: data.payment || '20% with the order + 30% against drawings + Balance before shipping',
           isArchived: data.isArchived || false,
         } as Quote);
       } else {
@@ -268,13 +277,12 @@ export default function AdminViewQuotePage() {
                 </div>
                 <div>
                   <p className="text-gray-600">Plug:</p>
-                  <p className="font-semibold">{product.plugType}</p>
                   <p className="text-xs text-gray-500">Weight: {product.plugWeight}kg × ₹{product.plugMaterialPrice}/kg</p>
                   <p className="text-green-700 font-semibold">₹{product.plugTotalCost.toFixed(2)}</p>
                 </div>
                 <div>
                   <p className="text-gray-600">Seat:</p>
-                  <p className="font-semibold">{product.seatType}</p>
+
                   <p className="text-xs text-gray-500">Weight: {product.seatWeight}kg × ₹{product.seatMaterialPrice}/kg</p>
                   <p className="text-green-700 font-semibold">₹{product.seatTotalCost.toFixed(2)}</p>
                 </div>
@@ -352,6 +360,24 @@ export default function AdminViewQuotePage() {
               </div>
             )}
 
+            {/* Machine Cost */}
+            {product.machineCost && product.machineCost.length > 0 && (
+              <div className="bg-cyan-50 p-4 rounded-lg mb-4">
+                <h5 className="font-semibold text-cyan-900 mb-3">⚙️ Machine Cost</h5>
+                <div className="space-y-2 text-sm">
+                  {product.machineCost.map((item) => (
+                    <div key={item.id} className="flex justify-between">
+                      <span>{item.title}</span>
+                      <span className="font-semibold text-green-700">₹{item.price.toLocaleString('en-IN')}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 pt-3 border-t border-cyan-200">
+                  <p className="font-bold text-cyan-900">Machine Cost Total: ₹{product.machineCostTotal?.toLocaleString('en-IN')}</p>
+                </div>
+              </div>
+            )}
+
             {/* Testing */}
             {product.testing && product.testing.length > 0 && (
               <div className="bg-teal-50 p-4 rounded-lg mb-4">
@@ -403,7 +429,7 @@ export default function AdminViewQuotePage() {
                     <span className="font-bold text-blue-700">₹{product.manufacturingCost?.toLocaleString('en-IN')}</span>
                   </div>
                   <p className="text-xs text-gray-500 pl-4">
-                    (Body + Actuator + Tubing & Fitting + Testing)
+                    (Body + Actuator + Tubing & Fitting + Machine Cost + Testing)
                   </p>
 
                   {product.manufacturingProfitPercentage && product.manufacturingProfitPercentage > 0 ? (

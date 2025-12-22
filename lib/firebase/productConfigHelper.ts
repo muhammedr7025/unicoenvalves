@@ -98,28 +98,21 @@ export async function getBonnetWeight(
   }
 }
 
-// Get plug weight (from plugWeights collection) - now returns seal ring info as well
-export interface PlugWeightResult {
-  weight: number;
-  hasSealRing: boolean;
-  sealRingPrice: number | null;
-}
+// Get plug weight (simplified - no type, just series+size+rating)
 
 export async function getPlugWeight(
   seriesNumber: string,
   size: string,
-  rating: string,
-  plugType: string
-): Promise<PlugWeightResult | null> {
+  rating: string
+): Promise<number | null> {
   try {
-    console.log('Looking for plug weight:', { seriesNumber, size, rating, plugType });
+    console.log('Looking for plug weight:', { seriesNumber, size, rating });
     const weightsRef = collection(db, 'plugWeights');
     const q = query(
       weightsRef,
       where('seriesId', '==', seriesNumber),
       where('size', '==', size),
-      where('rating', '==', rating),
-      where('plugType', '==', plugType)
+      where('rating', '==', rating)
     );
     const snapshot = await getDocs(q);
 
@@ -127,40 +120,27 @@ export async function getPlugWeight(
 
     if (snapshot.empty) return null;
 
-    const data = snapshot.docs[0].data();
-    return {
-      weight: data.weight,
-      hasSealRing: data.hasSealRing || false,
-      sealRingPrice: data.sealRingPrice || null,
-    };
+    return snapshot.docs[0].data().weight;
   } catch (error) {
     console.error('Error fetching plug weight:', error);
     return null;
   }
 }
 
-// Get seat weight (from seatWeights collection) - now returns cage info as well
-export interface SeatWeightResult {
-  weight: number;
-  hasCage: boolean;
-  cageWeight: number | null;
-}
-
+// Get seat weight (simple weight lookup by series+size+rating)
 export async function getSeatWeight(
   seriesNumber: string,
   size: string,
-  rating: string,
-  seatType: string
-): Promise<SeatWeightResult | null> {
+  rating: string
+): Promise<number | null> {
   try {
-    console.log('Looking for seat weight:', { seriesNumber, size, rating, seatType });
+    console.log('Looking for seat weight:', { seriesNumber, size, rating });
     const weightsRef = collection(db, 'seatWeights');
     const q = query(
       weightsRef,
       where('seriesId', '==', seriesNumber),
       where('size', '==', size),
-      where('rating', '==', rating),
-      where('seatType', '==', seatType)
+      where('rating', '==', rating)
     );
     const snapshot = await getDocs(q);
 
@@ -168,12 +148,7 @@ export async function getSeatWeight(
 
     if (snapshot.empty) return null;
 
-    const data = snapshot.docs[0].data();
-    return {
-      weight: data.weight,
-      hasCage: data.hasCage || false,
-      cageWeight: data.cageWeight || null,
-    };
+    return snapshot.docs[0].data().weight;
   } catch (error) {
     console.error('Error fetching seat weight:', error);
     return null;
@@ -240,20 +215,20 @@ export async function getCageWeight(
   }
 }
 
-// NEW: Get seal ring fixed price
+// Get seal ring fixed price (using sealType)
 export async function getSealRingPrice(
   seriesNumber: string,
-  plugType: string,
+  sealType: string,
   size: string,
   rating: string
 ): Promise<number | null> {
   try {
-    console.log('Looking for seal ring price:', { seriesNumber, plugType, size, rating });
+    console.log('Looking for seal ring price:', { seriesNumber, sealType, size, rating });
     const pricesRef = collection(db, 'sealRingPrices');
     const q = query(
       pricesRef,
       where('seriesId', '==', seriesNumber),
-      where('plugType', '==', plugType),
+      where('sealType', '==', sealType),
       where('size', '==', size),
       where('rating', '==', rating),
       where('isActive', '==', true)
@@ -379,58 +354,34 @@ export async function getAvailableBonnetTypes(
   }
 }
 
-// Get available plug types
-export async function getAvailablePlugTypes(
+// Get available seal types (for seal ring configuration)
+export async function getAvailableSealTypes(
   seriesNumber: string,
   size: string,
   rating: string
 ): Promise<string[]> {
   try {
-    const weightsRef = collection(db, 'plugWeights');
+    const pricesRef = collection(db, 'sealRingPrices');
     const q = query(
-      weightsRef,
+      pricesRef,
       where('seriesId', '==', seriesNumber),
       where('size', '==', size),
-      where('rating', '==', rating)
+      where('rating', '==', rating),
+      where('isActive', '==', true)
     );
     const snapshot = await getDocs(q);
 
     const types = new Set<string>();
-    snapshot.docs.forEach(doc => types.add(doc.data().plugType));
+    snapshot.docs.forEach(doc => types.add(doc.data().sealType));
 
-    return Array.from(types);
+    return Array.from(types).sort();
   } catch (error) {
-    console.error('Error fetching plug types:', error);
+    console.error('Error fetching seal ring types:', error);
     return [];
   }
 }
 
 // Get available seat types
-export async function getAvailableSeatTypes(
-  seriesNumber: string,
-  size: string,
-  rating: string
-): Promise<string[]> {
-  try {
-    const weightsRef = collection(db, 'seatWeights');
-    const q = query(
-      weightsRef,
-      where('seriesId', '==', seriesNumber),
-      where('size', '==', size),
-      where('rating', '==', rating)
-    );
-    const snapshot = await getDocs(q);
-
-    const types = new Set<string>();
-    snapshot.docs.forEach(doc => types.add(doc.data().seatType));
-
-    return Array.from(types);
-  } catch (error) {
-    console.error('Error fetching seat types:', error);
-    return [];
-  }
-}
-
 // Get actuator price by details
 export async function getActuatorPrice(
   type: string,
@@ -462,14 +413,22 @@ export async function getActuatorPrice(
   }
 }
 
-// Get handwheel price for actuator model
-export async function getHandwheelPrice(actuatorModel: string): Promise<number | null> {
+// Get handwheel price by actuator combination (type, series, model, standard)
+export async function getHandwheelPrice(
+  type: string,
+  series: string,
+  model: string,
+  standard: 'standard' | 'special'
+): Promise<number | null> {
   try {
-    console.log('Looking for handwheel price for:', actuatorModel);
+    console.log('Looking for handwheel price for:', { type, series, model, standard });
     const pricesRef = collection(db, 'handwheelPrices');
     const q = query(
       pricesRef,
-      where('actuatorModel', '==', actuatorModel),
+      where('type', '==', type),
+      where('series', '==', series),
+      where('model', '==', model),
+      where('standard', '==', standard),
       where('isActive', '==', true)
     );
     const snapshot = await getDocs(q);
@@ -545,5 +504,51 @@ export async function getAvailableActuatorModels(
   } catch (error) {
     console.error('Error fetching actuator models:', error);
     return [];
+  }
+}
+
+// Get machining hours
+export async function getMachiningHours(
+  seriesNumber: string,
+  size: string,
+  rating: string,
+  partType: string,
+  trimType?: string
+): Promise<number | null> {
+  try {
+    console.log('Looking for machining hours:', { seriesNumber, size, rating, partType, trimType });
+    const hoursRef = collection(db, 'machiningHours');
+    let q;
+
+    if (trimType) {
+      q = query(
+        hoursRef,
+        where('seriesId', '==', seriesNumber),
+        where('size', '==', size),
+        where('rating', '==', rating),
+        where('partType', '==', partType),
+        where('trimType', '==', trimType),
+        where('isActive', '==', true)
+      );
+    } else {
+      q = query(
+        hoursRef,
+        where('seriesId', '==', seriesNumber),
+        where('size', '==', size),
+        where('rating', '==', rating),
+        where('partType', '==', partType),
+        where('isActive', '==', true)
+      );
+    }
+
+    const snapshot = await getDocs(q);
+    console.log('Machining hours results:', snapshot.docs.length);
+
+    if (snapshot.empty) return null;
+
+    return snapshot.docs[0].data().hours;
+  } catch (error) {
+    console.error('Error fetching machining hours:', error);
+    return null;
   }
 }

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/firebase/authContext';
 import { getAllCustomers } from '@/lib/firebase/customerService';
-import { getAllMaterials, getMaterialsByGroup, getAllSeries } from '@/lib/firebase/pricingService';
+import { getAllMaterials, getMaterialsByGroup, getAllSeries, getAllMachineRates } from '@/lib/firebase/pricingService';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import {
@@ -12,8 +12,7 @@ import {
   getAvailableRatings,
   getAvailableEndConnectTypes,
   getAvailableBonnetTypes,
-  getAvailablePlugTypes,
-  getAvailableSeatTypes,
+  getAvailableSealTypes,
   getBodyWeight,
   getBonnetWeight,
   getPlugWeight,
@@ -24,18 +23,23 @@ import {
   getAvailableActuatorModels,
   getActuatorPrice,
   getHandwheelPrice,
+  getMachiningHours,
 } from '@/lib/firebase/productConfigHelper';
 import {
   Customer,
   Material,
   Series,
+  MachineRate,
   QuoteProduct,
   TubingAndFittingItem,
+  MachineCostItem,
   TestingItem,
   AccessoryItem,
   DEFAULT_ACCESSORIES,
 } from '@/types';
 import { calculateQuoteTotals } from '@/utils/priceCalculator';
+import PageLoader from '@/components/ui/PageLoader';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 export default function NewQuotePage() {
   const { user } = useAuth();
@@ -53,6 +57,7 @@ export default function NewQuotePage() {
   const [cageMaterials, setCageMaterials] = useState<Material[]>([]);
 
   const [series, setSeries] = useState<Series[]>([]);
+  const [machineRates, setMachineRates] = useState<MachineRate[]>([]);
   const [products, setProducts] = useState<QuoteProduct[]>([]);
 
   const [currentProduct, setCurrentProduct] = useState<Partial<QuoteProduct>>({
@@ -62,6 +67,7 @@ export default function NewQuotePage() {
     hasActuator: false,
     hasHandwheel: false,
     tubingAndFitting: [],
+    machineCost: [],
     testing: [],
     accessories: [],
   });
@@ -71,8 +77,7 @@ export default function NewQuotePage() {
   const [availableRatings, setAvailableRatings] = useState<string[]>([]);
   const [availableEndConnectTypes, setAvailableEndConnectTypes] = useState<string[]>([]);
   const [availableBonnetTypes, setAvailableBonnetTypes] = useState<string[]>([]);
-  const [availablePlugTypes, setAvailablePlugTypes] = useState<string[]>([]);
-  const [availableSeatTypes, setAvailableSeatTypes] = useState<string[]>([]);
+  const [availableSealTypes, setAvailableSealTypes] = useState<string[]>([]);
 
   // Dynamic options for actuator
   const [availableActuatorTypes, setAvailableActuatorTypes] = useState<string[]>([]);
@@ -81,12 +86,15 @@ export default function NewQuotePage() {
 
   // Additional modules
   const [tubingAndFittingItems, setTubingAndFittingItems] = useState<TubingAndFittingItem[]>([]);
+  const [machineCostItems, setMachineCostItems] = useState<MachineCostItem[]>([]);
   const [testingItems, setTestingItems] = useState<TestingItem[]>([]);
   const [accessoryItems, setAccessoryItems] = useState<AccessoryItem[]>([]);
 
   // Temporary states for adding items
   const [newTubingTitle, setNewTubingTitle] = useState('');
   const [newTubingPrice, setNewTubingPrice] = useState(0);
+  const [newMachineTitle, setNewMachineTitle] = useState('');
+  const [newMachinePrice, setNewMachinePrice] = useState(0);
   const [newTestingTitle, setNewTestingTitle] = useState('');
   const [newTestingPrice, setNewTestingPrice] = useState(0);
   const [newAccessoryTitle, setNewAccessoryTitle] = useState('');
@@ -100,13 +108,29 @@ export default function NewQuotePage() {
 
   const [discount, setDiscount] = useState(0);
   const [tax, setTax] = useState(18);
+  const [packagingPrice, setPackagingPrice] = useState(0);
   const [notes, setNotes] = useState('');
   const [projectName, setProjectName] = useState('');
   const [enquiryId, setEnquiryId] = useState('');
+
+  // Commercial Terms
+  const [priceType, setPriceType] = useState('Ex-Works INR each net');
+  const [validity, setValidity] = useState('30 days from the date of quote');
+  const [delivery, setDelivery] = useState('24 working weeks from the date of advance payment and approved technical documents (whichever comes later)');
+  const [warranty, setWarranty] = useState('UVPL Standard Warranty - 18 months from shipping or 12 months from installation (on material & workmanship)');
+  const [payment, setPayment] = useState('20% with the order + 30% against drawings + Balance before shipping');
+
   const [status, setStatus] = useState<'draft' | 'sent'>('draft');
   const [loading, setLoading] = useState(false);
   const [calculating, setCalculating] = useState(false);
   const [showProductConfig, setShowProductConfig] = useState(false);
+
+  // Loading states for dropdowns
+  const [loadingSizes, setLoadingSizes] = useState(false);
+  const [loadingRatings, setLoadingRatings] = useState(false);
+  const [loadingDependent, setLoadingDependent] = useState(false);
+  const [loadingActuatorSeries, setLoadingActuatorSeries] = useState(false);
+  const [loadingActuatorModels, setLoadingActuatorModels] = useState(false);
 
   useEffect(() => {
     fetchInitialData();
@@ -122,7 +146,8 @@ export default function NewQuotePage() {
       stemMats,
       cageMats,
       seriesData,
-      actuatorTypes
+      actuatorTypes,
+      machineRatesData
     ] = await Promise.all([
       getAllCustomers(),
       getMaterialsByGroup('BodyBonnet'),
@@ -132,6 +157,7 @@ export default function NewQuotePage() {
       getMaterialsByGroup('Cage'),
       getAllSeries(),
       getAvailableActuatorTypes(),
+      getAllMachineRates()
     ]);
 
     setCustomers(customersData);
@@ -142,6 +168,7 @@ export default function NewQuotePage() {
     setCageMaterials(cageMats);
     setSeries(seriesData.filter(s => s.isActive));
     setAvailableActuatorTypes(actuatorTypes);
+    setMachineRates(machineRatesData);
     setLoading(false);
   };
 
@@ -156,6 +183,17 @@ export default function NewQuotePage() {
       fetchAvailableRatings(currentProduct.seriesNumber, currentProduct.size);
     }
   }, [currentProduct.seriesNumber, currentProduct.size]);
+
+  // Update machine costs when Trim Type changes
+  useEffect(() => {
+    if (currentProduct.trimType) {
+      if (currentProduct.plugMachineTypeId) updateMachineCost('plug', currentProduct.plugMachineTypeId);
+      if (currentProduct.seatMachineTypeId) updateMachineCost('seat', currentProduct.seatMachineTypeId);
+      if (currentProduct.stemMachineTypeId) updateMachineCost('stem', currentProduct.stemMachineTypeId);
+      if (currentProduct.cageMachineTypeId) updateMachineCost('cage', currentProduct.cageMachineTypeId);
+      if (currentProduct.sealRingMachineTypeId) updateMachineCost('sealRing', currentProduct.sealRingMachineTypeId);
+    }
+  }, [currentProduct.trimType]);
 
   useEffect(() => {
     if (currentProduct.seriesNumber && currentProduct.size && currentProduct.rating) {
@@ -176,37 +214,51 @@ export default function NewQuotePage() {
   }, [currentProduct.actuatorType, currentProduct.actuatorSeries]);
 
   const fetchAvailableSizes = async (seriesNumber: string) => {
+    setLoadingSizes(true);
     const sizes = await getAvailableSizes(seriesNumber);
     setAvailableSizes(sizes);
+    setLoadingSizes(false);
   };
 
   const fetchAvailableRatings = async (seriesNumber: string, size: string) => {
+    setLoadingRatings(true);
     const ratings = await getAvailableRatings(seriesNumber, size);
     setAvailableRatings(ratings);
+    setLoadingRatings(false);
   };
 
   const fetchDependentOptions = async (seriesNumber: string, size: string, rating: string) => {
-    const [endConnects, bonnets, plugs, seats] = await Promise.all([
+    setLoadingDependent(true);
+    const [endConnects, bonnets] = await Promise.all([
       getAvailableEndConnectTypes(seriesNumber, size, rating),
       getAvailableBonnetTypes(seriesNumber, size, rating),
-      getAvailablePlugTypes(seriesNumber, size, rating),
-      getAvailableSeatTypes(seriesNumber, size, rating),
     ]);
 
     setAvailableEndConnectTypes(endConnects);
     setAvailableBonnetTypes(bonnets);
-    setAvailablePlugTypes(plugs);
-    setAvailableSeatTypes(seats);
+
+    // Also fetch seal types if series supports seal rings
+    const currentSeries = series.find(s => s.seriesNumber === seriesNumber);
+    if (currentSeries?.hasSealRing) {
+      const sealTypes = await getAvailableSealTypes(seriesNumber, size, rating);
+      setAvailableSealTypes(sealTypes);
+    }
+    setLoadingDependent(false);
   };
 
+
   const fetchActuatorSeries = async (type: string) => {
+    setLoadingActuatorSeries(true);
     const series = await getAvailableActuatorSeries(type);
     setAvailableActuatorSeries(series);
+    setLoadingActuatorSeries(false);
   };
 
   const fetchActuatorModels = async (type: string, series: string) => {
+    setLoadingActuatorModels(true);
     const models = await getAvailableActuatorModels(type, series);
     setAvailableActuatorModels(models);
+    setLoadingActuatorModels(false);
   };
 
   const handleSeriesChange = async (seriesId: string) => {
@@ -276,6 +328,28 @@ export default function NewQuotePage() {
 
   const removeTubingAndFittingItem = (id: string) => {
     setTubingAndFittingItems(tubingAndFittingItems.filter(item => item.id !== id));
+  };
+
+  // Machine Cost functions
+  const addMachineCostItem = () => {
+    if (!newMachineTitle.trim() || newMachinePrice <= 0) {
+      alert('Please enter both title and price');
+      return;
+    }
+
+    const newItem: MachineCostItem = {
+      id: `machine-${Date.now()}`,
+      title: newMachineTitle.trim(),
+      price: newMachinePrice,
+    };
+
+    setMachineCostItems([...machineCostItems, newItem]);
+    setNewMachineTitle('');
+    setNewMachinePrice(0);
+  };
+
+  const removeMachineCostItem = (id: string) => {
+    setMachineCostItems(machineCostItems.filter(item => item.id !== id));
   };
 
   // Testing functions
@@ -361,8 +435,7 @@ export default function NewQuotePage() {
       return;
     }
 
-    if (!currentProduct.bodyEndConnectType || !currentProduct.bonnetType ||
-      !currentProduct.plugType || !currentProduct.seatType) {
+    if (!currentProduct.bodyEndConnectType || !currentProduct.bonnetType) {
       alert('Please select all body component types');
       return;
     }
@@ -395,8 +468,8 @@ export default function NewQuotePage() {
       const [bodyWeight, bonnetWeight, plugWeightResult, seatWeightResult] = await Promise.all([
         getBodyWeight(currentProduct.seriesNumber, currentProduct.size, currentProduct.rating, currentProduct.bodyEndConnectType),
         getBonnetWeight(currentProduct.seriesNumber, currentProduct.size, currentProduct.rating, currentProduct.bonnetType),
-        getPlugWeight(currentProduct.seriesNumber, currentProduct.size, currentProduct.rating, currentProduct.plugType),
-        getSeatWeight(currentProduct.seriesNumber, currentProduct.size, currentProduct.rating, currentProduct.seatType),
+        getPlugWeight(currentProduct.seriesNumber, currentProduct.size, currentProduct.rating),
+        getSeatWeight(currentProduct.seriesNumber, currentProduct.size, currentProduct.rating),
       ]);
 
       // Get materials
@@ -418,8 +491,10 @@ export default function NewQuotePage() {
       }
 
       // Extract weights from results
-      const plugWeight = plugWeightResult.weight;
-      const seatWeight = seatWeightResult.weight;
+      // Plug weight is now just a number (no result object)
+      const plugWeight = plugWeightResult;
+      // Seat weight is now just a number (no result object)
+      const seatWeight = seatWeightResult;
 
       // Calculate body sub-assembly costs
       const bodyTotalCost = bodyWeight * bodyBonnetMaterial.pricePerKg;
@@ -443,34 +518,61 @@ export default function NewQuotePage() {
 
       const stemTotalCost = stemFixedPrice;
 
-      // Cage calculation - now from seat weight data
+      // Cage calculation - NEW: independent, only if series has cage AND user selected it
       let cageTotalCost = 0;
       let cageWeight = 0;
       let cageMaterialPrice = 0;
-      const hasCage = seatWeightResult.hasCage;
+      // selectedSeries is declared below for seal ring, reuse it
+      const hasCage = series.find(s => s.seriesNumber === currentProduct.seriesNumber)?.hasCage && currentProduct.hasCage && currentProduct.cageMaterialId;
 
-      if (hasCage && seatWeightResult.cageWeight && currentProduct.cageMaterialId) {
-        const cageMaterial = cageMaterials.find(m => m.id === currentProduct.cageMaterialId);
+      if (hasCage) {
+        const { getCageWeight } = await import('@/lib/firebase/productConfigHelper');
+        const weight = await getCageWeight(
+          currentProduct.seriesNumber,
+          currentProduct.size,
+          currentProduct.rating
+        );
 
-        if (cageMaterial) {
-          cageWeight = seatWeightResult.cageWeight;
-          cageMaterialPrice = cageMaterial.pricePerKg;
-          cageTotalCost = cageWeight * cageMaterialPrice;
+        if (weight) {
+          const cageMaterial = cageMaterials.find(m => m.id === currentProduct.cageMaterialId);
+          if (cageMaterial) {
+            cageWeight = weight;
+            cageMaterialPrice = cageMaterial.pricePerKg;
+            cageTotalCost = cageWeight * cageMaterialPrice;
+          }
         }
       }
 
-      // Seal ring calculation - now from plug weight data
+      // Seal ring calculation - NEW: independent, only if series has seal ring AND user selected type
       let sealRingTotalCost = 0;
       let sealRingFixedPrice = 0;
-      const hasSealRing = plugWeightResult.hasSealRing;
+      const selectedSeries = series.find(s => s.seriesNumber === currentProduct.seriesNumber);
+      const hasSealRing = selectedSeries?.hasSealRing && currentProduct.hasSealRing && currentProduct.sealType;
 
-      if (hasSealRing && plugWeightResult.sealRingPrice) {
-        sealRingFixedPrice = plugWeightResult.sealRingPrice;
-        sealRingTotalCost = plugWeightResult.sealRingPrice;
+      if (hasSealRing) {
+        const { getSealRingPrice } = await import('@/lib/firebase/productConfigHelper');
+        const price = await getSealRingPrice(
+          currentProduct.seriesNumber,
+          currentProduct.sealType!,
+          currentProduct.size,
+          currentProduct.rating
+        );
+
+        if (price) {
+          sealRingFixedPrice = price;
+          sealRingTotalCost = price;
+        }
       }
 
       const bodySubAssemblyTotal = bodyTotalCost + bonnetTotalCost + plugTotalCost +
-        seatTotalCost + stemTotalCost + cageTotalCost + sealRingTotalCost;
+        seatTotalCost + stemTotalCost + cageTotalCost + sealRingTotalCost +
+        (currentProduct.bodyMachineCost || 0) +
+        (currentProduct.bonnetMachineCost || 0) +
+        (currentProduct.plugMachineCost || 0) +
+        (currentProduct.seatMachineCost || 0) +
+        (currentProduct.stemMachineCost || 0) +
+        (currentProduct.cageMachineCost || 0) +
+        (currentProduct.sealRingMachineCost || 0);
 
       // Actuator sub-assembly
       let actuatorFixedPrice = 0;
@@ -493,8 +595,13 @@ export default function NewQuotePage() {
           actuatorSubAssemblyTotal += actuatorPrice;
         }
 
-        if (currentProduct.hasHandwheel && currentProduct.actuatorModel) {
-          const handwheelPrice = await getHandwheelPrice(currentProduct.actuatorModel);
+        if (currentProduct.hasHandwheel && currentProduct.actuatorType && currentProduct.actuatorSeries && currentProduct.actuatorModel && currentProduct.actuatorStandard) {
+          const handwheelPrice = await getHandwheelPrice(
+            currentProduct.actuatorType,
+            currentProduct.actuatorSeries,
+            currentProduct.actuatorModel,
+            currentProduct.actuatorStandard
+          );
           if (handwheelPrice) {
             handwheelFixedPrice = handwheelPrice;
             actuatorSubAssemblyTotal += handwheelPrice;
@@ -504,6 +611,7 @@ export default function NewQuotePage() {
 
       // Additional modules
       const tubingAndFittingTotal = tubingAndFittingItems.reduce((sum, item) => sum + item.price, 0);
+      const machineCostTotal = machineCostItems.reduce((sum, item) => sum + item.price, 0);
       const testingTotal = testingItems.reduce((sum, item) => sum + item.price, 0);
       const accessoriesTotal = accessoryItems.reduce((sum, item) => sum + item.price, 0);
 
@@ -511,6 +619,7 @@ export default function NewQuotePage() {
       const baseManufacturingCost = bodySubAssemblyTotal +
         (actuatorSubAssemblyTotal || 0) +
         tubingAndFittingTotal +
+        machineCostTotal +
         testingTotal;
 
       const baseBoughtoutItemCost = accessoriesTotal;
@@ -541,11 +650,11 @@ export default function NewQuotePage() {
         seatTotalCost,
         stemFixedPrice,
         stemTotalCost,
-        hasCage: hasCage,
+        hasCage: !!hasCage,
         cageWeight: hasCage ? cageWeight : undefined,
         cageMaterialPrice: hasCage ? cageMaterialPrice : undefined,
         cageTotalCost: hasCage ? cageTotalCost : undefined,
-        hasSealRing: hasSealRing,
+        hasSealRing: !!hasSealRing,
         sealRingFixedPrice: hasSealRing ? sealRingFixedPrice : undefined,
         sealRingTotalCost: hasSealRing ? sealRingTotalCost : undefined,
         bodySubAssemblyTotal,
@@ -556,6 +665,8 @@ export default function NewQuotePage() {
         // Additional modules
         tubingAndFitting: tubingAndFittingItems,
         tubingAndFittingTotal,
+        machineCost: machineCostItems,
+        machineCostTotal,
         testing: testingItems,
         testingTotal,
         accessories: accessoryItems,
@@ -604,10 +715,12 @@ export default function NewQuotePage() {
       hasActuator: false,
       hasHandwheel: false,
       tubingAndFitting: [],
+      machineCost: [],
       testing: [],
       accessories: [],
     });
     setTubingAndFittingItems([]);
+    setMachineCostItems([]);
     setTestingItems([]);
     setAccessoryItems([]);
     setShowProductConfig(false);
@@ -630,7 +743,7 @@ export default function NewQuotePage() {
     setLoading(true);
 
     try {
-      const totals = calculateQuoteTotals(products, discount, tax);
+      const totals = calculateQuoteTotals(products, discount, tax, packagingPrice);
 
       const now = new Date();
       const currentMonth = now.getMonth();
@@ -677,12 +790,11 @@ export default function NewQuotePage() {
           bonnetWeight: p.bonnetWeight,
           bonnetMaterialPrice: p.bonnetMaterialPrice,
           bonnetTotalCost: p.bonnetTotalCost,
-          plugType: p.plugType,
           plugMaterialId: p.plugMaterialId,
           plugWeight: p.plugWeight,
           plugMaterialPrice: p.plugMaterialPrice,
           plugTotalCost: p.plugTotalCost,
-          seatType: p.seatType,
+
           seatMaterialId: p.seatMaterialId,
           seatWeight: p.seatWeight,
           seatMaterialPrice: p.seatMaterialPrice,
@@ -712,6 +824,8 @@ export default function NewQuotePage() {
           // Additional modules
           tubingAndFitting: p.tubingAndFitting || [],
           tubingAndFittingTotal: p.tubingAndFittingTotal || 0,
+          machineCost: p.machineCost || [],
+          machineCostTotal: p.machineCostTotal || 0,
           testing: p.testing || [],
           testingTotal: p.testingTotal || 0,
           accessories: p.accessories || [],
@@ -736,6 +850,7 @@ export default function NewQuotePage() {
         discountAmount: totals.discountAmount,
         tax,
         taxAmount: totals.taxAmount,
+        packagingPrice,
         total: totals.total,
         status,
         createdBy: user.id,
@@ -743,6 +858,12 @@ export default function NewQuotePage() {
         projectName: projectName || '',
         enquiryId: enquiryId || '',
         notes: notes || '',
+        // Commercial Terms
+        priceType,
+        validity,
+        delivery,
+        warranty,
+        payment,
         isArchived: false,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
@@ -758,16 +879,53 @@ export default function NewQuotePage() {
     }
   };
 
+  const updateMachineCost = async (
+    part: 'body' | 'bonnet' | 'plug' | 'seat' | 'stem' | 'cage' | 'sealRing',
+    machineTypeId: string,
+    trimType?: string
+  ) => {
+    if (!currentProduct.seriesNumber || !currentProduct.size || !currentProduct.rating) return;
+
+    const machineRate = machineRates.find(m => m.id === machineTypeId);
+    if (!machineRate) return;
+
+    // Determine part type string for DB lookup
+    const dbPartType = part.charAt(0).toUpperCase() + part.slice(1); // Body, Bonnet, etc.
+    if (part === 'sealRing') {
+      // Special case if needed, but 'SealRing' matches DB
+    }
+
+    // Fetch hours
+    // For Body/Bonnet, trimType is ignored/empty
+    // For others, use the provided trimType or currentProduct.trimType
+    const effectiveTrimType = (part === 'body' || part === 'bonnet') ? '' : (trimType || currentProduct.trimType || '');
+
+    const hours = await getMachiningHours(
+      currentProduct.seriesNumber,
+      currentProduct.size,
+      currentProduct.rating,
+      dbPartType,
+      effectiveTrimType
+    );
+
+    const cost = (hours || 0) * machineRate.ratePerHour;
+
+    // Update product state
+    setCurrentProduct(prev => ({
+      ...prev,
+      [`${part}MachineTypeId`]: machineTypeId,
+      [`${part}MachiningHours`]: hours || 0,
+      [`${part}MachineRate`]: machineRate.ratePerHour,
+      [`${part}MachineCost`]: cost
+    }));
+  };
+
   const totals = products.length > 0
-    ? calculateQuoteTotals(products, discount, tax)
-    : { subtotal: 0, discountAmount: 0, taxableAmount: 0, taxAmount: 0, total: 0 };
+    ? calculateQuoteTotals(products, discount, tax, packagingPrice)
+    : { subtotal: 0, discountAmount: 0, taxableAmount: 0, taxAmount: 0, packagingPrice: 0, total: 0 };
 
   if (loading && customers.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-      </div>
-    );
+    return <PageLoader message="Loading configuration data..." />;
   }
   return (
     <div>
@@ -882,14 +1040,17 @@ export default function NewQuotePage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Size *</label>
+                  <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                    Size *
+                    {loadingSizes && <LoadingSpinner size="sm" />}
+                  </label>
                   <select
                     value={currentProduct.size || ''}
                     onChange={(e) => handleSizeChange(e.target.value)}
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
-                    disabled={!availableSizes.length}
+                    disabled={!availableSizes.length || loadingSizes}
                   >
-                    <option value="">Select Size</option>
+                    <option value="">{loadingSizes ? 'Loading...' : 'Select Size'}</option>
                     {availableSizes.map((size) => (
                       <option key={size} value={size}>{size}</option>
                     ))}
@@ -897,14 +1058,17 @@ export default function NewQuotePage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Rating *</label>
+                  <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                    Rating *
+                    {loadingRatings && <LoadingSpinner size="sm" />}
+                  </label>
                   <select
                     value={currentProduct.rating || ''}
                     onChange={(e) => handleRatingChange(e.target.value)}
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
-                    disabled={!availableRatings.length}
+                    disabled={!availableRatings.length || loadingRatings}
                   >
-                    <option value="">Select Rating</option>
+                    <option value="">{loadingRatings ? 'Loading...' : 'Select Rating'}</option>
                     {availableRatings.map((rating) => (
                       <option key={rating} value={rating}>{rating}</option>
                     ))}
@@ -917,6 +1081,22 @@ export default function NewQuotePage() {
                 <div className="border-2 border-blue-200 rounded-lg p-6 mb-6 bg-blue-50">
                   <h3 className="text-xl font-bold mb-4 text-blue-900">🔧 Body Sub-Assembly</h3>
 
+                  {/* Common Trim Type */}
+                  <div className="mb-6 bg-white p-4 rounded-lg border border-gray-200">
+                    <label className="block text-sm font-medium mb-2">Trim Type (Common for Internal Parts)</label>
+                    <select
+                      value={currentProduct.trimType || ''}
+                      onChange={(e) => setCurrentProduct({ ...currentProduct, trimType: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg"
+                    >
+                      <option value="">Select Trim Type</option>
+                      <option value="Linear">Linear</option>
+                      <option value="Equal %">Equal %</option>
+                      <option value="Quick Opening">Quick Opening</option>
+                      <option value="Standard">Standard</option>
+                    </select>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Body */}
                     <div className="bg-white rounded-lg p-4 border-2 border-blue-300">
@@ -926,13 +1106,17 @@ export default function NewQuotePage() {
                       </h4>
                       <div className="space-y-3">
                         <div>
-                          <label className="block text-sm mb-1">End Connect Type *</label>
+                          <label className="block text-sm mb-1 flex items-center gap-2">
+                            End Connect Type *
+                            {loadingDependent && <LoadingSpinner size="sm" />}
+                          </label>
                           <select
                             value={currentProduct.bodyEndConnectType || ''}
                             onChange={(e) => setCurrentProduct({ ...currentProduct, bodyEndConnectType: e.target.value as any })}
                             className="w-full px-3 py-2 border rounded-lg text-sm"
+                            disabled={loadingDependent}
                           >
-                            <option value="">Select</option>
+                            <option value="">{loadingDependent ? 'Loading...' : 'Select'}</option>
                             {availableEndConnectTypes.map((type) => (
                               <option key={type} value={type}>{type}</option>
                             ))}
@@ -954,1163 +1138,1586 @@ export default function NewQuotePage() {
                             * This material is shared for both Body and Bonnet
                           </p>
                         </div>
-                      </div>
-                    </div>
-
-                    {/* Bonnet */}
-                    <div className="bg-white rounded-lg p-4 border-2 border-blue-300">
-                      <h4 className="font-semibold mb-3 text-gray-900 flex items-center">
-                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs mr-2">Material Group 1</span>
-                        Bonnet
-                      </h4>
-                      <div className="space-y-3">
                         <div>
-                          <label className="block text-sm mb-1">Bonnet Type *</label>
+                          <label className="block text-sm mb-1">Machine Type</label>
                           <select
-                            value={currentProduct.bonnetType || ''}
-                            onChange={(e) => setCurrentProduct({ ...currentProduct, bonnetType: e.target.value as any })}
+                            value={currentProduct.bodyMachineTypeId || ''}
+                            onChange={(e) => updateMachineCost('body', e.target.value)}
                             className="w-full px-3 py-2 border rounded-lg text-sm"
                           >
-                            <option value="">Select</option>
-                            {availableBonnetTypes.map((type) => (
-                              <option key={type} value={type}>{type}</option>
+                            <option value="">Select Machine Type</option>
+                            {machineRates.map((m) => (
+                              <option key={m.id} value={m.id}>{m.name} (₹{m.ratePerHour}/hr)</option>
                             ))}
                           </select>
-                        </div>
-                        <div className="bg-blue-50 p-3 rounded">
-                          <p className="text-xs text-blue-800">
-                            ℹ️ Uses the same material as Body (Material Group 1)
-                          </p>
+                          {currentProduct.bodyMachineCost ? (
+                            <p className="text-xs text-gray-600 mt-1">
+                              Cost: ₹{currentProduct.bodyMachineCost.toFixed(2)} ({currentProduct.bodyMachiningHours} hrs)
+                            </p>
+                          ) : null}
                         </div>
                       </div>
-                    </div>
 
-                    {/* Plug */}
-                    <div className="bg-white rounded-lg p-4 border-2 border-purple-300">
-                      <h4 className="font-semibold mb-3 text-gray-900 flex items-center">
-                        <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs mr-2">Material Group 2</span>
-                        Plug
-                      </h4>
-                      <div className="space-y-3">
-                        <div>
-                          <label className="block text-sm mb-1">Plug Type *</label>
-                          <select
-                            value={currentProduct.plugType || ''}
-                            onChange={(e) => setCurrentProduct({ ...currentProduct, plugType: e.target.value as any })}
-                            className="w-full px-3 py-2 border rounded-lg text-sm"
-                          >
-                            <option value="">Select</option>
-                            {availablePlugTypes.map((type) => (
-                              <option key={type} value={type}>{type}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-sm mb-1">Plug Material *</label>
-                          <select
-                            value={currentProduct.plugMaterialId || ''}
-                            onChange={(e) => setCurrentProduct({ ...currentProduct, plugMaterialId: e.target.value })}
-                            className="w-full px-3 py-2 border rounded-lg text-sm"
-                          >
-                            <option value="">Select Material</option>
-                            {plugMaterials.map((m) => (
-                              <option key={m.id} value={m.id}>{m.name} (₹{m.pricePerKg}/kg)</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-                    </div>
 
-                    {/* Seat */}
-                    <div className="bg-white rounded-lg p-4 border-2 border-pink-300">
-                      <h4 className="font-semibold mb-3 text-gray-900 flex items-center">
-                        <span className="bg-pink-100 text-pink-800 px-2 py-1 rounded text-xs mr-2">Material Group 3</span>
-                        Seat
-                      </h4>
-                      <div className="space-y-3">
-                        <div>
-                          <label className="block text-sm mb-1">Seat Type *</label>
-                          <select
-                            value={currentProduct.seatType || ''}
-                            onChange={(e) => setCurrentProduct({ ...currentProduct, seatType: e.target.value as any })}
-                            className="w-full px-3 py-2 border rounded-lg text-sm"
-                          >
-                            <option value="">Select</option>
-                            {availableSeatTypes.map((type) => (
-                              <option key={type} value={type}>{type}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-sm mb-1">Seat Material *</label>
-                          <select
-                            value={currentProduct.seatMaterialId || ''}
-                            onChange={(e) => setCurrentProduct({ ...currentProduct, seatMaterialId: e.target.value })}
-                            className="w-full px-3 py-2 border rounded-lg text-sm"
-                          >
-                            <option value="">Select Material</option>
-                            {seatMaterials.map((m) => (
-                              <option key={m.id} value={m.id}>{m.name} (₹{m.pricePerKg}/kg)</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Stem */}
-                    <div className="bg-white rounded-lg p-4 border-2 border-orange-300">
-                      <h4 className="font-semibold mb-3 text-gray-900 flex items-center">
-                        <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs mr-2">Material Group 4</span>
-                        Stem
-                      </h4>
-                      <div className="space-y-3">
-                        <div>
-                          <label className="block text-sm mb-1">Stem Material *</label>
-                          <select
-                            value={currentProduct.stemMaterialId || ''}
-                            onChange={(e) => setCurrentProduct({ ...currentProduct, stemMaterialId: e.target.value })}
-                            className="w-full px-3 py-2 border rounded-lg text-sm"
-                          >
-                            <option value="">Select Material</option>
-                            {stemMaterials.map((m) => (
-                              <option key={m.id} value={m.id}>{m.name}</option>
-                            ))}
-                          </select>
-                          <p className="text-xs text-gray-500 mt-1">
-                            * Stem price = Fixed price based on series, size, rating, and material
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Cage (conditional) */}
-                    {currentProduct.hasCage && (
-                      <div className="bg-white rounded-lg p-4 border-2 border-green-300">
+                      {/* Bonnet */}
+                      <div className="bg-white rounded-lg p-4 border-2 border-blue-300">
                         <h4 className="font-semibold mb-3 text-gray-900 flex items-center">
-                          <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs mr-2">Material Group 5</span>
-                          Cage
+                          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs mr-2">Material Group 1</span>
+                          Bonnet
                         </h4>
                         <div className="space-y-3">
-                          <div className="bg-green-50 p-3 rounded">
-                            <p className="text-sm text-green-800">
-                              ✓ Cage available for this series
+                          <div>
+                            <label className="block text-sm mb-1 flex items-center gap-2">
+                              Bonnet Type *
+                              {loadingDependent && <LoadingSpinner size="sm" />}
+                            </label>
+                            <select
+                              value={currentProduct.bonnetType || ''}
+                              onChange={(e) => setCurrentProduct({ ...currentProduct, bonnetType: e.target.value as any })}
+                              className="w-full px-3 py-2 border rounded-lg text-sm"
+                              disabled={loadingDependent}
+                            >
+                              <option value="">{loadingDependent ? 'Loading...' : 'Select'}</option>
+                              {availableBonnetTypes.map((type) => (
+                                <option key={type} value={type}>{type}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="bg-blue-50 p-3 rounded">
+                            <p className="text-xs text-blue-800">
+                              ℹ️ Uses the same material as Body (Material Group 1)
                             </p>
                           </div>
                           <div>
-                            <label className="block text-sm mb-1">Cage Material *</label>
+                            <label className="block text-sm mb-1">Machine Type</label>
                             <select
-                              value={currentProduct.cageMaterialId || ''}
-                              onChange={(e) => setCurrentProduct({ ...currentProduct, cageMaterialId: e.target.value })}
+                              value={currentProduct.bonnetMachineTypeId || ''}
+                              onChange={(e) => updateMachineCost('bonnet', e.target.value)}
+                              className="w-full px-3 py-2 border rounded-lg text-sm"
+                            >
+                              <option value="">Select Machine Type</option>
+                              {machineRates.map((m) => (
+                                <option key={m.id} value={m.id}>{m.name} (₹{m.ratePerHour}/hr)</option>
+                              ))}
+                            </select>
+                            {currentProduct.bonnetMachineCost ? (
+                              <p className="text-xs text-gray-600 mt-1">
+                                Cost: ₹{currentProduct.bonnetMachineCost.toFixed(2)} ({currentProduct.bonnetMachiningHours} hrs)
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Plug */}
+                      <div className="bg-white rounded-lg p-4 border-2 border-purple-300">
+                        <h4 className="font-semibold mb-3 text-gray-900 flex items-center">
+                          <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs mr-2">Material Group 2</span>
+                          Plug
+                        </h4>
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-sm mb-1">Plug Material *</label>
+                            <select
+                              value={currentProduct.plugMaterialId || ''}
+                              onChange={(e) => setCurrentProduct({ ...currentProduct, plugMaterialId: e.target.value })}
                               className="w-full px-3 py-2 border rounded-lg text-sm"
                             >
                               <option value="">Select Material</option>
-                              {cageMaterials.map((m) => (
+                              {plugMaterials.map((m) => (
                                 <option key={m.id} value={m.id}>{m.name} (₹{m.pricePerKg}/kg)</option>
                               ))}
                             </select>
-                            <p className="text-xs text-gray-500 mt-1">
-                              * Cage price = Weight × Material price
-                            </p>
+                          </div>
+                          <div>
+                            <label className="block text-sm mb-1">Machine Type</label>
+                            <select
+                              value={currentProduct.plugMachineTypeId || ''}
+                              onChange={(e) => updateMachineCost('plug', e.target.value)}
+                              className="w-full px-3 py-2 border rounded-lg text-sm"
+                            >
+                              <option value="">Select Machine Type</option>
+                              {machineRates.map((m) => (
+                                <option key={m.id} value={m.id}>{m.name} (₹{m.ratePerHour}/hr)</option>
+                              ))}
+                            </select>
+                            {currentProduct.plugMachineCost ? (
+                              <p className="text-xs text-gray-600 mt-1">
+                                Cost: ₹{currentProduct.plugMachineCost.toFixed(2)} ({currentProduct.plugMachiningHours} hrs)
+                              </p>
+                            ) : null}
                           </div>
                         </div>
-                      </div>
-                    )}
 
-                    {/* Seal Ring (conditional) */}
-                    {currentProduct.hasSealRing && currentProduct.plugType && (
-                      <div className="bg-white rounded-lg p-4 border-2 border-indigo-300">
-                        <h4 className="font-semibold mb-3 text-gray-900">Seal Ring</h4>
-                        <div className="bg-indigo-50 p-3 rounded">
-                          <p className="text-sm text-indigo-800">
-                            ✓ Seal Ring available for this series
-                          </p>
-                          <p className="text-xs text-indigo-600 mt-1">
-                            Fixed price based on plug type, size, and rating
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              {/* ACTUATOR SUB-ASSEMBLY */}
-              {currentProduct.size && currentProduct.rating && (
-                <div className="border-2 border-purple-200 rounded-lg p-6 mb-6 bg-purple-50">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xl font-bold text-purple-900">⚙️ Actuator Sub-Assembly</h3>
-                    <label className="flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={currentProduct.hasActuator || false}
-                        onChange={(e) => setCurrentProduct({
-                          ...currentProduct,
-                          hasActuator: e.target.checked,
-                          hasHandwheel: false,
-                        })}
-                        className="mr-2 w-5 h-5"
-                      />
-                      <span className="text-sm font-medium">Add Actuator</span>
-                    </label>
-                  </div>
 
-                  {currentProduct.hasActuator && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="bg-white rounded-lg p-4 border border-gray-200">
-                        <label className="block text-sm font-medium mb-2">Actuator Type *</label>
-                        <select
-                          value={currentProduct.actuatorType || ''}
-                          onChange={(e) => {
-                            setCurrentProduct({
-                              ...currentProduct,
-                              actuatorType: e.target.value,
-                              actuatorSeries: undefined,
-                              actuatorModel: undefined,
-                            });
-                            setAvailableActuatorSeries([]);
-                            setAvailableActuatorModels([]);
-                          }}
-                          className="w-full px-3 py-2 border rounded-lg"
-                        >
-                          <option value="">Select Type</option>
-                          {availableActuatorTypes.map((type) => (
-                            <option key={type} value={type}>{type}</option>
-                          ))}
-                        </select>
-                      </div>
+                        {/* Seat */}
+                        <div className="bg-white rounded-lg p-4 border-2 border-pink-300">
+                          <h4 className="font-semibold mb-3 text-gray-900 flex items-center">
+                            <span className="bg-pink-100 text-pink-800 px-2 py-1 rounded text-xs mr-2">Material Group 3</span>
+                            Seat
+                          </h4>
+                          <div className="space-y-3">
+                            <div>
+                              <label className="block text-sm mb-1">Seat Material *</label>
+                              <select
+                                value={currentProduct.seatMaterialId || ''}
+                                onChange={(e) => setCurrentProduct({ ...currentProduct, seatMaterialId: e.target.value })}
+                                className="w-full px-3 py-2 border rounded-lg text-sm"
+                              >
+                                <option value="">Select Material</option>
+                                {seatMaterials.map((m) => (
+                                  <option key={m.id} value={m.id}>{m.name} (₹{m.pricePerKg}/kg)</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-sm mb-1">Machine Type</label>
+                              <select
+                                value={currentProduct.seatMachineTypeId || ''}
+                                onChange={(e) => updateMachineCost('seat', e.target.value)}
+                                className="w-full px-3 py-2 border rounded-lg text-sm"
+                              >
+                                <option value="">Select Machine Type</option>
+                                {machineRates.map((m) => (
+                                  <option key={m.id} value={m.id}>{m.name} (₹{m.ratePerHour}/hr)</option>
+                                ))}
+                              </select>
+                              {currentProduct.seatMachineCost ? (
+                                <p className="text-xs text-gray-600 mt-1">
+                                  Cost: ₹{currentProduct.seatMachineCost.toFixed(2)} ({currentProduct.seatMachiningHours} hrs)
+                                </p>
+                              ) : null}
+                            </div>
+                          </div>
 
-                      <div className="bg-white rounded-lg p-4 border border-gray-200">
-                        <label className="block text-sm font-medium mb-2">Actuator Series *</label>
-                        <select
-                          value={currentProduct.actuatorSeries || ''}
-                          onChange={(e) => {
-                            setCurrentProduct({
-                              ...currentProduct,
-                              actuatorSeries: e.target.value,
-                              actuatorModel: undefined,
-                            });
-                            setAvailableActuatorModels([]);
-                          }}
-                          className="w-full px-3 py-2 border rounded-lg"
-                          disabled={!availableActuatorSeries.length}
-                        >
-                          <option value="">Select Series</option>
-                          {availableActuatorSeries.map((series) => (
-                            <option key={series} value={series}>{series}</option>
-                          ))}
-                        </select>
-                      </div>
 
-                      <div className="bg-white rounded-lg p-4 border border-gray-200">
-                        <label className="block text-sm font-medium mb-2">Actuator Model *</label>
-                        <select
-                          value={currentProduct.actuatorModel || ''}
-                          onChange={(e) => setCurrentProduct({ ...currentProduct, actuatorModel: e.target.value })}
-                          className="w-full px-3 py-2 border rounded-lg"
-                          disabled={!availableActuatorModels.length}
-                        >
-                          <option value="">Select Model</option>
-                          {availableActuatorModels.map((model) => (
-                            <option key={model} value={model}>{model}</option>
-                          ))}
-                        </select>
-                      </div>
 
-                      <div className="bg-white rounded-lg p-4 border border-gray-200">
-                        <label className="block text-sm font-medium mb-2">Configuration *</label>
-                        <select
-                          value={currentProduct.actuatorStandard || ''}
-                          onChange={(e) => setCurrentProduct({ ...currentProduct, actuatorStandard: e.target.value as 'standard' | 'special' })}
-                          className="w-full px-3 py-2 border rounded-lg"
-                        >
-                          <option value="">Select Configuration</option>
-                          <option value="standard">Standard</option>
-                          <option value="special">Special</option>
-                        </select>
-                      </div>
+                          {/* Stem */}
+                          <div className="bg-white rounded-lg p-4 border-2 border-orange-300">
+                            <h4 className="font-semibold mb-3 text-gray-900 flex items-center">
+                              <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs mr-2">Material Group 4</span>
+                              Stem
+                            </h4>
+                            <div className="space-y-3">
+                              <div>
+                                <label className="block text-sm mb-1">Stem Material *</label>
+                                <select
+                                  value={currentProduct.stemMaterialId || ''}
+                                  onChange={(e) => setCurrentProduct({ ...currentProduct, stemMaterialId: e.target.value })}
+                                  className="w-full px-3 py-2 border rounded-lg text-sm"
+                                >
+                                  <option value="">Select Material</option>
+                                  {stemMaterials.map((m) => (
+                                    <option key={m.id} value={m.id}>{m.name}</option>
+                                  ))}
+                                </select>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  * Stem price = Fixed price based on series, size, rating, and material
+                                </p>
+                              </div>
+                              <div>
+                                <label className="block text-sm mb-1">Machine Type</label>
+                                <select
+                                  value={currentProduct.stemMachineTypeId || ''}
+                                  onChange={(e) => updateMachineCost('stem', e.target.value)}
+                                  className="w-full px-3 py-2 border rounded-lg text-sm"
+                                >
+                                  <option value="">Select Machine Type</option>
+                                  {machineRates.map((m) => (
+                                    <option key={m.id} value={m.id}>{m.name} (₹{m.ratePerHour}/hr)</option>
+                                  ))}
+                                </select>
+                                {currentProduct.stemMachineCost ? (
+                                  <p className="text-xs text-gray-600 mt-1">
+                                    Cost: ₹{currentProduct.stemMachineCost.toFixed(2)} ({currentProduct.stemMachiningHours} hrs)
+                                  </p>
+                                ) : null}
+                              </div>
+                            </div>
 
-                      {currentProduct.actuatorModel && (
-                        <div className="bg-white rounded-lg p-4 border border-gray-200 col-span-2">
-                          <label className="flex items-center cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={currentProduct.hasHandwheel || false}
-                              onChange={(e) => setCurrentProduct({ ...currentProduct, hasHandwheel: e.target.checked })}
-                              className="mr-2 w-5 h-5"
-                            />
-                            <span className="text-sm font-medium">Add Handwheel (Optional)</span>
-                          </label>
-                          <p className="text-xs text-gray-500 mt-2">
-                            Handwheel price depends on actuator model
-                          </p>
+
+                            {/* Cage Section - NEW (Independent with checkbox) */}
+                            {series.find(s => s.seriesNumber === currentProduct.seriesNumber)?.hasCage && (
+                              <div className="bg-white rounded-lg p-4 border-2 border-teal-300">
+                                <div className="flex items-center gap-3 mb-3">
+                                  <input
+                                    type="checkbox"
+                                    id="hasCage"
+                                    checked={currentProduct.hasCage || false}
+                                    onChange={async (e) => {
+                                      const checked = e.target.checked;
+                                      setCurrentProduct({
+                                        ...currentProduct,
+                                        hasCage: checked,
+                                        cageMaterialId: checked ? currentProduct.cageMaterialId : undefined,
+                                        cageWeight: undefined,
+                                        cageMaterialPrice: undefined,
+                                        cageTotalCost: undefined,
+                                      });
+
+                                      // Auto-fetch cage weight if checked
+                                      if (checked && currentProduct.seriesNumber && currentProduct.size && currentProduct.rating) {
+                                        const { getCageWeight } = await import('@/lib/firebase/productConfigHelper');
+                                        const weight = await getCageWeight(
+                                          currentProduct.seriesNumber,
+                                          currentProduct.size,
+                                          currentProduct.rating
+                                        );
+
+                                        if (weight) {
+                                          setCurrentProduct(prev => ({
+                                            ...prev,
+                                            cageWeight: weight,
+                                          }));
+                                        }
+                                      }
+                                    }}
+                                    className="h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+                                  />
+                                  <label htmlFor="hasCage" className="text-sm font-semibold text-gray-900">
+                                    Include Cage
+                                  </label>
+                                </div>
+
+                                {currentProduct.hasCage && (
+                                  <div className="space-y-3 ml-7">
+                                    {/* Cage Material Dropdown */}
+                                    <div>
+                                      <label className="block text-sm mb-1">Cage Material *</label>
+                                      <select
+                                        value={currentProduct.cageMaterialId || ''}
+                                        onChange={(e) => {
+                                          const materialId = e.target.value;
+                                          const material = cageMaterials.find(m => m.id === materialId);
+                                          setCurrentProduct({
+                                            ...currentProduct,
+                                            cageMaterialId: materialId,
+                                            cageMaterialPrice: material?.pricePerKg,
+                                            cageTotalCost: currentProduct.cageWeight && material
+                                              ? currentProduct.cageWeight * material.pricePerKg
+                                              : undefined,
+                                          });
+                                        }}
+                                        className="w-full px-3 py-2 border rounded-lg text-sm"
+                                        required={currentProduct.hasCage}
+                                      >
+                                        <option value="">Select Material</option>
+                                        {cageMaterials.map((m) => (
+                                          <option key={m.id} value={m.id}>{m.name} (₹{m.pricePerKg}/kg)</option>
+                                        ))}
+                                      </select>
+                                    </div>
+                                    <div>
+                                      <label className="block text-sm mb-1 mt-2">Machine Type</label>
+                                      <select
+                                        value={currentProduct.cageMachineTypeId || ''}
+                                        onChange={(e) => updateMachineCost('cage', e.target.value)}
+                                        className="w-full px-3 py-2 border rounded-lg text-sm"
+                                      >
+                                        <option value="">Select Machine Type</option>
+                                        {machineRates.map((m) => (
+                                          <option key={m.id} value={m.id}>{m.name} (₹{m.ratePerHour}/hr)</option>
+                                        ))}
+                                      </select>
+                                      {currentProduct.cageMachineCost ? (
+                                        <p className="text-xs text-gray-600 mt-1">
+                                          Cost: ₹{currentProduct.cageMachineCost.toFixed(2)} ({currentProduct.cageMachiningHours} hrs)
+                                        </p>
+                                      ) : null}
+                                    </div>
+                                    <div>
+                                      <label className="block text-sm mb-1 mt-2">Machine Type</label>
+                                      <select
+                                        value={currentProduct.cageMachineTypeId || ''}
+                                        onChange={(e) => updateMachineCost('cage', e.target.value)}
+                                        className="w-full px-3 py-2 border rounded-lg text-sm"
+                                      >
+                                        <option value="">Select Machine Type</option>
+                                        {machineRates.map((m) => (
+                                          <option key={m.id} value={m.id}>{m.name} (₹{m.ratePerHour}/hr)</option>
+                                        ))}
+                                      </select>
+                                      {currentProduct.cageMachineCost ? (
+                                        <p className="text-xs text-gray-600 mt-1">
+                                          Cost: ₹{currentProduct.cageMachineCost.toFixed(2)} ({currentProduct.cageMachiningHours} hrs)
+                                        </p>
+                                      ) : null}
+                                    </div>
+
+                                    {/* Display cage weight and cost */}
+                                    {currentProduct.cageWeight && currentProduct.cageMaterialId && (
+                                      <div className="bg-teal-50 p-3 rounded">
+                                        <div className="text-xs text-gray-600 mb-2">
+                                          Weight: {currentProduct.cageWeight}kg × ₹{currentProduct.cageMaterialPrice}/kg
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                          <span className="text-sm font-medium text-gray-700">Total Cost:</span>
+                                          <span className="text-sm font-semibold text-teal-700">
+                                            ₹{currentProduct.cageTotalCost?.toLocaleString()}
+                                          </span>
+                                        </div>
+                                        <p className="text-xs text-teal-600 mt-1">
+                                          * Based on series, size, and rating
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+
+                                {/* Seal Ring (conditional) */}
+                                {/* Seal Ring Section - NEW (Independent with own type) */}
+                                {series.find(s => s.seriesNumber === currentProduct.seriesNumber)?.hasSealRing && (
+                                  <div className="bg-white rounded-lg p-4 border-2 border-purple-300">
+                                    <div className="flex items-center gap-3 mb-3">
+                                      <input
+                                        type="checkbox"
+                                        id="hasSealRing"
+                                        checked={currentProduct.hasSealRing || false}
+                                        onChange={(e) => {
+                                          setCurrentProduct({
+                                            ...currentProduct,
+                                            hasSealRing: e.target.checked,
+                                            sealType: e.target.checked ? currentProduct.sealType : undefined,
+                                            sealRingFixedPrice: e.target.checked ? currentProduct.sealRingFixedPrice : undefined,
+                                            sealRingTotalCost: e.target.checked ? currentProduct.sealRingTotalCost : undefined,
+                                          });
+                                        }}
+                                        className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                                      />
+                                      <label htmlFor="hasSealRing" className="text-sm font-semibold text-gray-900">
+                                        Include Seal Ring
+                                      </label>
+                                    </div>
+
+                                    {currentProduct.hasSealRing && (
+                                      <div className="space-y-3 ml-7">
+                                        {/* Seal Type Dropdown */}
+                                        <div>
+                                          <label className="block text-sm mb-1">Seal Type *</label>
+                                          <select
+                                            value={currentProduct.sealType || ''}
+                                            onChange={async (e) => {
+                                              const sealType = e.target.value;
+                                              setCurrentProduct({ ...currentProduct, sealType });
+
+                                              // Auto-fetch seal ring price
+                                              if (sealType && currentProduct.seriesNumber && currentProduct.size && currentProduct.rating) {
+                                                const { getSealRingPrice } = await import('@/lib/firebase/productConfigHelper');
+                                                const price = await getSealRingPrice(
+                                                  currentProduct.seriesNumber,
+                                                  sealType,
+                                                  currentProduct.size,
+                                                  currentProduct.rating
+                                                );
+
+                                                if (price) {
+                                                  setCurrentProduct(prev => ({
+                                                    ...prev,
+                                                    sealRingFixedPrice: price,
+                                                    sealRingTotalCost: price,
+                                                  }));
+                                                }
+                                              }
+                                            }}
+                                            className="w-full px-3 py-2 border rounded-lg text-sm"
+                                            required={currentProduct.hasSealRing}
+                                          >
+                                            <option value="">Select seal type...</option>
+                                            {availableSealTypes.map((type) => (
+                                              <option key={type} value={type}>{type}</option>
+                                            ))}
+                                          </select>
+                                        </div>
+                                        <div>
+                                          <label className="block text-sm mb-1 mt-2">Machine Type</label>
+                                          <select
+                                            value={currentProduct.sealRingMachineTypeId || ''}
+                                            onChange={(e) => updateMachineCost('sealRing', e.target.value)}
+                                            className="w-full px-3 py-2 border rounded-lg text-sm"
+                                          >
+                                            <option value="">Select Machine Type</option>
+                                            {machineRates.map((m) => (
+                                              <option key={m.id} value={m.id}>{m.name} (₹{m.ratePerHour}/hr)</option>
+                                            ))}
+                                          </select>
+                                          {currentProduct.sealRingMachineCost ? (
+                                            <p className="text-xs text-gray-600 mt-1">
+                                              Cost: ₹{currentProduct.sealRingMachineCost.toFixed(2)} ({currentProduct.sealRingMachiningHours} hrs)
+                                            </p>
+                                          ) : null}
+                                        </div>
+
+
+                                        {/* Display Seal Ring Price */}
+                                        {currentProduct.sealRingFixedPrice && (
+                                          <div className="bg-purple-50 p-3 rounded">
+                                            <div className="flex justify-between items-center">
+                                              <span className="text-sm font-medium text-gray-700">Fixed Price:</span>
+                                              <span className="text-sm font-semibold text-purple-700">
+                                                ₹{currentProduct.sealRingFixedPrice.toLocaleString()}
+                                              </span>
+                                            </div>
+                                            <p className="text-xs text-purple-600 mt-1">
+                                              * Based on series, seal type, size, and rating
+                                            </p>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                              </div>
+
+                            )}
+                          </div>
                         </div>
                       )}
-                    </div>
-                  )}
 
-                  {!currentProduct.hasActuator && (
-                    <div className="text-center py-8 text-gray-500">
-                      <p>Enable "Add Actuator" to configure actuator options</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* TUBING & FITTING MODULE */}
-              {currentProduct.size && currentProduct.rating && (
-                <div className="border-2 border-orange-200 rounded-lg p-6 mb-6 bg-orange-50">
-                  <h3 className="text-xl font-bold mb-4 text-orange-900">🔧 Tubing & Fitting</h3>
-
-                  <div className="bg-white rounded-lg p-4 mb-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium mb-2">Title</label>
-                        <input
-                          type="text"
-                          value={newTubingTitle}
-                          onChange={(e) => setNewTubingTitle(e.target.value)}
-                          placeholder="e.g., Stainless Steel Tubing 1/4 inch"
-                          className="w-full px-3 py-2 border rounded-lg"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Price (₹)</label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={newTubingPrice}
-                          onChange={(e) => setNewTubingPrice(parseFloat(e.target.value) || 0)}
-                          className="w-full px-3 py-2 border rounded-lg"
-                        />
-                      </div>
-                    </div>
-                    <button
-                      onClick={addTubingAndFittingItem}
-                      className="mt-3 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 text-sm"
-                    >
-                      + Add Item
-                    </button>
-                  </div>
-
-                  {tubingAndFittingItems.length > 0 && (
-                    <div className="space-y-2">
-                      {tubingAndFittingItems.map((item) => (
-                        <div key={item.id} className="bg-white p-3 rounded-lg flex justify-between items-center">
-                          <div>
-                            <p className="font-medium">{item.title}</p>
-                            <p className="text-sm text-gray-600">₹{item.price.toLocaleString('en-IN')}</p>
-                          </div>
-                          <button
-                            onClick={() => removeTubingAndFittingItem(item.id)}
-                            className="text-red-600 hover:text-red-800 text-sm"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      ))}
-                      <div className="bg-orange-100 p-3 rounded-lg">
-                        <p className="font-bold text-orange-900">
-                          Tubing & Fitting Total: ₹{tubingAndFittingItems.reduce((sum, item) => sum + item.price, 0).toLocaleString('en-IN')}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {tubingAndFittingItems.length === 0 && (
-                    <div className="text-center py-4 text-gray-500">
-                      <p className="text-sm">No items added yet</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* TESTING MODULE */}
-              {currentProduct.size && currentProduct.rating && (
-                <div className="border-2 border-teal-200 rounded-lg p-6 mb-6 bg-teal-50">
-                  <h3 className="text-xl font-bold mb-4 text-teal-900">🔬 Testing</h3>
-
-                  <div className="bg-white rounded-lg p-4 mb-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium mb-2">Test Title</label>
-                        <input
-                          type="text"
-                          value={newTestingTitle}
-                          onChange={(e) => setNewTestingTitle(e.target.value)}
-                          placeholder="e.g., Hydrostatic Pressure Test"
-                          className="w-full px-3 py-2 border rounded-lg"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Price (₹)</label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={newTestingPrice}
-                          onChange={(e) => setNewTestingPrice(parseFloat(e.target.value) || 0)}
-                          className="w-full px-3 py-2 border rounded-lg"
-                        />
-                      </div>
-                    </div>
-                    <button
-                      onClick={addTestingItem}
-                      className="mt-3 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 text-sm"
-                    >
-                      + Add Test
-                    </button>
-                  </div>
-
-                  {testingItems.length > 0 && (
-                    <div className="space-y-2">
-                      {testingItems.map((item) => (
-                        <div key={item.id} className="bg-white p-3 rounded-lg flex justify-between items-center">
-                          <div>
-                            <p className="font-medium">{item.title}</p>
-                            <p className="text-sm text-gray-600">₹{item.price.toLocaleString('en-IN')}</p>
-                          </div>
-                          <button
-                            onClick={() => removeTestingItem(item.id)}
-                            className="text-red-600 hover:text-red-800 text-sm"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      ))}
-                      <div className="bg-teal-100 p-3 rounded-lg">
-                        <p className="font-bold text-teal-900">
-                          Testing Total: ₹{testingItems.reduce((sum, item) => sum + item.price, 0).toLocaleString('en-IN')}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {testingItems.length === 0 && (
-                    <div className="text-center py-4 text-gray-500">
-                      <p className="text-sm">No tests added yet</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ACCESSORIES MODULE */}
-              {currentProduct.size && currentProduct.rating && (
-                <div className="border-2 border-pink-200 rounded-lg p-6 mb-6 bg-pink-50">
-                  <h3 className="text-xl font-bold mb-4 text-pink-900">🎯 Accessories</h3>
-
-                  <div className="bg-white rounded-lg p-4 mb-4">
-                    <p className="text-sm font-medium mb-3">Default Accessories (Optional - Enter Custom Price)</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {DEFAULT_ACCESSORIES.map((title) => {
-                        const isChecked = accessoryItems.some(item => item.title === title);
-                        const showInput = showAccessoryPriceInput === title;
-
-                        return (
-                          <div key={title}>
-                            <label className="flex items-center cursor-pointer p-2 hover:bg-gray-50 rounded">
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setShowAccessoryPriceInput(title);
-                                  } else {
-                                    toggleDefaultAccessory(title);
-                                  }
-                                }}
-                                className="mr-2 w-4 h-4"
-                              />
-                              <span className="text-sm">{title}</span>
-                            </label>
-
-                            {showInput && (
-                              <div className="ml-6 mt-2 flex items-center space-x-2">
+                        {/* ACTUATOR SUB-ASSEMBLY */}
+                        {currentProduct.size && currentProduct.rating && (
+                          <div className="border-2 border-purple-200 rounded-lg p-6 mb-6 bg-purple-50">
+                            <div className="flex items-center justify-between mb-4">
+                              <h3 className="text-xl font-bold text-purple-900">⚙️ Actuator Sub-Assembly</h3>
+                              <label className="flex items-center cursor-pointer">
                                 <input
-                                  type="number"
-                                  min="0"
-                                  placeholder="Enter price"
-                                  value={customAccessoryPrice[title] || ''}
-                                  onChange={(e) => setCustomAccessoryPrice({
-                                    ...customAccessoryPrice,
-                                    [title]: parseFloat(e.target.value) || 0
+                                  type="checkbox"
+                                  checked={currentProduct.hasActuator || false}
+                                  onChange={(e) => setCurrentProduct({
+                                    ...currentProduct,
+                                    hasActuator: e.target.checked,
+                                    hasHandwheel: false,
                                   })}
-                                  className="flex-1 px-3 py-1 border rounded text-sm"
-                                  autoFocus
+                                  className="mr-2 w-5 h-5"
                                 />
-                                <button
-                                  onClick={() => handleDefaultAccessoryPriceSubmit(title)}
-                                  className="bg-pink-600 text-white px-3 py-1 rounded text-xs hover:bg-pink-700"
-                                >
-                                  Add
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setShowAccessoryPriceInput(null);
-                                  }}
-                                  className="text-gray-600 hover:text-gray-800 text-xs"
-                                >
-                                  Cancel
-                                </button>
+                                <span className="text-sm font-medium">Add Actuator</span>
+                              </label>
+                            </div>
+
+                            {currentProduct.hasActuator && (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                                  <label className="block text-sm font-medium mb-2">Actuator Type *</label>
+                                  <select
+                                    value={currentProduct.actuatorType || ''}
+                                    onChange={(e) => {
+                                      setCurrentProduct({
+                                        ...currentProduct,
+                                        actuatorType: e.target.value,
+                                        actuatorSeries: undefined,
+                                        actuatorModel: undefined,
+                                      });
+                                      setAvailableActuatorSeries([]);
+                                      setAvailableActuatorModels([]);
+                                    }}
+                                    className="w-full px-3 py-2 border rounded-lg"
+                                  >
+                                    <option value="">Select Type</option>
+                                    {availableActuatorTypes.map((type) => (
+                                      <option key={type} value={type}>{type}</option>
+                                    ))}
+                                  </select>
+                                </div>
+
+                                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                                  <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                                    Actuator Series *
+                                    {loadingActuatorSeries && <LoadingSpinner size="sm" />}
+                                  </label>
+                                  <select
+                                    value={currentProduct.actuatorSeries || ''}
+                                    onChange={(e) => {
+                                      setCurrentProduct({
+                                        ...currentProduct,
+                                        actuatorSeries: e.target.value,
+                                        actuatorModel: undefined,
+                                      });
+                                      setAvailableActuatorModels([]);
+                                    }}
+                                    className="w-full px-3 py-2 border rounded-lg"
+                                    disabled={!availableActuatorSeries.length || loadingActuatorSeries}
+                                  >
+                                    <option value="">{loadingActuatorSeries ? 'Loading...' : 'Select Series'}</option>
+                                    {availableActuatorSeries.map((series) => (
+                                      <option key={series} value={series}>{series}</option>
+                                    ))}
+                                  </select>
+                                </div>
+
+                                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                                  <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                                    Actuator Model *
+                                    {loadingActuatorModels && <LoadingSpinner size="sm" />}
+                                  </label>
+                                  <select
+                                    value={currentProduct.actuatorModel || ''}
+                                    onChange={(e) => setCurrentProduct({ ...currentProduct, actuatorModel: e.target.value })}
+                                    className="w-full px-3 py-2 border rounded-lg"
+                                    disabled={!availableActuatorModels.length || loadingActuatorModels}
+                                  >
+                                    <option value="">{loadingActuatorModels ? 'Loading...' : 'Select Model'}</option>
+                                    {availableActuatorModels.map((model) => (
+                                      <option key={model} value={model}>{model}</option>
+                                    ))}
+                                  </select>
+                                </div>
+
+                                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                                  <label className="block text-sm font-medium mb-2">Configuration *</label>
+                                  <select
+                                    value={currentProduct.actuatorStandard || ''}
+                                    onChange={(e) => setCurrentProduct({ ...currentProduct, actuatorStandard: e.target.value as 'standard' | 'special' })}
+                                    className="w-full px-3 py-2 border rounded-lg"
+                                  >
+                                    <option value="">Select Configuration</option>
+                                    <option value="standard">Standard</option>
+                                    <option value="special">Special</option>
+                                  </select>
+                                </div>
+
+                                {currentProduct.actuatorModel && (
+                                  <div className="bg-white rounded-lg p-4 border border-gray-200 col-span-2">
+                                    <label className="flex items-center cursor-pointer">
+                                      <input
+                                        type="checkbox"
+                                        checked={currentProduct.hasHandwheel || false}
+                                        onChange={(e) => setCurrentProduct({ ...currentProduct, hasHandwheel: e.target.checked })}
+                                        className="mr-2 w-5 h-5"
+                                      />
+                                      <span className="text-sm font-medium">Add Handwheel (Optional)</span>
+                                    </label>
+                                    <p className="text-xs text-gray-500 mt-2">
+                                      Handwheel price depends on actuator model
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {!currentProduct.hasActuator && (
+                              <div className="text-center py-8 text-gray-500">
+                                <p>Enable "Add Actuator" to configure actuator options</p>
                               </div>
                             )}
                           </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                        )}
 
-                  <div className="bg-white rounded-lg p-4 mb-4">
-                    <p className="text-sm font-medium mb-3">Add Custom Accessory</p>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="md:col-span-2">
-                        <label className="block text-sm mb-2">Title</label>
-                        <input
-                          type="text"
-                          value={newAccessoryTitle}
-                          onChange={(e) => setNewAccessoryTitle(e.target.value)}
-                          placeholder="e.g., Custom Mounting Bracket"
-                          className="w-full px-3 py-2 border rounded-lg"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm mb-2">Price (₹)</label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={newAccessoryPrice}
-                          onChange={(e) => setNewAccessoryPrice(parseFloat(e.target.value) || 0)}
-                          className="w-full px-3 py-2 border rounded-lg"
-                        />
-                      </div>
-                    </div>
-                    <button
-                      onClick={addCustomAccessory}
-                      className="mt-3 bg-pink-600 text-white px-4 py-2 rounded-lg hover:bg-pink-700 text-sm"
-                    >
-                      + Add Custom Accessory
-                    </button>
-                  </div>
+                        {/* TUBING & FITTING MODULE */}
+                        {currentProduct.size && currentProduct.rating && (
+                          <div className="border-2 border-orange-200 rounded-lg p-6 mb-6 bg-orange-50">
+                            <h3 className="text-xl font-bold mb-4 text-orange-900">🔧 Tubing & Fitting</h3>
 
-                  {accessoryItems.length > 0 && (
-                    <div className="space-y-2">
-                      {accessoryItems.map((item) => (
-                        <div key={item.id} className="bg-white p-3 rounded-lg flex justify-between items-center">
-                          <div>
-                            <p className="font-medium">
-                              {item.title}
-                              {item.isDefault && <span className="ml-2 text-xs bg-pink-200 text-pink-800 px-2 py-1 rounded">Default</span>}
-                            </p>
-                            <p className="text-sm text-gray-600">₹{item.price.toLocaleString('en-IN')}</p>
+                            <div className="bg-white rounded-lg p-4 mb-4">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="md:col-span-2">
+                                  <label className="block text-sm font-medium mb-2">Title</label>
+                                  <input
+                                    type="text"
+                                    value={newTubingTitle}
+                                    onChange={(e) => setNewTubingTitle(e.target.value)}
+                                    placeholder="e.g., Stainless Steel Tubing 1/4 inch"
+                                    className="w-full px-3 py-2 border rounded-lg"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium mb-2">Price (₹)</label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={newTubingPrice}
+                                    onChange={(e) => setNewTubingPrice(parseFloat(e.target.value) || 0)}
+                                    className="w-full px-3 py-2 border rounded-lg"
+                                  />
+                                </div>
+                              </div>
+                              <button
+                                onClick={addTubingAndFittingItem}
+                                className="mt-3 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 text-sm"
+                              >
+                                + Add Item
+                              </button>
+                            </div>
+
+                            {tubingAndFittingItems.length > 0 && (
+                              <div className="space-y-2">
+                                {tubingAndFittingItems.map((item) => (
+                                  <div key={item.id} className="bg-white p-3 rounded-lg flex justify-between items-center">
+                                    <div>
+                                      <p className="font-medium">{item.title}</p>
+                                      <p className="text-sm text-gray-600">₹{item.price.toLocaleString('en-IN')}</p>
+                                    </div>
+                                    <button
+                                      onClick={() => removeTubingAndFittingItem(item.id)}
+                                      className="text-red-600 hover:text-red-800 text-sm"
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                ))}
+                                <div className="bg-orange-100 p-3 rounded-lg">
+                                  <p className="font-bold text-orange-900">
+                                    Tubing & Fitting Total: ₹{tubingAndFittingItems.reduce((sum, item) => sum + item.price, 0).toLocaleString('en-IN')}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+
+                            {tubingAndFittingItems.length === 0 && (
+                              <div className="text-center py-4 text-gray-500">
+                                <p className="text-sm">No items added yet</p>
+                              </div>
+                            )}
                           </div>
+                        )}
+
+                        {/* MACHINE COST MODULE */}
+                        {currentProduct.size && currentProduct.rating && (
+                          <div className="border-2 border-cyan-200 rounded-lg p-6 mb-6 bg-cyan-50">
+                            <h3 className="text-xl font-bold mb-4 text-cyan-900">⚙️ Machine Cost</h3>
+
+                            <div className="bg-white rounded-lg p-4 mb-4">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="md:col-span-2">
+                                  <label className="block text-sm font-medium mb-2">Title</label>
+                                  <input
+                                    type="text"
+                                    value={newMachineTitle}
+                                    onChange={(e) => setNewMachineTitle(e.target.value)}
+                                    placeholder="e.g., CNC Machining, Welding Equipment"
+                                    className="w-full px-3 py-2 border rounded-lg"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium mb-2">Price (₹)</label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={newMachinePrice}
+                                    onChange={(e) => setNewMachinePrice(parseFloat(e.target.value) || 0)}
+                                    className="w-full px-3 py-2 border rounded-lg"
+                                  />
+                                </div>
+                              </div>
+                              <button
+                                onClick={addMachineCostItem}
+                                className="mt-3 bg-cyan-600 text-white px-4 py-2 rounded-lg hover:bg-cyan-700 text-sm"
+                              >
+                                + Add Machine Cost
+                              </button>
+                            </div>
+
+                            {machineCostItems.length > 0 && (
+                              <div className="space-y-2">
+                                {machineCostItems.map((item) => (
+                                  <div key={item.id} className="bg-white p-3 rounded-lg flex justify-between items-center">
+                                    <div>
+                                      <p className="font-medium">{item.title}</p>
+                                      <p className="text-sm text-gray-600">₹{item.price.toLocaleString('en-IN')}</p>
+                                    </div>
+                                    <button
+                                      onClick={() => removeMachineCostItem(item.id)}
+                                      className="text-red-600 hover:text-red-800 text-sm"
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                ))}
+                                <div className="bg-cyan-100 p-3 rounded-lg">
+                                  <p className="font-bold text-cyan-900">
+                                    Machine Cost Total: ₹{machineCostItems.reduce((sum, item) => sum + item.price, 0).toLocaleString('en-IN')}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+
+                            {machineCostItems.length === 0 && (
+                              <div className="text-center py-4 text-gray-500">
+                                <p className="text-sm">No machine costs added yet</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* TESTING MODULE */}
+                        {currentProduct.size && currentProduct.rating && (
+                          <div className="border-2 border-teal-200 rounded-lg p-6 mb-6 bg-teal-50">
+                            <h3 className="text-xl font-bold mb-4 text-teal-900">🔬 Testing</h3>
+
+                            <div className="bg-white rounded-lg p-4 mb-4">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="md:col-span-2">
+                                  <label className="block text-sm font-medium mb-2">Test Title</label>
+                                  <input
+                                    type="text"
+                                    value={newTestingTitle}
+                                    onChange={(e) => setNewTestingTitle(e.target.value)}
+                                    placeholder="e.g., Hydrostatic Pressure Test"
+                                    className="w-full px-3 py-2 border rounded-lg"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium mb-2">Price (₹)</label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={newTestingPrice}
+                                    onChange={(e) => setNewTestingPrice(parseFloat(e.target.value) || 0)}
+                                    className="w-full px-3 py-2 border rounded-lg"
+                                  />
+                                </div>
+                              </div>
+                              <button
+                                onClick={addTestingItem}
+                                className="mt-3 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 text-sm"
+                              >
+                                + Add Test
+                              </button>
+                            </div>
+
+                            {testingItems.length > 0 && (
+                              <div className="space-y-2">
+                                {testingItems.map((item) => (
+                                  <div key={item.id} className="bg-white p-3 rounded-lg flex justify-between items-center">
+                                    <div>
+                                      <p className="font-medium">{item.title}</p>
+                                      <p className="text-sm text-gray-600">₹{item.price.toLocaleString('en-IN')}</p>
+                                    </div>
+                                    <button
+                                      onClick={() => removeTestingItem(item.id)}
+                                      className="text-red-600 hover:text-red-800 text-sm"
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                ))}
+                                <div className="bg-teal-100 p-3 rounded-lg">
+                                  <p className="font-bold text-teal-900">
+                                    Testing Total: ₹{testingItems.reduce((sum, item) => sum + item.price, 0).toLocaleString('en-IN')}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+
+                            {testingItems.length === 0 && (
+                              <div className="text-center py-4 text-gray-500">
+                                <p className="text-sm">No tests added yet</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* ACCESSORIES MODULE */}
+                        {currentProduct.size && currentProduct.rating && (
+                          <div className="border-2 border-pink-200 rounded-lg p-6 mb-6 bg-pink-50">
+                            <h3 className="text-xl font-bold mb-4 text-pink-900">🎯 Accessories</h3>
+
+                            <div className="bg-white rounded-lg p-4 mb-4">
+                              <p className="text-sm font-medium mb-3">Default Accessories (Optional - Enter Custom Price)</p>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {DEFAULT_ACCESSORIES.map((title) => {
+                                  const isChecked = accessoryItems.some(item => item.title === title);
+                                  const showInput = showAccessoryPriceInput === title;
+
+                                  return (
+                                    <div key={title}>
+                                      <label className="flex items-center cursor-pointer p-2 hover:bg-gray-50 rounded">
+                                        <input
+                                          type="checkbox"
+                                          checked={isChecked}
+                                          onChange={(e) => {
+                                            if (e.target.checked) {
+                                              setShowAccessoryPriceInput(title);
+                                            } else {
+                                              toggleDefaultAccessory(title);
+                                            }
+                                          }}
+                                          className="mr-2 w-4 h-4"
+                                        />
+                                        <span className="text-sm">{title}</span>
+                                      </label>
+
+                                      {showInput && (
+                                        <div className="ml-6 mt-2 flex items-center space-x-2">
+                                          <input
+                                            type="number"
+                                            min="0"
+                                            placeholder="Enter price"
+                                            value={customAccessoryPrice[title] || ''}
+                                            onChange={(e) => setCustomAccessoryPrice({
+                                              ...customAccessoryPrice,
+                                              [title]: parseFloat(e.target.value) || 0
+                                            })}
+                                            className="flex-1 px-3 py-1 border rounded text-sm"
+                                            autoFocus
+                                          />
+                                          <button
+                                            onClick={() => handleDefaultAccessoryPriceSubmit(title)}
+                                            className="bg-pink-600 text-white px-3 py-1 rounded text-xs hover:bg-pink-700"
+                                          >
+                                            Add
+                                          </button>
+                                          <button
+                                            onClick={() => {
+                                              setShowAccessoryPriceInput(null);
+                                            }}
+                                            className="text-gray-600 hover:text-gray-800 text-xs"
+                                          >
+                                            Cancel
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            <div className="bg-white rounded-lg p-4 mb-4">
+                              <p className="text-sm font-medium mb-3">Add Custom Accessory</p>
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="md:col-span-2">
+                                  <label className="block text-sm mb-2">Title</label>
+                                  <input
+                                    type="text"
+                                    value={newAccessoryTitle}
+                                    onChange={(e) => setNewAccessoryTitle(e.target.value)}
+                                    placeholder="e.g., Custom Mounting Bracket"
+                                    className="w-full px-3 py-2 border rounded-lg"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm mb-2">Price (₹)</label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={newAccessoryPrice}
+                                    onChange={(e) => setNewAccessoryPrice(parseFloat(e.target.value) || 0)}
+                                    className="w-full px-3 py-2 border rounded-lg"
+                                  />
+                                </div>
+                              </div>
+                              <button
+                                onClick={addCustomAccessory}
+                                className="mt-3 bg-pink-600 text-white px-4 py-2 rounded-lg hover:bg-pink-700 text-sm"
+                              >
+                                + Add Custom Accessory
+                              </button>
+                            </div>
+
+                            {accessoryItems.length > 0 && (
+                              <div className="space-y-2">
+                                {accessoryItems.map((item) => (
+                                  <div key={item.id} className="bg-white p-3 rounded-lg flex justify-between items-center">
+                                    <div>
+                                      <p className="font-medium">
+                                        {item.title}
+                                        {item.isDefault && <span className="ml-2 text-xs bg-pink-200 text-pink-800 px-2 py-1 rounded">Default</span>}
+                                      </p>
+                                      <p className="text-sm text-gray-600">₹{item.price.toLocaleString('en-IN')}</p>
+                                    </div>
+                                    <button
+                                      onClick={() => removeAccessoryItem(item.id)}
+                                      className="text-red-600 hover:text-red-800 text-sm"
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                ))}
+                                <div className="bg-pink-100 p-3 rounded-lg">
+                                  <p className="font-bold text-pink-900">
+                                    Accessories Total: ₹{accessoryItems.reduce((sum, item) => sum + item.price, 0).toLocaleString('en-IN')}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+
+                            {accessoryItems.length === 0 && (
+                              <div className="text-center py-4 text-gray-500">
+                                <p className="text-sm">No accessories selected</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* PROFIT PERCENTAGE SECTION */}
+                        {currentProduct.size && currentProduct.rating && (
+                          <div className="border-2 border-indigo-200 rounded-lg p-6 mb-6 bg-indigo-50">
+                            <h3 className="text-xl font-bold mb-4 text-indigo-900">💼 Profit Margin</h3>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                                <label className="block text-sm font-semibold mb-2 text-blue-900">
+                                  Manufacturing Cost Profit (%)
+                                </label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  step="0.1"
+                                  value={manufacturingProfit}
+                                  onChange={(e) => setManufacturingProfit(parseFloat(e.target.value) || 0)}
+                                  className="w-full px-4 py-3 border rounded-lg text-lg font-semibold"
+                                  placeholder="0"
+                                />
+                                <p className="text-xs text-gray-500 mt-2">
+                                  Applied to: Body + Actuator + Tubing & Fitting + Machine Cost + Testing
+                                </p>
+                              </div>
+
+                              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                                <label className="block text-sm font-semibold mb-2 text-pink-900">
+                                  Boughtout Items Profit (%)
+                                </label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  step="0.1"
+                                  value={boughtoutProfit}
+                                  onChange={(e) => setBoughtoutProfit(parseFloat(e.target.value) || 0)}
+                                  className="w-full px-4 py-3 border rounded-lg text-lg font-semibold"
+                                  placeholder="0"
+                                />
+                                <p className="text-xs text-gray-500 mt-2">
+                                  Applied to: Accessories
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="mt-4 bg-indigo-100 p-4 rounded-lg">
+                              <p className="text-sm text-indigo-900">
+                                <strong>Note:</strong> Profit percentages will be calculated after you click "Calculate Price"
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* QUANTITY */}
+                        {currentProduct.size && currentProduct.rating && (
+                          <div className="bg-white rounded-lg p-4 border-2 border-gray-300 mb-6">
+                            <label className="block text-sm font-medium mb-2">Product Quantity *</label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={currentProduct.quantity || 1}
+                              onChange={(e) => setCurrentProduct({ ...currentProduct, quantity: parseInt(e.target.value) || 1 })}
+                              className="w-full px-4 py-3 border rounded-lg text-lg font-semibold"
+                            />
+                            <p className="text-xs text-gray-500 mt-2">
+                              * Quantity applies to the entire configured product with all modules
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Action Buttons */}
+                        <div className="flex space-x-4 mb-6">
                           <button
-                            onClick={() => removeAccessoryItem(item.id)}
-                            className="text-red-600 hover:text-red-800 text-sm"
+                            onClick={() => {
+                              setShowProductConfig(false);
+                              setCurrentProduct({
+                                quantity: 1,
+                                hasCage: false,
+                                hasSealRing: false,
+                                hasActuator: false,
+                                hasHandwheel: false,
+                                tubingAndFitting: [],
+                                testing: [],
+                                accessories: [],
+                              });
+                              setTubingAndFittingItems([]);
+                              setTestingItems([]);
+                              setAccessoryItems([]);
+                              setManufacturingProfit(0);
+                              setBoughtoutProfit(0);
+                            }}
+                            className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
                           >
-                            Remove
+                            Cancel
                           </button>
-                        </div>
-                      ))}
-                      <div className="bg-pink-100 p-3 rounded-lg">
-                        <p className="font-bold text-pink-900">
-                          Accessories Total: ₹{accessoryItems.reduce((sum, item) => sum + item.price, 0).toLocaleString('en-IN')}
-                        </p>
-                      </div>
-                    </div>
-                  )}
 
-                  {accessoryItems.length === 0 && (
-                    <div className="text-center py-4 text-gray-500">
-                      <p className="text-sm">No accessories selected</p>
-                    </div>
-                  )}
-                </div>
-              )}
+                          <button
+                            onClick={calculateProductPrice}
+                            disabled={calculating}
+                            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                          >
+                            {calculating ? 'Calculating...' : 'Calculate Price'}
+                          </button>
 
-              {/* PROFIT PERCENTAGE SECTION */}
-              {currentProduct.size && currentProduct.rating && (
-                <div className="border-2 border-indigo-200 rounded-lg p-6 mb-6 bg-indigo-50">
-                  <h3 className="text-xl font-bold mb-4 text-indigo-900">💼 Profit Margin</h3>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="bg-white rounded-lg p-4 border border-gray-200">
-                      <label className="block text-sm font-semibold mb-2 text-blue-900">
-                        Manufacturing Cost Profit (%)
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.1"
-                        value={manufacturingProfit}
-                        onChange={(e) => setManufacturingProfit(parseFloat(e.target.value) || 0)}
-                        className="w-full px-4 py-3 border rounded-lg text-lg font-semibold"
-                        placeholder="0"
-                      />
-                      <p className="text-xs text-gray-500 mt-2">
-                        Applied to: Body + Actuator + Tubing & Fitting + Testing
-                      </p>
-                    </div>
-
-                    <div className="bg-white rounded-lg p-4 border border-gray-200">
-                      <label className="block text-sm font-semibold mb-2 text-pink-900">
-                        Boughtout Items Profit (%)
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.1"
-                        value={boughtoutProfit}
-                        onChange={(e) => setBoughtoutProfit(parseFloat(e.target.value) || 0)}
-                        className="w-full px-4 py-3 border rounded-lg text-lg font-semibold"
-                        placeholder="0"
-                      />
-                      <p className="text-xs text-gray-500 mt-2">
-                        Applied to: Accessories
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 bg-indigo-100 p-4 rounded-lg">
-                    <p className="text-sm text-indigo-900">
-                      <strong>Note:</strong> Profit percentages will be calculated after you click "Calculate Price"
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* QUANTITY */}
-              {currentProduct.size && currentProduct.rating && (
-                <div className="bg-white rounded-lg p-4 border-2 border-gray-300 mb-6">
-                  <label className="block text-sm font-medium mb-2">Product Quantity *</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={currentProduct.quantity || 1}
-                    onChange={(e) => setCurrentProduct({ ...currentProduct, quantity: parseInt(e.target.value) || 1 })}
-                    className="w-full px-4 py-3 border rounded-lg text-lg font-semibold"
-                  />
-                  <p className="text-xs text-gray-500 mt-2">
-                    * Quantity applies to the entire configured product with all modules
-                  </p>
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="flex space-x-4 mb-6">
-                <button
-                  onClick={() => {
-                    setShowProductConfig(false);
-                    setCurrentProduct({
-                      quantity: 1,
-                      hasCage: false,
-                      hasSealRing: false,
-                      hasActuator: false,
-                      hasHandwheel: false,
-                      tubingAndFitting: [],
-                      testing: [],
-                      accessories: [],
-                    });
-                    setTubingAndFittingItems([]);
-                    setTestingItems([]);
-                    setAccessoryItems([]);
-                    setManufacturingProfit(0);
-                    setBoughtoutProfit(0);
-                  }}
-                  className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-
-                <button
-                  onClick={calculateProductPrice}
-                  disabled={calculating}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {calculating ? 'Calculating...' : 'Calculate Price'}
-                </button>
-
-                {currentProduct.productTotalCost && (
-                  <button
-                    onClick={addProductToQuote}
-                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                  >
-                    Add Product (₹{currentProduct.lineTotal?.toLocaleString('en-IN')})
-                  </button>
-                )}
-              </div>
-              {/* PRICE BREAKDOWN */}
-              {currentProduct.productTotalCost && (
-                <div className="mt-6 p-6 bg-gradient-to-br from-green-50 to-blue-50 rounded-lg border-2 border-green-200">
-                  <h4 className="font-bold text-xl mb-6 text-gray-900">💰 Complete Price Breakdown</h4>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-                    {/* Body Sub-Assembly */}
-                    <div className="bg-white p-4 rounded-lg shadow-sm">
-                      <h5 className="font-semibold text-blue-900 mb-3 flex items-center">
-                        <span className="text-lg mr-2">🔧</span>
-                        Body Sub-Assembly
-                      </h5>
-                      <div className="text-sm space-y-1">
-                        <p className="flex justify-between">
-                          <span>Body:</span>
-                          <span>₹{currentProduct.bodyTotalCost?.toFixed(2)}</span>
-                        </p>
-                        <p className="flex justify-between">
-                          <span>Bonnet:</span>
-                          <span>₹{currentProduct.bonnetTotalCost?.toFixed(2)}</span>
-                        </p>
-                        <p className="flex justify-between">
-                          <span>Plug:</span>
-                          <span>₹{currentProduct.plugTotalCost?.toFixed(2)}</span>
-                        </p>
-                        <p className="flex justify-between">
-                          <span>Seat:</span>
-                          <span>₹{currentProduct.seatTotalCost?.toFixed(2)}</span>
-                        </p>
-                        <p className="flex justify-between">
-                          <span>Stem:</span>
-                          <span>₹{currentProduct.stemTotalCost?.toFixed(2)}</span>
-                        </p>
-                        {currentProduct.cageTotalCost && currentProduct.cageTotalCost > 0 && (
-                          <p className="flex justify-between">
-                            <span>Cage:</span>
-                            <span>₹{currentProduct.cageTotalCost?.toFixed(2)}</span>
-                          </p>
-                        )}
-                        {currentProduct.sealRingTotalCost && currentProduct.sealRingTotalCost > 0 && (
-                          <p className="flex justify-between">
-                            <span>Seal Ring:</span>
-                            <span>₹{currentProduct.sealRingTotalCost?.toFixed(2)}</span>
-                          </p>
-                        )}
-                        <p className="flex justify-between font-bold pt-2 border-t text-blue-900">
-                          <span>Subtotal:</span>
-                          <span>₹{currentProduct.bodySubAssemblyTotal?.toFixed(2)}</span>
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Actuator Sub-Assembly */}
-                    {currentProduct.hasActuator && currentProduct.actuatorSubAssemblyTotal && (
-                      <div className="bg-white p-4 rounded-lg shadow-sm">
-                        <h5 className="font-semibold text-purple-900 mb-3 flex items-center">
-                          <span className="text-lg mr-2">⚙️</span>
-                          Actuator Sub-Assembly
-                        </h5>
-                        <div className="text-sm space-y-1">
-                          <p className="flex justify-between">
-                            <span>Actuator:</span>
-                            <span>₹{currentProduct.actuatorFixedPrice?.toFixed(2)}</span>
-                          </p>
-                          {currentProduct.hasHandwheel && currentProduct.handwheelFixedPrice && (
-                            <p className="flex justify-between">
-                              <span>Handwheel:</span>
-                              <span>₹{currentProduct.handwheelFixedPrice?.toFixed(2)}</span>
-                            </p>
+                          {currentProduct.productTotalCost && (
+                            <button
+                              onClick={addProductToQuote}
+                              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                            >
+                              Add Product (₹{currentProduct.lineTotal?.toLocaleString('en-IN')})
+                            </button>
                           )}
-                          <p className="flex justify-between font-bold pt-2 border-t text-purple-900">
-                            <span>Subtotal:</span>
-                            <span>₹{currentProduct.actuatorSubAssemblyTotal?.toFixed(2)}</span>
-                          </p>
                         </div>
-                      </div>
-                    )}
+                        {/* PRICE BREAKDOWN */}
+                        {currentProduct.productTotalCost && (
+                          <div className="mt-6 p-6 bg-gradient-to-br from-green-50 to-blue-50 rounded-lg border-2 border-green-200">
+                            <h4 className="font-bold text-xl mb-6 text-gray-900">💰 Complete Price Breakdown</h4>
 
-                    {/* Tubing & Fitting */}
-                    {currentProduct.tubingAndFittingTotal && currentProduct.tubingAndFittingTotal > 0 && (
-                      <div className="bg-white p-4 rounded-lg shadow-sm">
-                        <h5 className="font-semibold text-orange-900 mb-3 flex items-center">
-                          <span className="text-lg mr-2">🔧</span>
-                          Tubing & Fitting
-                        </h5>
-                        <div className="text-sm space-y-1">
-                          {currentProduct.tubingAndFitting?.map((item) => (
-                            <p key={item.id} className="flex justify-between">
-                              <span className="truncate mr-2">{item.title}:</span>
-                              <span>₹{item.price.toFixed(2)}</span>
-                            </p>
-                          ))}
-                          <p className="flex justify-between font-bold pt-2 border-t text-orange-900">
-                            <span>Subtotal:</span>
-                            <span>₹{currentProduct.tubingAndFittingTotal?.toFixed(2)}</span>
-                          </p>
-                        </div>
-                      </div>
-                    )}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                              {/* Body Sub-Assembly */}
+                              <div className="bg-white p-4 rounded-lg shadow-sm">
+                                <h5 className="font-semibold text-blue-900 mb-3 flex items-center">
+                                  <span className="text-lg mr-2">🔧</span>
+                                  Body Sub-Assembly
+                                </h5>
+                                <div className="text-sm space-y-1">
+                                  <p className="flex justify-between">
+                                    <span>Body:</span>
+                                    <span>₹{currentProduct.bodyTotalCost?.toFixed(2)}</span>
+                                  </p>
+                                  <p className="flex justify-between">
+                                    <span>Bonnet:</span>
+                                    <span>₹{currentProduct.bonnetTotalCost?.toFixed(2)}</span>
+                                  </p>
+                                  <p className="flex justify-between">
+                                    <span>Plug:</span>
+                                    <span>₹{currentProduct.plugTotalCost?.toFixed(2)}</span>
+                                  </p>
+                                  <p className="flex justify-between">
+                                    <span>Seat:</span>
+                                    <span>₹{currentProduct.seatTotalCost?.toFixed(2)}</span>
+                                  </p>
+                                  <p className="flex justify-between">
+                                    <span>Stem:</span>
+                                    <span>₹{currentProduct.stemTotalCost?.toFixed(2)}</span>
+                                  </p>
+                                  {currentProduct.cageTotalCost && currentProduct.cageTotalCost > 0 && (
+                                    <p className="flex justify-between">
+                                      <span>Cage:</span>
+                                      <span>₹{currentProduct.cageTotalCost?.toFixed(2)}</span>
+                                    </p>
+                                  )}
+                                  {currentProduct.sealRingTotalCost && currentProduct.sealRingTotalCost > 0 && (
+                                    <p className="flex justify-between">
+                                      <span>Seal Ring:</span>
+                                      <span>₹{currentProduct.sealRingTotalCost?.toFixed(2)}</span>
+                                    </p>
+                                  )}
+                                  <p className="flex justify-between font-bold pt-2 border-t text-blue-900">
+                                    <span>Subtotal:</span>
+                                    <span>₹{currentProduct.bodySubAssemblyTotal?.toFixed(2)}</span>
+                                  </p>
+                                </div>
+                              </div>
 
-                    {/* Testing */}
-                    {currentProduct.testingTotal && currentProduct.testingTotal > 0 && (
-                      <div className="bg-white p-4 rounded-lg shadow-sm">
-                        <h5 className="font-semibold text-teal-900 mb-3 flex items-center">
-                          <span className="text-lg mr-2">🔬</span>
-                          Testing
-                        </h5>
-                        <div className="text-sm space-y-1">
-                          {currentProduct.testing?.map((item) => (
-                            <p key={item.id} className="flex justify-between">
-                              <span className="truncate mr-2">{item.title}:</span>
-                              <span>₹{item.price.toFixed(2)}</span>
-                            </p>
-                          ))}
-                          <p className="flex justify-between font-bold pt-2 border-t text-teal-900">
-                            <span>Subtotal:</span>
-                            <span>₹{currentProduct.testingTotal?.toFixed(2)}</span>
-                          </p>
-                        </div>
-                      </div>
-                    )}
+                              {/* Actuator Sub-Assembly */}
+                              {currentProduct.hasActuator && currentProduct.actuatorSubAssemblyTotal && (
+                                <div className="bg-white p-4 rounded-lg shadow-sm">
+                                  <h5 className="font-semibold text-purple-900 mb-3 flex items-center">
+                                    <span className="text-lg mr-2">⚙️</span>
+                                    Actuator Sub-Assembly
+                                  </h5>
+                                  <div className="text-sm space-y-1">
+                                    <p className="flex justify-between">
+                                      <span>Actuator:</span>
+                                      <span>₹{currentProduct.actuatorFixedPrice?.toFixed(2)}</span>
+                                    </p>
+                                    {currentProduct.hasHandwheel && currentProduct.handwheelFixedPrice && (
+                                      <p className="flex justify-between">
+                                        <span>Handwheel:</span>
+                                        <span>₹{currentProduct.handwheelFixedPrice?.toFixed(2)}</span>
+                                      </p>
+                                    )}
+                                    <p className="flex justify-between font-bold pt-2 border-t text-purple-900">
+                                      <span>Subtotal:</span>
+                                      <span>₹{currentProduct.actuatorSubAssemblyTotal?.toFixed(2)}</span>
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
 
-                    {/* Accessories */}
-                    {currentProduct.accessoriesTotal && currentProduct.accessoriesTotal > 0 && (
-                      <div className="bg-white p-4 rounded-lg shadow-sm">
-                        <h5 className="font-semibold text-pink-900 mb-3 flex items-center">
-                          <span className="text-lg mr-2">🎯</span>
-                          Accessories
-                        </h5>
-                        <div className="text-sm space-y-1">
-                          {currentProduct.accessories?.map((item) => (
-                            <p key={item.id} className="flex justify-between">
-                              <span className="truncate mr-2">{item.title}:</span>
-                              <span>₹{item.price.toFixed(2)}</span>
-                            </p>
-                          ))}
-                          <p className="flex justify-between font-bold pt-2 border-t text-pink-900">
-                            <span>Subtotal:</span>
-                            <span>₹{currentProduct.accessoriesTotal?.toFixed(2)}</span>
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                              {/* Tubing & Fitting */}
+                              {currentProduct.tubingAndFittingTotal && currentProduct.tubingAndFittingTotal > 0 && (
+                                <div className="bg-white p-4 rounded-lg shadow-sm">
+                                  <h5 className="font-semibold text-orange-900 mb-3 flex items-center">
+                                    <span className="text-lg mr-2">🔧</span>
+                                    Tubing & Fitting
+                                  </h5>
+                                  <div className="text-sm space-y-1">
+                                    {currentProduct.tubingAndFitting?.map((item) => (
+                                      <p key={item.id} className="flex justify-between">
+                                        <span className="truncate mr-2">{item.title}:</span>
+                                        <span>₹{item.price.toFixed(2)}</span>
+                                      </p>
+                                    ))}
+                                    <p className="flex justify-between font-bold pt-2 border-t text-orange-900">
+                                      <span>Subtotal:</span>
+                                      <span>₹{currentProduct.tubingAndFittingTotal?.toFixed(2)}</span>
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
 
-                  {/* Cost Summary */}
-                  <div className="bg-gradient-to-r from-blue-100 to-green-100 p-6 rounded-lg border-2 border-blue-300">
-                    <h5 className="font-bold text-lg mb-4 text-gray-900">📊 Cost Summary</h5>
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center text-base">
-                        <span className="font-semibold text-gray-700">Manufacturing Cost:</span>
-                        <span className="font-bold text-blue-700">
-                          ₹{currentProduct.manufacturingCost?.toLocaleString('en-IN')}
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-600 pl-4">
-                        (Body + Actuator + Tubing & Fitting + Testing)
-                      </p>
+                              {/* Testing */}
+                              {currentProduct.testingTotal && currentProduct.testingTotal > 0 && (
+                                <div className="bg-white p-4 rounded-lg shadow-sm">
+                                  <h5 className="font-semibold text-teal-900 mb-3 flex items-center">
+                                    <span className="text-lg mr-2">🔬</span>
+                                    Testing
+                                  </h5>
+                                  <div className="text-sm space-y-1">
+                                    {currentProduct.testing?.map((item) => (
+                                      <p key={item.id} className="flex justify-between">
+                                        <span className="truncate mr-2">{item.title}:</span>
+                                        <span>₹{item.price.toFixed(2)}</span>
+                                      </p>
+                                    ))}
+                                    <p className="flex justify-between font-bold pt-2 border-t text-teal-900">
+                                      <span>Subtotal:</span>
+                                      <span>₹{currentProduct.testingTotal?.toFixed(2)}</span>
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
 
-                      {currentProduct.manufacturingProfitPercentage && currentProduct.manufacturingProfitPercentage > 0 && (
-                        <>
-                          <div className="flex justify-between text-blue-600 pl-4">
-                            <span>+ Profit ({currentProduct.manufacturingProfitPercentage}%):</span>
-                            <span>₹{currentProduct.manufacturingProfitAmount?.toLocaleString('en-IN')}</span>
-                          </div>
-                          <div className="flex justify-between font-semibold text-blue-800 pl-4">
-                            <span>Manufacturing (with profit):</span>
-                            <span>₹{currentProduct.manufacturingCostWithProfit?.toLocaleString('en-IN')}</span>
-                          </div>
-                        </>
-                      )}
-
-                      <div className="flex justify-between items-center text-base pt-2 border-t">
-                        <span className="font-semibold text-gray-700">Boughtout Item Cost:</span>
-                        <span className="font-bold text-pink-700">
-                          ₹{currentProduct.boughtoutItemCost?.toLocaleString('en-IN')}
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-600 pl-4">
-                        (Accessories)
-                      </p>
-
-                      {currentProduct.boughtoutProfitPercentage && currentProduct.boughtoutProfitPercentage > 0 && (
-                        <>
-                          <div className="flex justify-between text-pink-600 pl-4">
-                            <span>+ Profit ({currentProduct.boughtoutProfitPercentage}%):</span>
-                            <span>₹{currentProduct.boughtoutProfitAmount?.toLocaleString('en-IN')}</span>
-                          </div>
-                          <div className="flex justify-between font-semibold text-pink-800 pl-4">
-                            <span>Boughtout (with profit):</span>
-                            <span>₹{currentProduct.boughtoutCostWithProfit?.toLocaleString('en-IN')}</span>
-                          </div>
-                        </>
-                      )}
-
-                      <div className="flex justify-between items-center text-lg pt-4 border-t-2 border-gray-400">
-                        <span className="font-bold text-gray-900">Unit Cost:</span>
-                        <span className="font-bold text-green-700 text-xl">
-                          ₹{currentProduct.unitCost?.toLocaleString('en-IN')}
-                        </span>
-                      </div>
-
-                      <div className="flex justify-between items-center text-xl pt-4 border-t-2 border-green-400">
-                        <span className="font-bold text-gray-900">Quantity:</span>
-                        <span className="font-bold text-gray-900">×{currentProduct.quantity}</span>
-                      </div>
-
-                      <div className="flex justify-between items-center text-2xl pt-4 border-t-4 border-green-600">
-                        <span className="font-bold text-gray-900">Line Total:</span>
-                        <span className="font-bold text-green-600">
-                          ₹{currentProduct.lineTotal?.toLocaleString('en-IN')}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Profit Summary Badge */}
-                  {((currentProduct.manufacturingProfitPercentage && currentProduct.manufacturingProfitPercentage > 0) ||
-                    (currentProduct.boughtoutProfitPercentage && currentProduct.boughtoutProfitPercentage > 0)) && (
-                      <div className="mt-4 p-4 bg-gradient-to-r from-yellow-50 to-green-50 border-2 border-yellow-300 rounded-lg">
-                        <p className="text-sm font-semibold text-gray-800 mb-2">💰 Profit Summary:</p>
-                        <div className="grid grid-cols-2 gap-4 text-xs">
-                          {currentProduct.manufacturingProfitPercentage && currentProduct.manufacturingProfitPercentage > 0 && (
-                            <div>
-                              <p className="text-gray-600">Manufacturing Profit:</p>
-                              <p className="font-bold text-blue-700">
-                                {currentProduct.manufacturingProfitPercentage}% = ₹{currentProduct.manufacturingProfitAmount?.toLocaleString('en-IN')}
-                              </p>
+                              {/* Accessories */}
+                              {currentProduct.accessoriesTotal && currentProduct.accessoriesTotal > 0 && (
+                                <div className="bg-white p-4 rounded-lg shadow-sm">
+                                  <h5 className="font-semibold text-pink-900 mb-3 flex items-center">
+                                    <span className="text-lg mr-2">🎯</span>
+                                    Accessories
+                                  </h5>
+                                  <div className="text-sm space-y-1">
+                                    {currentProduct.accessories?.map((item) => (
+                                      <p key={item.id} className="flex justify-between">
+                                        <span className="truncate mr-2">{item.title}:</span>
+                                        <span>₹{item.price.toFixed(2)}</span>
+                                      </p>
+                                    ))}
+                                    <p className="flex justify-between font-bold pt-2 border-t text-pink-900">
+                                      <span>Subtotal:</span>
+                                      <span>₹{currentProduct.accessoriesTotal?.toFixed(2)}</span>
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                          )}
-                          {currentProduct.boughtoutProfitPercentage && currentProduct.boughtoutProfitPercentage > 0 && (
-                            <div>
-                              <p className="text-gray-600">Boughtout Profit:</p>
-                              <p className="font-bold text-pink-700">
-                                {currentProduct.boughtoutProfitPercentage}% = ₹{currentProduct.boughtoutProfitAmount?.toLocaleString('en-IN')}
-                              </p>
+
+                            {/* Cost Summary */}
+                            <div className="bg-gradient-to-r from-blue-100 to-green-100 p-6 rounded-lg border-2 border-blue-300">
+                              <h5 className="font-bold text-lg mb-4 text-gray-900">📊 Cost Summary</h5>
+                              <div className="space-y-3">
+                                <div className="flex justify-between items-center text-base">
+                                  <span className="font-semibold text-gray-700">Manufacturing Cost:</span>
+                                  <span className="font-bold text-blue-700">
+                                    ₹{currentProduct.manufacturingCost?.toLocaleString('en-IN')}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-gray-600 pl-4">
+                                  (Body + Actuator + Tubing & Fitting + Testing)
+                                </p>
+
+                                {currentProduct.manufacturingProfitPercentage && currentProduct.manufacturingProfitPercentage > 0 && (
+                                  <>
+                                    <div className="flex justify-between text-blue-600 pl-4">
+                                      <span>+ Profit ({currentProduct.manufacturingProfitPercentage}%):</span>
+                                      <span>₹{currentProduct.manufacturingProfitAmount?.toLocaleString('en-IN')}</span>
+                                    </div>
+                                    <div className="flex justify-between font-semibold text-blue-800 pl-4">
+                                      <span>Manufacturing (with profit):</span>
+                                      <span>₹{currentProduct.manufacturingCostWithProfit?.toLocaleString('en-IN')}</span>
+                                    </div>
+                                  </>
+                                )}
+
+                                <div className="flex justify-between items-center text-base pt-2 border-t">
+                                  <span className="font-semibold text-gray-700">Boughtout Item Cost:</span>
+                                  <span className="font-bold text-pink-700">
+                                    ₹{currentProduct.boughtoutItemCost?.toLocaleString('en-IN')}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-gray-600 pl-4">
+                                  (Accessories)
+                                </p>
+
+                                {currentProduct.boughtoutProfitPercentage && currentProduct.boughtoutProfitPercentage > 0 && (
+                                  <>
+                                    <div className="flex justify-between text-pink-600 pl-4">
+                                      <span>+ Profit ({currentProduct.boughtoutProfitPercentage}%):</span>
+                                      <span>₹{currentProduct.boughtoutProfitAmount?.toLocaleString('en-IN')}</span>
+                                    </div>
+                                    <div className="flex justify-between font-semibold text-pink-800 pl-4">
+                                      <span>Boughtout (with profit):</span>
+                                      <span>₹{currentProduct.boughtoutCostWithProfit?.toLocaleString('en-IN')}</span>
+                                    </div>
+                                  </>
+                                )}
+
+                                <div className="flex justify-between items-center text-lg pt-4 border-t-2 border-gray-400">
+                                  <span className="font-bold text-gray-900">Unit Cost:</span>
+                                  <span className="font-bold text-green-700 text-xl">
+                                    ₹{currentProduct.unitCost?.toLocaleString('en-IN')}
+                                  </span>
+                                </div>
+
+                                <div className="flex justify-between items-center text-xl pt-4 border-t-2 border-green-400">
+                                  <span className="font-bold text-gray-900">Quantity:</span>
+                                  <span className="font-bold text-gray-900">×{currentProduct.quantity}</span>
+                                </div>
+
+                                <div className="flex justify-between items-center text-2xl pt-4 border-t-4 border-green-600">
+                                  <span className="font-bold text-gray-900">Line Total:</span>
+                                  <span className="font-bold text-green-600">
+                                    ₹{currentProduct.lineTotal?.toLocaleString('en-IN')}
+                                  </span>
+                                </div>
+                              </div>
                             </div>
-                          )}
-                        </div>
-                        <div className="mt-2 pt-2 border-t border-yellow-300">
-                          <p className="text-sm font-bold text-green-700">
-                            Total Profit: ₹{((currentProduct.manufacturingProfitAmount || 0) + (currentProduct.boughtoutProfitAmount || 0)).toLocaleString('en-IN')}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                </div>
-              )}
-            </div>
-          )}
 
-          {/* Products List */}
-          {products.length > 0 && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-xl font-bold mb-4">Products in Quote ({products.length})</h2>
-              <div className="space-y-4">
-                {products.map((product, index) => (
-                  <div key={product.id} className="border-2 rounded-lg p-4 hover:border-green-300">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2">
-                          <h3 className="font-semibold text-lg">
-                            Product #{index + 1}: {product.seriesNumber} - {product.size}/{product.rating}
-                          </h3>
-                          {product.productTag && (
-                            <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-medium">
-                              {product.productTag}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-sm text-gray-600 mt-2 grid grid-cols-2 gap-2">
-                          <p>Quantity: {product.quantity}</p>
-                          <p>Unit Cost: ₹{product.unitCost?.toLocaleString('en-IN')}</p>
-                          <p>Manufacturing: ₹{product.manufacturingCost?.toLocaleString('en-IN')}
-                            {product.manufacturingProfitPercentage && product.manufacturingProfitPercentage > 0 && (
-                              <span className="text-blue-600 ml-1">(+{product.manufacturingProfitPercentage}%)</span>
-                            )}
-                          </p>
-                          <p>Boughtout: ₹{product.boughtoutItemCost?.toLocaleString('en-IN')}
-                            {product.boughtoutProfitPercentage && product.boughtoutProfitPercentage > 0 && (
-                              <span className="text-pink-600 ml-1">(+{product.boughtoutProfitPercentage}%)</span>
-                            )}
-                          </p>
-                          {product.hasCage && <p className="text-green-600">✓ With Cage</p>}
-                          {product.hasSealRing && <p className="text-indigo-600">✓ With Seal Ring</p>}
-                          {product.hasActuator && <p className="text-purple-600">✓ With Actuator</p>}
-                        </div>
+                            {/* Profit Summary Badge */}
+                            {((currentProduct.manufacturingProfitPercentage && currentProduct.manufacturingProfitPercentage > 0) ||
+                              (currentProduct.boughtoutProfitPercentage && currentProduct.boughtoutProfitPercentage > 0)) && (
+                                <div className="mt-4 p-4 bg-gradient-to-r from-yellow-50 to-green-50 border-2 border-yellow-300 rounded-lg">
+                                  <p className="text-sm font-semibold text-gray-800 mb-2">💰 Profit Summary:</p>
+                                  <div className="grid grid-cols-2 gap-4 text-xs">
+                                    {currentProduct.manufacturingProfitPercentage && currentProduct.manufacturingProfitPercentage > 0 && (
+                                      <div>
+                                        <p className="text-gray-600">Manufacturing Profit:</p>
+                                        <p className="font-bold text-blue-700">
+                                          {currentProduct.manufacturingProfitPercentage}% = ₹{currentProduct.manufacturingProfitAmount?.toLocaleString('en-IN')}
+                                        </p>
+                                      </div>
+                                    )}
+                                    {currentProduct.boughtoutProfitPercentage && currentProduct.boughtoutProfitPercentage > 0 && (
+                                      <div>
+                                        <p className="text-gray-600">Boughtout Profit:</p>
+                                        <p className="font-bold text-pink-700">
+                                          {currentProduct.boughtoutProfitPercentage}% = ₹{currentProduct.boughtoutProfitAmount?.toLocaleString('en-IN')}
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="mt-2 pt-2 border-t border-yellow-300">
+                                    <p className="text-sm font-bold text-green-700">
+                                      Total Profit: ₹{((currentProduct.manufacturingProfitAmount || 0) + (currentProduct.boughtoutProfitAmount || 0)).toLocaleString('en-IN')}
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+                          </div>
+                        )}
+
+
+                        {/* Products List */}
+                        {products.length > 0 && (
+                          <div className="bg-white rounded-xl shadow-sm p-6">
+                            <h2 className="text-xl font-bold mb-4">Products in Quote ({products.length})</h2>
+                            <div className="space-y-4">
+                              {products.map((product, index) => (
+                                <div key={product.id} className="border-2 rounded-lg p-4 hover:border-green-300">
+                                  <div className="flex justify-between items-start">
+                                    <div className="flex-1">
+                                      <div className="flex items-center space-x-2">
+                                        <h3 className="font-semibold text-lg">
+                                          Product #{index + 1}: {product.seriesNumber} - {product.size}/{product.rating}
+                                        </h3>
+                                        {product.productTag && (
+                                          <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-medium">
+                                            {product.productTag}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="text-sm text-gray-600 mt-2 grid grid-cols-2 gap-2">
+                                        <p>Quantity: {product.quantity}</p>
+                                        <p>Unit Cost: ₹{product.unitCost?.toLocaleString('en-IN')}</p>
+                                        <p>Manufacturing: ₹{product.manufacturingCost?.toLocaleString('en-IN')}
+                                          {product.manufacturingProfitPercentage && product.manufacturingProfitPercentage > 0 && (
+                                            <span className="text-blue-600 ml-1">(+{product.manufacturingProfitPercentage}%)</span>
+                                          )}
+                                        </p>
+                                        <p>Boughtout: ₹{product.boughtoutItemCost?.toLocaleString('en-IN')}
+                                          {product.boughtoutProfitPercentage && product.boughtoutProfitPercentage > 0 && (
+                                            <span className="text-pink-600 ml-1">(+{product.boughtoutProfitPercentage}%)</span>
+                                          )}
+                                        </p>
+                                        {product.hasCage && <p className="text-green-600">✓ With Cage</p>}
+                                        {product.hasSealRing && <p className="text-indigo-600">✓ With Seal Ring</p>}
+                                        {product.hasActuator && <p className="text-purple-600">✓ With Actuator</p>}
+                                      </div>
+                                    </div>
+                                    <div className="ml-4 flex flex-col items-end space-y-2">
+                                      <div className="text-right">
+                                        <p className="text-xs text-gray-500">Line Total</p>
+                                        <p className="font-bold text-2xl text-green-600">₹{product.lineTotal.toLocaleString('en-IN')}</p>
+                                      </div>
+                                      <button
+                                        onClick={() => removeProduct(product.id)}
+                                        className="text-red-600 hover:text-red-800 text-sm px-3 py-1 border border-red-300 rounded hover:bg-red-50"
+                                      >
+                                        Remove
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+
+                            <div className="mt-6 pt-6 border-t">
+                              <button
+                                onClick={() => setCurrentStep(3)}
+                                className="w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-medium text-lg"
+                              >
+                                Continue to Review & Save
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <div className="ml-4 flex flex-col items-end space-y-2">
-                        <div className="text-right">
-                          <p className="text-xs text-gray-500">Line Total</p>
-                          <p className="font-bold text-2xl text-green-600">₹{product.lineTotal.toLocaleString('en-IN')}</p>
-                        </div>
-                        <button
-                          onClick={() => removeProduct(product.id)}
-                          className="text-red-600 hover:text-red-800 text-sm px-3 py-1 border border-red-300 rounded hover:bg-red-50"
-                        >
-                          Remove
-                        </button>
-                      </div>
+                      )
+              }
+
+                      {/* Step 3: Review and Save */}
+                      {
+                        currentStep === 3 && (
+                          <div className="space-y-6">
+                            <div className="bg-white rounded-xl shadow-sm p-6">
+                              <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-2xl font-bold">Review Quote</h2>
+                                <button
+                                  onClick={() => setCurrentStep(2)}
+                                  className="text-blue-600 hover:underline"
+                                >
+                                  ← Back to Products
+                                </button>
+                              </div>
+
+
+                              {/* Customer Info */}
+                              <div className="mb-6">
+                                <h3 className="font-semibold mb-2">Customer</h3>
+                                <p className="text-gray-700">{selectedCustomer?.name}</p>
+                                <p className="text-gray-600 text-sm">{selectedCustomer?.email}</p>
+                              </div>
+
+                              {/* Project & Enquiry Details */}
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 bg-blue-50 p-4 rounded-lg border border-blue-200">
+                                <div>
+                                  <label className="block text-sm font-medium mb-2 text-blue-900">
+                                    Project Name
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={projectName}
+                                    onChange={(e) => setProjectName(e.target.value)}
+                                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    placeholder="Enter project name..."
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium mb-2 text-blue-900">
+                                    Enquiry ID / Reference
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={enquiryId}
+                                    onChange={(e) => setEnquiryId(e.target.value)}
+                                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    placeholder="Enter enquiry reference..."
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Products Summary */}
+                              <div className="mb-6">
+                                <h3 className="font-semibold mb-2">Products ({products.length})</h3>
+                                <div className="space-y-2">
+                                  {products.map((product, index) => (
+                                    <div key={product.id} className="flex justify-between py-2 border-b">
+                                      <div>
+                                        <span className="font-medium">
+                                          {index + 1}. {product.seriesNumber} - {product.size}/{product.rating}
+                                        </span>
+                                        {product.productTag && (
+                                          <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+                                            {product.productTag}
+                                          </span>
+                                        )}
+                                        <span className="text-gray-600 ml-2">(Qty: {product.quantity})</span>
+                                      </div>
+                                      <span className="font-semibold">₹{product.lineTotal.toLocaleString('en-IN')}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {/* Financial Summary */}
+                              <div className="grid grid-cols-3 gap-4 mb-6">
+                                <div>
+                                  <label className="block text-sm font-medium mb-2">Discount (%)</label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    value={discount}
+                                    onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                                    className="w-full px-3 py-2 border rounded-lg"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium mb-2">Tax (%)</label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={tax}
+                                    onChange={(e) => setTax(parseFloat(e.target.value) || 0)}
+                                    className="w-full px-3 py-2 border rounded-lg"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium mb-2">Packaging Price (₹)</label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={packagingPrice}
+                                    onChange={(e) => setPackagingPrice(parseFloat(e.target.value) || 0)}
+                                    className="w-full px-3 py-2 border rounded-lg"
+                                    placeholder="0"
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Commercial Terms & Conditions */}
+                              <div className="mb-6 bg-indigo-50 p-6 rounded-lg border-2 border-indigo-200">
+                                <h3 className="text-lg font-bold mb-4 text-indigo-900">💼 Commercial Terms & Conditions</h3>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  {/* Price Type */}
+                                  <div>
+                                    <label className="block text-sm font-medium mb-2">Prices</label>
+                                    <select
+                                      value={priceType}
+                                      onChange={(e) => setPriceType(e.target.value)}
+                                      className="w-full px-3 py-2 border rounded-lg"
+                                    >
+                                      <option value="Ex-Works INR each net">Ex-Works INR each net</option>
+                                      <option value="Ex-Works Coimbatore">Ex-Works Coimbatore</option>
+                                      <option value="F.O.R sites">F.O.R sites</option>
+                                      <option value="CIF">CIF</option>
+                                    </select>
+                                  </div>
+
+                                  {/* Validity */}
+                                  <div>
+                                    <label className="block text-sm font-medium mb-2">Validity</label>
+                                    <input
+                                      type="text"
+                                      value={validity}
+                                      onChange={(e) => setValidity(e.target.value)}
+                                      className="w-full px-3 py-2 border rounded-lg"
+                                      placeholder="30 days from the date of quote"
+                                    />
+                                  </div>
+
+                                  {/* Delivery */}
+                                  <div className="md:col-span-2">
+                                    <label className="block text-sm font-medium mb-2">Delivery (Ex-Works)</label>
+                                    <textarea
+                                      value={delivery}
+                                      onChange={(e) => setDelivery(e.target.value)}
+                                      className="w-full px-3 py-2 border rounded-lg"
+                                      rows={2}
+                                      placeholder="24 working weeks from the date of advance payment..."
+                                    />
+                                  </div>
+
+                                  {/* Warranty */}
+                                  <div className="md:col-span-2">
+                                    <label className="block text-sm font-medium mb-2">Warranty</label>
+                                    <textarea
+                                      value={warranty}
+                                      onChange={(e) => setWarranty(e.target.value)}
+                                      className="w-full px-3 py-2 border rounded-lg"
+                                      rows={2}
+                                      placeholder="UVPL Standard Warranty - 18 months from shipping..."
+                                    />
+                                  </div>
+
+                                  {/* Payment */}
+                                  <div className="md:col-span-2">
+                                    <label className="block text-sm font-medium mb-2">Payment Terms</label>
+                                    <textarea
+                                      value={payment}
+                                      onChange={(e) => setPayment(e.target.value)}
+                                      className="w-full px-3 py-2 border rounded-lg"
+                                      rows={2}
+                                      placeholder="20% with the order + 30% against drawings + Balance before shipping"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="mb-6">
+                                <label className="block text-sm font-medium mb-2">Notes (Optional)</label>
+                                <textarea
+                                  value={notes}
+                                  onChange={(e) => setNotes(e.target.value)}
+                                  className="w-full px-3 py-2 border rounded-lg"
+                                  rows={3}
+                                  placeholder="Add any special instructions or notes..."
+                                />
+                              </div>
+
+                              <div className="mb-6">
+                                <label className="block text-sm font-medium mb-2">Status</label>
+                                <select
+                                  value={status}
+                                  onChange={(e) => setStatus(e.target.value as 'draft' | 'sent')}
+                                  className="w-full px-3 py-2 border rounded-lg"
+                                >
+                                  <option value="draft">Draft</option>
+                                  <option value="sent">Sent</option>
+                                </select>
+                              </div>
+
+                              {/* Totals */}
+                              <div className="bg-gradient-to-r from-gray-50 to-green-50 p-6 rounded-lg mb-6">
+                                <div className="space-y-3">
+                                  <div className="flex justify-between text-lg">
+                                    <span className="font-medium">Subtotal:</span>
+                                    <span className="font-semibold">₹{totals.subtotal.toLocaleString('en-IN')}</span>
+                                  </div>
+                                  {discount > 0 && (
+                                    <div className="flex justify-between text-lg text-red-600">
+                                      <span className="font-medium">Discount ({discount}%):</span>
+                                      <span className="font-semibold">-₹{totals.discountAmount.toLocaleString('en-IN')}</span>
+                                    </div>
+                                  )}
+                                  <div className="flex justify-between text-lg">
+                                    <span className="font-medium">Tax ({tax}%):</span>
+                                    <span className="font-semibold">₹{totals.taxAmount.toLocaleString('en-IN')}</span>
+                                  </div>
+                                  {packagingPrice > 0 && (
+                                    <div className="flex justify-between text-lg text-blue-600">
+                                      <span className="font-medium">Packaging:</span>
+                                      <span className="font-semibold">₹{packagingPrice.toLocaleString('en-IN')}</span>
+                                    </div>
+                                  )}
+                                  <div className="flex justify-between text-2xl font-bold pt-4 border-t-2 text-green-700">
+                                    <span>Grand Total:</span>
+                                    <span>₹{totals.total.toLocaleString('en-IN')}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Save Button */}
+                              <button
+                                onClick={handleSaveQuote}
+                                disabled={loading}
+                                className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium text-lg"
+                              >
+                                {loading ? 'Saving...' : 'Save Quote'}
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      }
                     </div>
                   </div>
-                ))}
-              </div>
-
-              <div className="mt-6 pt-6 border-t">
-                <button
-                  onClick={() => setCurrentStep(3)}
-                  className="w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-medium text-lg"
-                >
-                  Continue to Review & Save
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Step 3: Review and Save */}
-      {currentStep === 3 && (
-        <div className="space-y-6">
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold">Review Quote</h2>
-              <button
-                onClick={() => setCurrentStep(2)}
-                className="text-blue-600 hover:underline"
-              >
-                ← Back to Products
-              </button>
-            </div>
-
-
-            {/* Customer Info */}
-            <div className="mb-6">
-              <h3 className="font-semibold mb-2">Customer</h3>
-              <p className="text-gray-700">{selectedCustomer?.name}</p>
-              <p className="text-gray-600 text-sm">{selectedCustomer?.email}</p>
-            </div>
-
-            {/* Project & Enquiry Details */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 bg-blue-50 p-4 rounded-lg border border-blue-200">
-              <div>
-                <label className="block text-sm font-medium mb-2 text-blue-900">
-                  Project Name
-                </label>
-                <input
-                  type="text"
-                  value={projectName}
-                  onChange={(e) => setProjectName(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter project name..."
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2 text-blue-900">
-                  Enquiry ID / Reference
-                </label>
-                <input
-                  type="text"
-                  value={enquiryId}
-                  onChange={(e) => setEnquiryId(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter enquiry reference..."
-                />
-              </div>
-            </div>
-
-            {/* Products Summary */}
-            <div className="mb-6">
-              <h3 className="font-semibold mb-2">Products ({products.length})</h3>
-              <div className="space-y-2">
-                {products.map((product, index) => (
-                  <div key={product.id} className="flex justify-between py-2 border-b">
-                    <div>
-                      <span className="font-medium">
-                        {index + 1}. {product.seriesNumber} - {product.size}/{product.rating}
-                      </span>
-                      {product.productTag && (
-                        <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
-                          {product.productTag}
-                        </span>
-                      )}
-                      <span className="text-gray-600 ml-2">(Qty: {product.quantity})</span>
-                    </div>
-                    <span className="font-semibold">₹{product.lineTotal.toLocaleString('en-IN')}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Financial Summary */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium mb-2">Discount (%)</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={discount}
-                  onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-                  className="w-full px-3 py-2 border rounded-lg"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Tax (%)</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={tax}
-                  onChange={(e) => setTax(parseFloat(e.target.value) || 0)}
-                  className="w-full px-3 py-2 border rounded-lg"
-                />
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-sm font-medium mb-2">Notes (Optional)</label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg"
-                rows={3}
-                placeholder="Add any special instructions or notes..."
-              />
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-sm font-medium mb-2">Status</label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as 'draft' | 'sent')}
-                className="w-full px-3 py-2 border rounded-lg"
-              >
-                <option value="draft">Draft</option>
-                <option value="sent">Sent</option>
-              </select>
-            </div>
-
-            {/* Totals */}
-            <div className="bg-gradient-to-r from-gray-50 to-green-50 p-6 rounded-lg mb-6">
-              <div className="space-y-3">
-                <div className="flex justify-between text-lg">
-                  <span className="font-medium">Subtotal:</span>
-                  <span className="font-semibold">₹{totals.subtotal.toLocaleString('en-IN')}</span>
                 </div>
-                {discount > 0 && (
-                  <div className="flex justify-between text-lg text-red-600">
-                    <span className="font-medium">Discount ({discount}%):</span>
-                    <span className="font-semibold">-₹{totals.discountAmount.toLocaleString('en-IN')}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-lg">
-                  <span className="font-medium">Tax ({tax}%):</span>
-                  <span className="font-semibold">₹{totals.taxAmount.toLocaleString('en-IN')}</span>
-                </div>
-                <div className="flex justify-between text-2xl font-bold pt-4 border-t-2 text-green-700">
-                  <span>Grand Total:</span>
-                  <span>₹{totals.total.toLocaleString('en-IN')}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Save Button */}
-            <button
-              onClick={handleSaveQuote}
-              disabled={loading}
-              className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium text-lg"
-            >
-              {loading ? 'Saving...' : 'Save Quote'}
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+              );
+  }

@@ -9,7 +9,7 @@ import { formatDate } from '@/utils/dateFormat';
 import Link from 'next/link';
 import { exportQuoteToExcel } from '@/utils/excelExport';
 import { getAllMaterials } from '@/lib/firebase/pricingService';
-import { generateQuotePDF } from '@/utils/quotePDFGenerator';
+import { generateOfferCoverLetter, generatePriceSummary, generateMergedPDF } from '@/utils/pdfGenerators';
 import { Material } from '@/types';
 export default function ViewQuotePage() {
   const params = useParams();
@@ -61,6 +61,7 @@ export default function ViewQuotePage() {
           discountAmount: data.discountAmount || 0,
           tax: data.tax || 0,
           taxAmount: data.taxAmount || 0,
+          packagingPrice: data.packagingPrice || 0,
           total: data.total || 0,
           status: data.status || 'draft',
           createdBy: data.createdBy,
@@ -68,6 +69,12 @@ export default function ViewQuotePage() {
           createdAt: data.createdAt?.toDate() || new Date(),
           updatedAt: data.updatedAt?.toDate() || new Date(),
           notes: data.notes || '',
+          // Commercial Terms
+          priceType: data.priceType || 'Ex-Works INR each net',
+          validity: data.validity || '30 days from the date of quote',
+          delivery: data.delivery || '24 working weeks from the date of advance payment and approved technical documents (whichever comes later)',
+          warranty: data.warranty || 'UVPL Standard Warranty - 18 months from shipping or 12 months from installation (on material & workmanship)',
+          payment: data.payment || '20% with the order + 30% against drawings + Balance before shipping',
           isArchived: data.isArchived || false,
         } as Quote);
       } else {
@@ -82,34 +89,28 @@ export default function ViewQuotePage() {
     }
   };
 
-  const handlePrintPDF = () => {
+  const handlePrintCoverLetter = () => {
     if (!quote || !customerDetails) {
       alert('Quote or customer data not loaded');
       return;
     }
+    generateOfferCoverLetter(quote, customerDetails);
+  };
 
-    // Enhance quote with material names
-    const enhancedQuote = {
-      ...quote,
-      products: quote.products.map(product => {
-        const bodyBonnetMaterial = materials.find(m => m.id === product.bodyBonnetMaterialId);
-        const plugMaterial = materials.find(m => m.id === product.plugMaterialId);
-        const seatMaterial = materials.find(m => m.id === product.seatMaterialId);
-        const stemMaterial = materials.find(m => m.id === product.stemMaterialId);
-        const cageMaterial = materials.find(m => m.id === product.cageMaterialId);
+  const handlePrintPriceSummary = () => {
+    if (!quote || !customerDetails) {
+      alert('Quote or customer data not loaded');
+      return;
+    }
+    generatePriceSummary(quote, customerDetails);
+  };
 
-        return {
-          ...product,
-          bodyMaterialName: bodyBonnetMaterial?.name || 'Unknown',
-          plugMaterialName: plugMaterial?.name || 'Unknown',
-          seatMaterialName: seatMaterial?.name || 'Unknown',
-          stemMaterialName: stemMaterial?.name || 'Unknown',
-          cageMaterialName: cageMaterial?.name || '',
-        };
-      }),
-    };
-
-    generateQuotePDF(enhancedQuote as any, customerDetails);
+  const handlePrintMergedPDF = () => {
+    if (!quote || !customerDetails) {
+      alert('Quote or customer data not loaded');
+      return;
+    }
+    generateMergedPDF(quote, customerDetails);
   };
 
   const handleExportToExcel = () => {
@@ -191,17 +192,41 @@ export default function ViewQuotePage() {
             <span>Export to Excel</span>
           </button>
 
-          {/* NEW: Print PDF Button */}
-          <button
-            onClick={handlePrintPDF}
-            disabled={!customerDetails}
-            className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-            </svg>
-            <span>Print PDF</span>
-          </button>
+          {/* PDF Export Buttons */}
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={handlePrintCoverLetter}
+              disabled={!customerDetails}
+              className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 text-sm"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <span>Cover Letter</span>
+            </button>
+
+            <button
+              onClick={handlePrintPriceSummary}
+              disabled={!customerDetails}
+              className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 text-sm"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+              <span>Price Summary</span>
+            </button>
+
+            <button
+              onClick={handlePrintMergedPDF}
+              disabled={!customerDetails}
+              className="bg-pink-600 text-white px-4 py-2 rounded-lg hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 text-sm"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+              <span>Complete PDF</span>
+            </button>
+          </div>
 
           <Link
             href={`/employee/edit-quote/${quote.id}`}
@@ -321,7 +346,6 @@ export default function ViewQuotePage() {
                 </div>
                 <div className="bg-white p-3 rounded border border-purple-200">
                   <p className="text-gray-600 font-medium mb-1">Plug</p>
-                  <p className="font-semibold">{product.plugType}</p>
                   <p className="text-xs text-gray-500 mt-1">
                     Weight: {product.plugWeight}kg × ₹{product.plugMaterialPrice}/kg
                   </p>
@@ -330,7 +354,7 @@ export default function ViewQuotePage() {
                 </div>
                 <div className="bg-white p-3 rounded border border-pink-200">
                   <p className="text-gray-600 font-medium mb-1">Seat</p>
-                  <p className="font-semibold">{product.seatType}</p>
+
                   <p className="text-xs text-gray-500 mt-1">
                     Weight: {product.seatWeight}kg × ₹{product.seatMaterialPrice}/kg
                   </p>
@@ -432,6 +456,27 @@ export default function ViewQuotePage() {
               </div>
             )}
 
+            {/* Machine Cost */}
+            {product.machineCost && product.machineCost.length > 0 && (
+              <div className="bg-cyan-50 p-4 rounded-lg mb-4 border-2 border-cyan-200">
+                <h5 className="font-semibold text-cyan-900 mb-3 flex items-center">
+                  <span className="text-lg mr-2">⚙️</span>
+                  Machine Cost
+                </h5>
+                <div className="space-y-2 text-sm">
+                  {product.machineCost.map((item) => (
+                    <div key={item.id} className="flex justify-between bg-white p-2 rounded">
+                      <span>{item.title}</span>
+                      <span className="font-semibold text-green-700">₹{item.price.toLocaleString('en-IN')}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 pt-3 border-t border-cyan-200">
+                  <p className="font-bold text-cyan-900">Machine Cost Total: ₹{product.machineCostTotal?.toLocaleString('en-IN')}</p>
+                </div>
+              </div>
+            )}
+
             {/* Testing */}
             {product.testing && product.testing.length > 0 && (
               <div className="bg-teal-50 p-4 rounded-lg mb-4 border-2 border-teal-200">
@@ -489,7 +534,7 @@ export default function ViewQuotePage() {
                     <span className="font-bold text-blue-700">₹{product.manufacturingCost?.toLocaleString('en-IN')}</span>
                   </div>
                   <p className="text-xs text-gray-500 pl-4">
-                    (Body + Actuator + Tubing & Fitting + Testing)
+                    (Body + Actuator + Tubing & Fitting + Machine Cost + Testing)
                   </p>
 
                   {product.manufacturingProfitPercentage && product.manufacturingProfitPercentage > 0 ? (

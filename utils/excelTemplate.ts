@@ -12,6 +12,8 @@ export interface ExcelData {
   sealRingPrices: any[]; // Keep for backward compatibility, but will be ignored
   actuatorModels: any[];
   handwheelPrices: any[];
+  machineRates: any[];
+  machiningHours: any[];
 }
 
 export function generateExcelTemplate(): void {
@@ -70,31 +72,30 @@ export function generateExcelTemplate(): void {
   const bonnetWeightsWs = XLSX.utils.aoa_to_sheet(bonnetWeightsData);
   XLSX.utils.book_append_sheet(wb, bonnetWeightsWs, 'Bonnet Weights');
 
-  // Sheet 5: Plug Weights (UPDATED - includes Seal Ring info)
+  // Sheet 5: Plug Weights (SIMPLIFIED - no type, just weight lookup)
   const plugWeightsData = [
-    ['Series Number', 'Size', 'Rating', 'Plug Type', 'Weight (kg)', 'Has Seal Ring', 'Seal Ring Price', 'Active'],
-    ['91000', '1/2', '150', 'Standard', '0.5', 'FALSE', '', 'TRUE'],
-    ['91000', '1/2', '150', 'Modified', '0.6', 'TRUE', '800', 'TRUE'],
-    ['91000', '3/4', '150', 'Standard', '0.7', 'FALSE', '', 'TRUE'],
-    ['92000', '1/2', '150', 'Standard', '0.55', 'TRUE', '900', 'TRUE'],
-    ['92000', '1/2', '150', 'Modified', '0.6', 'TRUE', '1000', 'TRUE'],
-    ['92000', '3/4', '150', 'Standard', '0.7', 'TRUE', '1200', 'TRUE'],
-    ['93000', '3/4', '300', 'Modified', '0.8', 'FALSE', '', 'TRUE'],
+    ['Series Number', 'Size', 'Rating', 'Weight (kg)', 'Active'],
+    ['91000', '1/2', '150', '0.5', 'TRUE'],
+    ['91000', '3/4', '150', '0.7', 'TRUE'],
+    ['91000', '1', '150', '1.2', 'TRUE'],
+    ['92000', '1/2', '150', '0.55', 'TRUE'],
+    ['92000', '3/4', '150', '0.75', 'TRUE'],
+    ['93000', '3/4', '300', '0.8', 'TRUE'],
+    ['93000', '1', '300', '1.5', 'TRUE'],
   ];
   const plugWeightsWs = XLSX.utils.aoa_to_sheet(plugWeightsData);
   XLSX.utils.book_append_sheet(wb, plugWeightsWs, 'Plug Weights');
 
-  // Sheet 6: Seat Weights (UPDATED - includes Cage info)
+  // Sheet 6: Seat Weights (SIMPLIFIED - just weight lookup)
   const seatWeightsData = [
-    ['Series Number', 'Size', 'Rating', 'Seat Type', 'Weight (kg)', 'Has Cage', 'Cage Weight', 'Active'],
-    ['91000', '1/2', '150', 'Soft Seat', '0.4', 'FALSE', '', 'TRUE'],
-    ['91000', '1/2', '150', 'Metal Seat', '0.5', 'FALSE', '', 'TRUE'],
-    ['91000', '3/4', '150', 'Soft Seat', '0.6', 'FALSE', '', 'TRUE'],
-    ['92000', '1/2', '150', 'Metal Seat', '0.55', 'TRUE', '1.2', 'TRUE'],
-    ['92000', '1/2', '150', 'Cage Guided', '0.6', 'TRUE', '1.5', 'TRUE'],
-    ['92000', '3/4', '150', 'Cage Guided', '0.7', 'TRUE', '1.8', 'TRUE'],
-    ['93000', '3/4', '300', 'Soft Seat', '0.7', 'FALSE', '', 'TRUE'],
-    ['93000', '3/4', '300', 'Cage Guided', '0.8', 'TRUE', '2.0', 'TRUE'],
+    ['Series Number', 'Size', 'Rating', 'Weight (kg)', 'Active'],
+    ['91000', '1/2', '150', '0.4', 'TRUE'],
+    ['91000', '3/4', '150', '0.6', 'TRUE'],
+    ['91000', '1', '150', '0.9', 'TRUE'],
+    ['92000', '1/2', '150', '0.5', 'TRUE'],
+    ['92000', '3/4', '150', '0.7', 'TRUE'],
+    ['93000', '3/4', '300', '0.8', 'TRUE'],
+    ['93000', '1', '300', '1.2', 'TRUE'],
   ];
   const seatWeightsWs = XLSX.utils.aoa_to_sheet(seatWeightsData);
   XLSX.utils.book_append_sheet(wb, seatWeightsWs, 'Seat Weights');
@@ -116,11 +117,33 @@ export function generateExcelTemplate(): void {
   const stemFixedPricesWs = XLSX.utils.aoa_to_sheet(stemFixedPricesData);
   XLSX.utils.book_append_sheet(wb, stemFixedPricesWs, 'Stem Fixed Prices');
 
-  // NOTE: Cage Weights are now included in the Seat Weights sheet
-  // NOTE: Seal Ring Prices are now included in the Plug Weights sheet
-  // The separate Seal Ring Prices sheet is no longer needed for new imports
+  // Sheet 8: Seal Ring Prices (INDEPENDENT - has its own seal type)
+  const sealRingPricesData = [
+    ['Series Number', 'Seal Type', 'Size', 'Rating', 'Fixed Price', 'Active'],
+    ['92000', 'Type1', '1/2', '150', '800', 'TRUE'],
+    ['92000', 'Type2', '1/2', '150', '1000', 'TRUE'],
+    ['92000', 'Type1', '3/4', '150', '1200', 'TRUE'],
+    ['92000', 'Type2', '3/4', '150', '1400', 'TRUE'],
+    ['93000', 'Type1', '3/4', '300', '1500', 'TRUE'],
+    ['93000', 'Type2', '1', '300', '1800', 'TRUE'],
+  ];
+  const sealRingPricesWs = XLSX.utils.aoa_to_sheet(sealRingPricesData);
+  XLSX.utils.book_append_sheet(wb, sealRingPricesWs, 'Seal Ring Prices');
 
-  // Sheet 9: Actuator Models
+  // Sheet 9: Cage Weights (INDEPENDENT - weight lookup by series+size+rating)
+  const cageWeightsData = [
+    ['Series Number', 'Size', 'Rating', 'Weight (kg)', 'Active'],
+    ['92000', '1/2', '150', '1.2', 'TRUE'],
+    ['92000', '3/4', '150', '1.5', 'TRUE'],
+    ['92000', '1', '150', '2.0', 'TRUE'],
+    ['93000', '3/4', '300', '2.2', 'TRUE'],
+    ['93000', '1', '300', '2.8', 'TRUE'],
+    ['93000', '1-1/2', '300', '3.5', 'TRUE'],
+  ];
+  const cageWeightsWs = XLSX.utils.aoa_to_sheet(cageWeightsData);
+  XLSX.utils.book_append_sheet(wb, cageWeightsWs, 'Cage Weights');
+
+  // Sheet 10: Actuator Models
   const actuatorModelsData = [
     ['Type', 'Series', 'Model', 'Standard/Special', 'Fixed Price', 'Active'],
     ['Pneumatic', 'Series A', 'PA-100', 'standard', '15000', 'TRUE'],
@@ -133,18 +156,40 @@ export function generateExcelTemplate(): void {
   const actuatorModelsWs = XLSX.utils.aoa_to_sheet(actuatorModelsData);
   XLSX.utils.book_append_sheet(wb, actuatorModelsWs, 'Actuator Models');
 
-  // Sheet 11: Handwheel Prices
+  // Sheet 10: Handwheel Prices  (UPDATED - matches actuator combination)
   const handwheelPricesData = [
-    ['Actuator Model', 'Fixed Price', 'Active'],
-    ['PA-100', '2000', 'TRUE'],
-    ['PA-200', '2500', 'TRUE'],
-    ['PA-300', '3000', 'TRUE'],
-    ['EB-100', '3500', 'TRUE'],
-    ['EB-200', '4000', 'TRUE'],
-    ['MC-50', '1500', 'TRUE'],
+    ['Type', 'Series', 'Model', 'Standard/Special', 'Fixed Price', 'Active'],
+    ['Pneumatic', 'Series A', 'PA-100', 'standard', '2000', 'TRUE'],
+    ['Pneumatic', 'Series A', 'PA-200', 'standard', '2500', 'TRUE'],
+    ['Pneumatic', 'Series A', 'PA-300', 'special', '3000', 'TRUE'],
+    ['Electric', 'Series B', 'EB-100', 'standard', '3500', 'TRUE'],
+    ['Electric', 'Series B', 'EB-200', 'special', '4000', 'TRUE'],
+    ['Manual', 'Series C', 'MC-50', 'standard', '1500', 'TRUE'],
   ];
   const handwheelPricesWs = XLSX.utils.aoa_to_sheet(handwheelPricesData);
   XLSX.utils.book_append_sheet(wb, handwheelPricesWs, 'Handwheel Prices');
+
+  // Sheet 11: Machine Rates
+  const machineRatesData = [
+    ['Machine Name', 'Rate Per Hour', 'Active'],
+    ['CNC Lathe', '1200', 'TRUE'],
+    ['VMC', '1500', 'TRUE'],
+    ['Manual Lathe', '800', 'TRUE'],
+    ['Drilling Machine', '600', 'TRUE'],
+  ];
+  const machineRatesWs = XLSX.utils.aoa_to_sheet(machineRatesData);
+  XLSX.utils.book_append_sheet(wb, machineRatesWs, 'Machine Rates');
+
+  // Sheet 12: Machining Hours
+  const machiningHoursData = [
+    ['Series Number', 'Size', 'Rating', 'Part Type', 'Trim Type', 'Hours', 'Active'],
+    ['91000', '1/2', '150', 'Body', '', '2.5', 'TRUE'],
+    ['91000', '1/2', '150', 'Bonnet', '', '1.5', 'TRUE'],
+    ['91000', '1/2', '150', 'Plug', 'Linear', '1.2', 'TRUE'],
+    ['91000', '1/2', '150', 'Seat', 'Linear', '0.8', 'TRUE'],
+  ];
+  const machiningHoursWs = XLSX.utils.aoa_to_sheet(machiningHoursData);
+  XLSX.utils.book_append_sheet(wb, machiningHoursWs, 'Machining Hours');
 
   // Generate and download
   XLSX.writeFile(wb, 'Unicorn_Valves_Pricing_Template.xlsx');
@@ -171,6 +216,8 @@ export function parseExcelFile(file: File): Promise<ExcelData> {
           sealRingPrices: [],
           actuatorModels: [],
           handwheelPrices: [],
+          machineRates: [],
+          machiningHours: [],
         };
 
         // Parse Materials
@@ -248,6 +295,88 @@ export function parseExcelFile(file: File): Promise<ExcelData> {
           const sheet = workbook.Sheets['Handwheel Prices'];
           const json = XLSX.utils.sheet_to_json(sheet);
           result.handwheelPrices = json;
+        }
+
+        // Parse Machine Rates
+        if (workbook.SheetNames.includes('Machine Rates')) {
+          const sheet = workbook.Sheets['Machine Rates'];
+          const json = XLSX.utils.sheet_to_json(sheet);
+          result.machineRates = json;
+        }
+
+        // Parse Machining Hours
+        if (workbook.SheetNames.includes('Machining Hours')) {
+          const sheet = workbook.Sheets['Machining Hours'];
+          const json = XLSX.utils.sheet_to_json(sheet);
+          result.machiningHours = json;
+        }
+
+        resolve(result);
+      } catch (error) {
+        reject(error);
+      }
+    };
+
+    reader.onerror = () => reject(reader.error);
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+export function generateMachineCostTemplate(): void {
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1: Machine Rates
+  const machineRatesData = [
+    ['Machine Name', 'Rate Per Hour', 'Active'],
+    ['CNC Lathe', '1200', 'TRUE'],
+    ['VMC', '1500', 'TRUE'],
+    ['Manual Lathe', '800', 'TRUE'],
+    ['Drilling Machine', '600', 'TRUE'],
+  ];
+  const machineRatesWs = XLSX.utils.aoa_to_sheet(machineRatesData);
+  XLSX.utils.book_append_sheet(wb, machineRatesWs, 'Machine Rates');
+
+  // Sheet 2: Machining Hours
+  const machiningHoursData = [
+    ['Series Number', 'Size', 'Rating', 'Part Type', 'Trim Type', 'Hours', 'Active'],
+    ['91000', '1/2', '150', 'Body', '', '2.5', 'TRUE'],
+    ['91000', '1/2', '150', 'Bonnet', '', '1.5', 'TRUE'],
+    ['91000', '1/2', '150', 'Plug', 'Linear', '1.2', 'TRUE'],
+    ['91000', '1/2', '150', 'Seat', 'Linear', '0.8', 'TRUE'],
+  ];
+  const machiningHoursWs = XLSX.utils.aoa_to_sheet(machiningHoursData);
+  XLSX.utils.book_append_sheet(wb, machiningHoursWs, 'Machining Hours');
+
+  // Generate and download
+  XLSX.writeFile(wb, 'Unicorn_Machine_Cost_Template.xlsx');
+}
+
+export function parseMachineCostExcel(file: File): Promise<{ machineRates: any[], machiningHours: any[] }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+
+        const result = {
+          machineRates: [],
+          machiningHours: [],
+        };
+
+        // Parse Machine Rates
+        if (workbook.SheetNames.includes('Machine Rates')) {
+          const sheet = workbook.Sheets['Machine Rates'];
+          const json = XLSX.utils.sheet_to_json(sheet);
+          result.machineRates = json as any[];
+        }
+
+        // Parse Machining Hours
+        if (workbook.SheetNames.includes('Machining Hours')) {
+          const sheet = workbook.Sheets['Machining Hours'];
+          const json = XLSX.utils.sheet_to_json(sheet);
+          result.machiningHours = json as any[];
         }
 
         resolve(result);

@@ -99,11 +99,11 @@ export interface CageWeight {
   isActive: boolean;
 }
 
-// NEW: Seal Ring Price
+// Seal Ring Price (Independent from Plug - uses seal type)
 export interface SealRingPrice {
   id: string;
   seriesId: string;
-  plugType: string;
+  sealType: string; // Changed from plugType - seal has its own type
   size: string;
   rating: string;
   fixedPrice: number;
@@ -122,12 +122,21 @@ export interface ActuatorModel {
 
 export interface HandwheelPrice {
   id: string;
-  actuatorModel: string;
+  type: string; // Actuator type (e.g., Pneumatic, Electric)
+  series: string; // Actuator series
+  model: string; // Actuator model
+  standard: 'standard' | 'special'; // Standard or special configuration
   fixedPrice: number;
   isActive: boolean;
 }
 
 export interface TubingAndFittingItem {
+  id: string;
+  title: string;
+  price: number;
+}
+
+export interface MachineCostItem {
   id: string;
   title: string;
   price: number;
@@ -154,6 +163,24 @@ export const DEFAULT_ACCESSORIES = [
   'Airlock',
 ];
 
+export interface MachineRate {
+  id: string;
+  name: string;
+  ratePerHour: number;
+  isActive: boolean;
+}
+
+export interface MachiningHour {
+  id: string;
+  seriesId: string;
+  size: string;
+  rating: string;
+  partType: 'Body' | 'Bonnet' | 'Plug' | 'Seat' | 'Stem' | 'Cage' | 'SealRing';
+  trimType?: string; // Only for Plug, Seat, Stem, Cage, SealRing
+  hours: number;
+  isActive: boolean;
+}
+
 export interface QuoteProduct {
   id: string;
   productType: ProductType;
@@ -166,44 +193,83 @@ export interface QuoteProduct {
   // NEW: Product Identification
   productTag?: string; // Custom name/identifier for this product
 
+  // NEW: Common Trim Type for internal parts
+  trimType?: string;
+
   // Body Sub-Assembly - UPDATED with separate material groups
   bodyEndConnectType: EndConnectType;
-  bodyBonnetMaterialId: string; // NEW: Shared material for body & bonnet
+  bodyBonnetMaterialId: string; // Shared material for body & bonnet
   bodyWeight: number;
   bodyMaterialPrice: number;
+  // Machine Cost Fields
+  bodyMachineTypeId?: string;
+  bodyMachiningHours?: number;
+  bodyMachineRate?: number;
+  bodyMachineCost?: number;
   bodyTotalCost: number;
 
   bonnetType: BonnetType;
   bonnetWeight: number;
   bonnetMaterialPrice: number;
+  // Machine Cost Fields
+  bonnetMachineTypeId?: string;
+  bonnetMachiningHours?: number;
+  bonnetMachineRate?: number;
+  bonnetMachineCost?: number;
   bonnetTotalCost: number;
 
-  plugType: PlugType;
-  plugMaterialId: string; // NEW: Separate material for plug
+  // Plug - NO TYPE, just weight lookup by series+size+rating
+  plugMaterialId: string; // Material for plug
   plugWeight: number;
   plugMaterialPrice: number;
+  // Machine Cost Fields
+  plugMachineTypeId?: string;
+  plugMachiningHours?: number;
+  plugMachineRate?: number;
+  plugMachineCost?: number;
   plugTotalCost: number;
 
-  seatType: SeatType;
-  seatMaterialId: string; // NEW: Separate material for seat
+  // Seat - NO TYPE, just weight lookup by series+size+rating
+  seatMaterialId: string; // Separate material for seat
   seatWeight: number;
   seatMaterialPrice: number;
+  // Machine Cost Fields
+  seatMachineTypeId?: string;
+  seatMachiningHours?: number;
+  seatMachineRate?: number;
+  seatMachineCost?: number;
   seatTotalCost: number;
 
-  stemMaterialId: string; // NEW: Separate material for stem
-  stemFixedPrice: number; // NEW: Fixed price lookup
+  stemMaterialId: string; // Separate material for stem
+  stemFixedPrice: number; // Fixed price lookup
+  // Machine Cost Fields
+  stemMachineTypeId?: string;
+  stemMachiningHours?: number;
+  stemMachineRate?: number;
+  stemMachineCost?: number;
   stemTotalCost: number;
 
-  // Cage - UPDATED to weight-based calculation
+  // Cage - weight-based calculation
   hasCage: boolean;
-  cageMaterialId?: string; // NEW: Separate material for cage
-  cageWeight?: number; // NEW
-  cageMaterialPrice?: number; // NEW
+  cageMaterialId?: string; // Separate material for cage
+  cageWeight?: number;
+  cageMaterialPrice?: number;
+  // Machine Cost Fields
+  cageMachineTypeId?: string;
+  cageMachiningHours?: number;
+  cageMachineRate?: number;
+  cageMachineCost?: number;
   cageTotalCost?: number;
 
-  // NEW: Seal Ring
+  // Seal Ring - Independent sub-assembly with its own type
   hasSealRing: boolean;
+  sealType?: string; // NEW: Seal has its own type
   sealRingFixedPrice?: number;
+  // Machine Cost Fields
+  sealRingMachineTypeId?: string;
+  sealRingMachiningHours?: number;
+  sealRingMachineRate?: number;
+  sealRingMachineCost?: number;
   sealRingTotalCost?: number;
 
   bodySubAssemblyTotal: number;
@@ -222,6 +288,8 @@ export interface QuoteProduct {
   // Additional Modules
   tubingAndFitting?: TubingAndFittingItem[];
   tubingAndFittingTotal?: number;
+  machineCost?: MachineCostItem[]; // NOTE: This is for EXTRA machine cost, separate from manufacturing
+  machineCostTotal?: number;
   testing?: TestingItem[];
   testingTotal?: number;
   accessories?: AccessoryItem[];
@@ -260,6 +328,7 @@ export interface Quote {
   discountAmount: number;
   tax: number;
   taxAmount: number;
+  packagingPrice: number;
   total: number;
   status: QuoteStatus;
   createdBy: string;
@@ -267,6 +336,12 @@ export interface Quote {
   createdAt: Date;
   updatedAt: Date;
   notes?: string;
+  // Commercial Terms
+  priceType: string; // e.g., "Ex-Works INR each net", "F.O.R sites"
+  validity: string;
+  delivery: string;
+  warranty: string;
+  payment: string;
   isArchived: boolean;
 }
 
