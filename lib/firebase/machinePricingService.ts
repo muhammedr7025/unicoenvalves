@@ -22,16 +22,34 @@ export async function getMachineTypes(): Promise<MachineType[]> {
     try {
         const q = query(
             collection(db, 'machineTypes'),
-            where('isActive', '==', true),
-            orderBy('name', 'asc')
+            where('isActive', '==', true)
         );
         const snapshot = await getDocs(q);
+        const types = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+        } as MachineType));
+
+        // Sort in JavaScript to avoid composite index requirement
+        return types.sort((a, b) => a.name.localeCompare(b.name));
+    } catch (error) {
+        console.error('Error fetching machine types:', error);
+        return [];
+    }
+}
+
+/**
+ * Get ALL machine types (including inactive) - for bulk import merge logic
+ */
+export async function getAllMachineTypes(): Promise<MachineType[]> {
+    try {
+        const snapshot = await getDocs(collection(db, 'machineTypes'));
         return snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data(),
         } as MachineType));
     } catch (error) {
-        console.error('Error fetching machine types:', error);
+        console.error('Error fetching all machine types:', error);
         return [];
     }
 }
@@ -65,8 +83,16 @@ export async function addMachineType(data: Omit<MachineType, 'id'>): Promise<str
 
 export async function updateMachineType(id: string, data: Partial<MachineType>): Promise<void> {
     try {
+        // Clean data - remove undefined fields
+        const cleanData: any = { ...data };
+        Object.keys(cleanData).forEach(key => {
+            if (cleanData[key] === undefined) {
+                delete cleanData[key];
+            }
+        });
+
         const docRef = doc(db, 'machineTypes', id);
-        await updateDoc(docRef, data);
+        await updateDoc(docRef, cleanData);
     } catch (error) {
         console.error('Error updating machine type:', error);
         throw error;
@@ -100,6 +126,22 @@ export async function getWorkHours(): Promise<WorkHourData[]> {
         } as WorkHourData));
     } catch (error) {
         console.error('Error fetching work hours:', error);
+        return [];
+    }
+}
+
+/**
+ * Get ALL work hours (including inactive) - for bulk import merge logic
+ */
+export async function getAllWorkHours(): Promise<WorkHourData[]> {
+    try {
+        const snapshot = await getDocs(collection(db, 'workHours'));
+        return snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+        } as WorkHourData));
+    } catch (error) {
+        console.error('Error fetching all work hours:', error);
         return [];
     }
 }
@@ -184,10 +226,20 @@ export async function getWorkHourData(
 
 export async function addWorkHourData(data: Omit<WorkHourData, 'id'>): Promise<string> {
     try {
-        const docRef = await addDoc(collection(db, 'workHours'), {
+        // Clean data - remove undefined fields (Firestore doesn't accept undefined)
+        const cleanData: any = {
             ...data,
             isActive: true,
+        };
+
+        // Remove undefined fields
+        Object.keys(cleanData).forEach(key => {
+            if (cleanData[key] === undefined) {
+                delete cleanData[key];
+            }
         });
+
+        const docRef = await addDoc(collection(db, 'workHours'), cleanData);
         return docRef.id;
     } catch (error) {
         console.error('Error adding work hour data:', error);
@@ -197,8 +249,16 @@ export async function addWorkHourData(data: Omit<WorkHourData, 'id'>): Promise<s
 
 export async function updateWorkHourData(id: string, data: Partial<WorkHourData>): Promise<void> {
     try {
+        // Clean data - remove undefined fields (Firestore doesn't accept undefined)
+        const cleanData: any = { ...data };
+        Object.keys(cleanData).forEach(key => {
+            if (cleanData[key] === undefined) {
+                delete cleanData[key];
+            }
+        });
+
         const docRef = doc(db, 'workHours', id);
-        await updateDoc(docRef, data);
+        await updateDoc(docRef, cleanData);
     } catch (error) {
         console.error('Error updating work hour data:', error);
         throw error;
@@ -217,7 +277,7 @@ export async function deleteWorkHourData(id: string): Promise<void> {
 
 /**
  * Bulk import work hours data
- * Useful for Excel imports
+ * Implements merge/upsert logic: updates existing records, adds new ones
  */
 export async function bulkImportWorkHours(dataArray: Omit<WorkHourData, 'id'>[]): Promise<{
     success: number;
@@ -228,9 +288,31 @@ export async function bulkImportWorkHours(dataArray: Omit<WorkHourData, 'id'>[])
     let failed = 0;
     const errors: string[] = [];
 
+    // Get all existing work hours to check for duplicates (including inactive)
+    // This is more efficient than querying for each item
+    const existingWorkHours = await getAllWorkHours();
+
     for (const data of dataArray) {
         try {
-            await addWorkHourData(data);
+            // Find existing record matching key fields
+            const existing = existingWorkHours.find(wh =>
+                wh.seriesId === data.seriesId &&
+                wh.size === data.size &&
+                wh.rating === data.rating &&
+                wh.component === data.component &&
+                (wh.trimType === data.trimType || (!wh.trimType && !data.trimType))
+            );
+
+            if (existing) {
+                // Update existing
+                await updateWorkHourData(existing.id, {
+                    ...data,
+                    isActive: true
+                });
+            } else {
+                // Add new
+                await addWorkHourData(data);
+            }
             success++;
         } catch (error: any) {
             failed++;
@@ -243,7 +325,7 @@ export async function bulkImportWorkHours(dataArray: Omit<WorkHourData, 'id'>[])
 
 /**
  * Bulk import machine types
- * Useful for Excel imports
+ * Implements merge/upsert logic: updates existing records, adds new ones
  */
 export async function bulkImportMachineTypes(dataArray: Omit<MachineType, 'id'>[]): Promise<{
     success: number;
@@ -254,9 +336,26 @@ export async function bulkImportMachineTypes(dataArray: Omit<MachineType, 'id'>[
     let failed = 0;
     const errors: string[] = [];
 
+    // Get all existing machine types (including inactive)
+    const existingMachines = await getAllMachineTypes();
+
     for (const data of dataArray) {
         try {
-            await addMachineType(data);
+            // Find existing machine by name (case insensitive)
+            const existing = existingMachines.find(m =>
+                m.name.toLowerCase() === data.name.toLowerCase()
+            );
+
+            if (existing) {
+                // Update existing
+                await updateMachineType(existing.id, {
+                    ...data,
+                    isActive: true
+                });
+            } else {
+                // Add new
+                await addMachineType(data);
+            }
             success++;
         } catch (error: any) {
             failed++;

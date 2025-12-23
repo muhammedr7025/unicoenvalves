@@ -21,6 +21,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: 'Employees', href: '/admin/employees', icon: '👥' },
     { name: 'Customers', href: '/admin/customers', icon: '🏢' },
     { name: 'Pricing Data', href: '/admin/pricing', icon: '💰' },
+    { name: 'Machine Pricing', href: '/admin/machine-pricing', icon: '⚙️' },
     { name: 'All Quotes', href: '/admin/quotes', icon: '📄' },
   ];
 
@@ -28,9 +29,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <ProtectedRoute allowedRoles={['admin']}>
       <div className="min-h-screen bg-gray-50">
         <aside
-          className={`fixed top-0 left-0 z-40 h-screen transition-transform ${
-            sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          } bg-gradient-to-b from-indigo-600 to-purple-700 w-64`}
+          className={`fixed top-0 left-0 z-40 h-screen transition-transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+            } bg-gradient-to-b from-indigo-600 to-purple-700 w-64`}
         >
           <div className="h-full px-3 py-4 overflow-y-auto">
             <div className="flex items-center mb-8 px-4">

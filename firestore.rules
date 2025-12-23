@@ -1,0 +1,146 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isSignedIn() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    function isEmployee() {
+      return isSignedIn() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'employee';
+    }
+    
+    function isAdminOrEmployee() {
+      return isAdmin() || isEmployee();
+    }
+    
+    // Users collection - only admins can manage
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Customers collection - admin and employees can manage
+    match /customers/{customerId} {
+      allow read, write: if isAdminOrEmployee();
+    }
+    
+    // Quotes collection - admin and employees can manage
+    match /quotes/{quoteId} {
+      allow read, write: if isAdminOrEmployee();
+    }
+    
+    // Materials collection - admin can manage, employees can read
+    match /materials/{materialId} {
+      allow read: if isAdminOrEmployee();
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Series collection
+    match /series/{seriesId} {
+      allow read: if isAdminOrEmployee();
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Body Weights collection
+    match /bodyWeights/{weightId} {
+      allow read: if isAdminOrEmployee();
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Bonnet Weights collection
+    match /bonnetWeights/{weightId} {
+      allow read: if isAdminOrEmployee();
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Plug Weights collection (NEW)
+    match /plugWeights/{weightId} {
+      allow read: if isAdminOrEmployee();
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Seat Weights collection (NEW)
+    match /seatWeights/{weightId} {
+      allow read: if isAdminOrEmployee();
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Stem Fixed Prices collection (NEW - replaced stemWeights)
+    match /stemFixedPrices/{priceId} {
+      allow read: if isAdminOrEmployee();
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Cage Weights collection (NEW - replaced cagePrices)
+    match /cageWeights/{weightId} {
+      allow read: if isAdminOrEmployee();
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Seal Ring Prices collection (NEW)
+    match /sealRingPrices/{priceId} {
+      allow read: if isAdminOrEmployee();
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Actuator Models collection
+    match /actuatorModels/{modelId} {
+      allow read: if isAdminOrEmployee();
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Handwheel Prices collection
+    match /handwheelPrices/{priceId} {
+      allow read: if isAdminOrEmployee();
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // ========================================
+    // MACHINE PRICING COLLECTIONS (NEW)
+    // ========================================
+    
+    // Machine Types collection
+    match /machineTypes/{machineTypeId} {
+      allow read: if isAdminOrEmployee();
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Work Hours collection
+    match /workHours/{workHourId} {
+      allow read: if isAdminOrEmployee();
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // ========================================
+    // OLD collections (keep for backward compatibility, can be removed later)
+    // ========================================
+    
+    match /componentWeights/{weightId} {
+      allow read: if isAdminOrEmployee();
+      allow create, update, delete: if isAdmin();
+    }
+    
+    match /stemWeights/{weightId} {
+      allow read: if isAdminOrEmployee();
+      allow create, update, delete: if isAdmin();
+    }
+    
+    match /cagePrices/{priceId} {
+      allow read: if isAdminOrEmployee();
+      allow create, update, delete: if isAdmin();
+    }
+    
+    match /cagePricesBySeat/{priceId} {
+      allow read: if isAdminOrEmployee();
+      allow create, update, delete: if isAdmin();
+    }
+  }
+}
