@@ -31,43 +31,79 @@ export interface ExportData {
 export function generateExcelTemplate(): void {
   const wb = XLSX.utils.book_new();
 
-  // Sheet 1: Materials (simplified - no material code needed)
+  // Sheet 1: Materials - Comprehensive coverage for all material groups
   const materialsData = [
     ['Material Name', 'Price Per Kg (INR)', 'Material Group', 'Active'],
-    ['Aluminum AL100', '250', 'BodyBonnet', 'TRUE'],
-    ['Steel ST200', '180', 'BodyBonnet', 'TRUE'],
+    // Body/Bonnet Materials
+    ['Carbon Steel CS A216-WCB', '180', 'BodyBonnet', 'TRUE'],
     ['Stainless Steel SS304', '450', 'BodyBonnet', 'TRUE'],
-    ['Bronze BR100', '550', 'Plug', 'TRUE'],
-    ['Brass BS100', '420', 'Plug', 'TRUE'],
+    ['Stainless Steel SS316', '550', 'BodyBonnet', 'TRUE'],
+    ['Alloy Steel A217-WC6', '320', 'BodyBonnet', 'TRUE'],
+    ['Chrome Moly A217-WC9', '380', 'BodyBonnet', 'TRUE'],
+    // Plug Materials
+    ['SS304 Plug', '450', 'Plug', 'TRUE'],
+    ['SS316 Plug', '550', 'Plug', 'TRUE'],
+    ['Stellite Plug', '1200', 'Plug', 'TRUE'],
+    ['Chrome Plated Plug', '380', 'Plug', 'TRUE'],
+    // Seat Materials
+    ['SS304 Seat', '450', 'Seat', 'TRUE'],
+    ['SS316 Seat', '550', 'Seat', 'TRUE'],
+    ['Stellite Seat', '1200', 'Seat', 'TRUE'],
     ['PTFE Seat', '800', 'Seat', 'TRUE'],
-    ['Metal Seat MS100', '600', 'Seat', 'TRUE'],
-    ['Stem Steel ST300', '350', 'Stem', 'TRUE'],
-    ['Stem SS316', '500', 'Stem', 'TRUE'],
-    ['Cage Material CG100', '400', 'Cage', 'TRUE'],
-    ['Cage SS CG200', '550', 'Cage', 'TRUE'],
+    // Stem Materials
+    ['SS304 Stem', '450', 'Stem', 'TRUE'],
+    ['SS316 Stem', '550', 'Stem', 'TRUE'],
+    ['SS410 Stem', '380', 'Stem', 'TRUE'],
+    ['Stellite Stem', '1200', 'Stem', 'TRUE'],
+    // Cage Materials
+    ['SS304 Cage', '450', 'Cage', 'TRUE'],
+    ['SS316 Cage', '550', 'Cage', 'TRUE'],
+    ['Chrome Moly Cage', '380', 'Cage', 'TRUE'],
   ];
   const materialsWs = XLSX.utils.aoa_to_sheet(materialsData);
   XLSX.utils.book_append_sheet(wb, materialsWs, 'Materials');
 
-  // Sheet 2: Series (UPDATED with Has Seal Ring)
+  // Sheet 2: Series - Multiple series for testing
   const seriesData = [
     ['Product Type', 'Series Number', 'Series Name', 'Has Cage', 'Has Seal Ring', 'Active'],
-    ['SV', '91000', 'SV Series 91000', 'FALSE', 'FALSE', 'TRUE'],
-    ['SV', '92000', 'SV Series 92000', 'TRUE', 'TRUE', 'TRUE'],
-    ['CV', '93000', 'CV Series 93000', 'TRUE', 'FALSE', 'TRUE'],
+    ['Globe Valve', '91000', 'Standard Globe Valve', 'FALSE', 'FALSE', 'TRUE'],
+    ['Globe Valve', '92000', 'Cage Guided Globe Valve', 'TRUE', 'TRUE', 'TRUE'],
+    ['Angle Valve', '93000', 'Angle Control Valve', 'TRUE', 'TRUE', 'TRUE'],
+    ['Ball Valve', '94000', 'Trunnion Ball Valve', 'FALSE', 'FALSE', 'TRUE'],
   ];
   const seriesWs = XLSX.utils.aoa_to_sheet(seriesData);
   XLSX.utils.book_append_sheet(wb, seriesWs, 'Series');
 
-  // Sheet 3: Body Weights
+  // Sheet 3: Body Weights - Multiple combinations
   const bodyWeightsData = [
     ['Series Number', 'Size', 'Rating', 'End Connect Type', 'Weight (kg)', 'Active'],
+    // Series 91000
     ['91000', '1/2', '150', 'Flanged', '2.5', 'TRUE'],
-    ['91000', '1/2', '150', 'Threaded', '2.8', 'TRUE'],
-    ['91000', '3/4', '150', 'Flanged', '3.2', 'TRUE'],
-    ['91000', '1', '300', 'Flanged', '4.5', 'TRUE'],
+    ['91000', '1/2', '150', 'Threaded', '2.3', 'TRUE'],
+    ['91000', '1/2', '300', 'Flanged', '3.2', 'TRUE'],
+    ['91000', '3/4', '150', 'Flanged', '3.8', 'TRUE'],
+    ['91000', '3/4', '300', 'Flanged', '4.5', 'TRUE'],
+    ['91000', '1', '150', 'Flanged', '5.2', 'TRUE'],
+    ['91000', '1', '300', 'Flanged', '6.8', 'TRUE'],
+    ['91000', '1-1/2', '150', 'Flanged', '8.5', 'TRUE'],
+    ['91000', '2', '150', 'Flanged', '12.5', 'TRUE'],
+    // Series 92000
     ['92000', '1/2', '150', 'Flanged', '2.7', 'TRUE'],
-    ['93000', '3/4', '300', 'Flanged', '3.5', 'TRUE'],
+    ['92000', '3/4', '150', 'Flanged', '4.0', 'TRUE'],
+    ['92000', '1', '150', 'Flanged', '5.5', 'TRUE'],
+    ['92000', '1', '300', 'Flanged', '7.2', 'TRUE'],
+    ['92000', '1-1/2', '150', 'Flanged', '9.0', 'TRUE'],
+    ['92000', '2', '150', 'Flanged', '13.0', 'TRUE'],
+    // Series 93000
+    ['93000', '1/2', '150', 'Flanged', '2.8', 'TRUE'],
+    ['93000', '3/4', '150', 'Flanged', '4.2', 'TRUE'],
+    ['93000', '3/4', '300', 'Flanged', '5.0', 'TRUE'],
+    ['93000', '1', '150', 'Flanged', '5.8', 'TRUE'],
+    ['93000', '1-1/2', '150', 'Flanged', '9.5', 'TRUE'],
+    // Series 94000
+    ['94000', '1/2', '150', 'Flanged', '3.0', 'TRUE'],
+    ['94000', '1', '150', 'Flanged', '6.0', 'TRUE'],
+    ['94000', '2', '150', 'Flanged', '14.0', 'TRUE'],
   ];
   const bodyWeightsWs = XLSX.utils.aoa_to_sheet(bodyWeightsData);
   XLSX.utils.book_append_sheet(wb, bodyWeightsWs, 'Body Weights');
@@ -75,76 +111,178 @@ export function generateExcelTemplate(): void {
   // Sheet 4: Bonnet Weights
   const bonnetWeightsData = [
     ['Series Number', 'Size', 'Rating', 'Bonnet Type', 'Weight (kg)', 'Active'],
-    ['91000', '1/2', '150', 'Standard', '1.5', 'TRUE'],
+    // Series 91000
+    ['91000', '1/2', '150', 'Standard', '1.2', 'TRUE'],
     ['91000', '1/2', '150', 'Extended', '1.8', 'TRUE'],
-    ['91000', '3/4', '150', 'Standard', '2.2', 'TRUE'],
-    ['92000', '1/2', '150', 'Standard', '1.6', 'TRUE'],
-    ['93000', '3/4', '300', 'Extended', '2.5', 'TRUE'],
+    ['91000', '1/2', '300', 'Standard', '1.5', 'TRUE'],
+    ['91000', '3/4', '150', 'Standard', '1.8', 'TRUE'],
+    ['91000', '3/4', '300', 'Standard', '2.2', 'TRUE'],
+    ['91000', '1', '150', 'Standard', '2.5', 'TRUE'],
+    ['91000', '1', '300', 'Standard', '3.2', 'TRUE'],
+    ['91000', '1-1/2', '150', 'Standard', '4.0', 'TRUE'],
+    ['91000', '2', '150', 'Standard', '5.5', 'TRUE'],
+    // Series 92000
+    ['92000', '1/2', '150', 'Standard', '1.4', 'TRUE'],
+    ['92000', '3/4', '150', 'Standard', '2.0', 'TRUE'],
+    ['92000', '1', '150', 'Standard', '2.8', 'TRUE'],
+    ['92000', '1', '300', 'Standard', '3.5', 'TRUE'],
+    ['92000', '1-1/2', '150', 'Standard', '4.2', 'TRUE'],
+    ['92000', '2', '150', 'Standard', '5.8', 'TRUE'],
+    // Series 93000
+    ['93000', '1/2', '150', 'Standard', '1.5', 'TRUE'],
+    ['93000', '3/4', '150', 'Standard', '2.2', 'TRUE'],
+    ['93000', '3/4', '300', 'Standard', '2.8', 'TRUE'],
+    ['93000', '1', '150', 'Standard', '3.0', 'TRUE'],
+    ['93000', '1-1/2', '150', 'Standard', '4.5', 'TRUE'],
+    // Series 94000
+    ['94000', '1/2', '150', 'Standard', '1.6', 'TRUE'],
+    ['94000', '1', '150', 'Standard', '3.2', 'TRUE'],
+    ['94000', '2', '150', 'Standard', '6.0', 'TRUE'],
   ];
   const bonnetWeightsWs = XLSX.utils.aoa_to_sheet(bonnetWeightsData);
   XLSX.utils.book_append_sheet(wb, bonnetWeightsWs, 'Bonnet Weights');
 
-  // Sheet 5: Plug Weights (Weight-based pricing, no Plug Type)
+  // Sheet 5: Plug Weights
   const plugWeightsData = [
     ['Series Number', 'Size', 'Rating', 'Weight (kg)', 'Active'],
-    ['91000', '1/2', '150', '0.5', 'TRUE'],
-    ['91000', '3/4', '150', '0.7', 'TRUE'],
-    ['91000', '1', '300', '0.9', 'TRUE'],
-    ['92000', '1/2', '150', '0.55', 'TRUE'],
-    ['92000', '3/4', '150', '0.7', 'TRUE'],
+    ['91000', '1/2', '150', '0.4', 'TRUE'],
+    ['91000', '1/2', '300', '0.5', 'TRUE'],
+    ['91000', '3/4', '150', '0.6', 'TRUE'],
+    ['91000', '3/4', '300', '0.7', 'TRUE'],
+    ['91000', '1', '150', '0.8', 'TRUE'],
+    ['91000', '1', '300', '1.0', 'TRUE'],
+    ['91000', '1-1/2', '150', '1.5', 'TRUE'],
+    ['91000', '2', '150', '2.2', 'TRUE'],
+    ['92000', '1/2', '150', '0.45', 'TRUE'],
+    ['92000', '3/4', '150', '0.65', 'TRUE'],
+    ['92000', '1', '150', '0.85', 'TRUE'],
+    ['92000', '1', '300', '1.05', 'TRUE'],
+    ['92000', '1-1/2', '150', '1.6', 'TRUE'],
+    ['92000', '2', '150', '2.3', 'TRUE'],
+    ['93000', '1/2', '150', '0.5', 'TRUE'],
+    ['93000', '3/4', '150', '0.7', 'TRUE'],
     ['93000', '3/4', '300', '0.8', 'TRUE'],
+    ['93000', '1', '150', '0.9', 'TRUE'],
+    ['93000', '1-1/2', '150', '1.7', 'TRUE'],
+    ['94000', '1/2', '150', '0.6', 'TRUE'],
+    ['94000', '1', '150', '1.0', 'TRUE'],
+    ['94000', '2', '150', '2.5', 'TRUE'],
   ];
   const plugWeightsWs = XLSX.utils.aoa_to_sheet(plugWeightsData);
   XLSX.utils.book_append_sheet(wb, plugWeightsWs, 'Plug Weights');
 
-  // Sheet 6: Seat Weights (Weight-based pricing, no Seat Type)
+  // Sheet 6: Seat Weights
   const seatWeightsData = [
     ['Series Number', 'Size', 'Rating', 'Weight (kg)', 'Active'],
-    ['91000', '1/2', '150', '0.4', 'TRUE'],
-    ['91000', '3/4', '150', '0.6', 'TRUE'],
-    ['91000', '1', '300', '0.8', 'TRUE'],
-    ['92000', '1/2', '150', '0.55', 'TRUE'],
-    ['92000', '3/4', '150', '0.7', 'TRUE'],
+    ['91000', '1/2', '150', '0.3', 'TRUE'],
+    ['91000', '1/2', '300', '0.4', 'TRUE'],
+    ['91000', '3/4', '150', '0.5', 'TRUE'],
+    ['91000', '3/4', '300', '0.6', 'TRUE'],
+    ['91000', '1', '150', '0.7', 'TRUE'],
+    ['91000', '1', '300', '0.9', 'TRUE'],
+    ['91000', '1-1/2', '150', '1.2', 'TRUE'],
+    ['91000', '2', '150', '1.8', 'TRUE'],
+    ['92000', '1/2', '150', '0.35', 'TRUE'],
+    ['92000', '3/4', '150', '0.55', 'TRUE'],
+    ['92000', '1', '150', '0.75', 'TRUE'],
+    ['92000', '1', '300', '0.95', 'TRUE'],
+    ['92000', '1-1/2', '150', '1.3', 'TRUE'],
+    ['92000', '2', '150', '1.9', 'TRUE'],
+    ['93000', '1/2', '150', '0.4', 'TRUE'],
+    ['93000', '3/4', '150', '0.6', 'TRUE'],
     ['93000', '3/4', '300', '0.7', 'TRUE'],
+    ['93000', '1', '150', '0.8', 'TRUE'],
+    ['93000', '1-1/2', '150', '1.4', 'TRUE'],
+    ['94000', '1/2', '150', '0.5', 'TRUE'],
+    ['94000', '1', '150', '0.9', 'TRUE'],
+    ['94000', '2', '150', '2.0', 'TRUE'],
   ];
   const seatWeightsWs = XLSX.utils.aoa_to_sheet(seatWeightsData);
   XLSX.utils.book_append_sheet(wb, seatWeightsWs, 'Seat Weights');
 
-  // Sheet 7: Cage Weights (Separate sheet for cage weight pricing)
+  // Sheet 7: Cage Weights (only for series with hasCage = TRUE)
   const cageWeightsData = [
     ['Series Number', 'Size', 'Rating', 'Weight (kg)', 'Active'],
     ['92000', '1/2', '150', '1.2', 'TRUE'],
     ['92000', '3/4', '150', '1.8', 'TRUE'],
-    ['93000', '3/4', '300', '2.0', 'TRUE'],
+    ['92000', '1', '150', '2.5', 'TRUE'],
+    ['92000', '1', '300', '3.0', 'TRUE'],
+    ['92000', '1-1/2', '150', '4.0', 'TRUE'],
+    ['92000', '2', '150', '6.0', 'TRUE'],
+    ['93000', '1/2', '150', '1.3', 'TRUE'],
+    ['93000', '3/4', '150', '2.0', 'TRUE'],
+    ['93000', '3/4', '300', '2.4', 'TRUE'],
+    ['93000', '1', '150', '2.7', 'TRUE'],
+    ['93000', '1-1/2', '150', '4.2', 'TRUE'],
   ];
   const cageWeightsWs = XLSX.utils.aoa_to_sheet(cageWeightsData);
   XLSX.utils.book_append_sheet(wb, cageWeightsWs, 'Cage Weights');
 
-  // Sheet 8: Seal Ring Prices (Conditional pricing based on series, size, rating, seal type)
+  // Sheet 8: Seal Ring Prices (only for series with hasSealRing = TRUE)
   const sealRingPricesData = [
     ['Series Number', 'Seal Type', 'Size', 'Rating', 'Fixed Price', 'Active'],
     ['92000', 'Graphite', '1/2', '150', '800', 'TRUE'],
     ['92000', 'Graphite', '3/4', '150', '1000', 'TRUE'],
+    ['92000', 'Graphite', '1', '150', '1200', 'TRUE'],
+    ['92000', 'Graphite', '1', '300', '1400', 'TRUE'],
     ['92000', 'PTFE', '1/2', '150', '900', 'TRUE'],
-    ['92000', 'PTFE', '3/4', '150', '1200', 'TRUE'],
-    ['93000', 'Graphite', '3/4', '300', '1100', 'TRUE'],
+    ['92000', 'PTFE', '3/4', '150', '1100', 'TRUE'],
+    ['92000', 'PTFE', '1', '150', '1300', 'TRUE'],
+    ['93000', 'Graphite', '1/2', '150', '850', 'TRUE'],
+    ['93000', 'Graphite', '3/4', '150', '1050', 'TRUE'],
+    ['93000', 'Graphite', '3/4', '300', '1250', 'TRUE'],
+    ['93000', 'PTFE', '1/2', '150', '950', 'TRUE'],
+    ['93000', 'PTFE', '3/4', '150', '1150', 'TRUE'],
   ];
   const sealRingPricesWs = XLSX.utils.aoa_to_sheet(sealRingPricesData);
   XLSX.utils.book_append_sheet(wb, sealRingPricesWs, 'Seal Ring Prices');
 
-  // Sheet 9: Stem Fixed Prices (uses Material Name instead of Material Code)
+  // Sheet 9: Stem Fixed Prices
   const stemFixedPricesData = [
     ['Series Number', 'Size', 'Rating', 'Material Name', 'Fixed Price', 'Active'],
-    ['91000', '1/2', '150', 'Stem Steel ST300', '1500', 'TRUE'],
-    ['91000', '1/2', '150', 'Stem SS316', '2000', 'TRUE'],
-    ['91000', '1/2', '300', 'Stem Steel ST300', '1800', 'TRUE'],
-    ['91000', '1/2', '300', 'Stem SS316', '2300', 'TRUE'],
-    ['91000', '3/4', '150', 'Stem Steel ST300', '2000', 'TRUE'],
-    ['91000', '3/4', '150', 'Stem SS316', '2500', 'TRUE'],
-    ['92000', '1/2', '150', 'Stem Steel ST300', '1600', 'TRUE'],
-    ['92000', '1/2', '150', 'Stem SS316', '2100', 'TRUE'],
-    ['93000', '3/4', '300', 'Stem Steel ST300', '2200', 'TRUE'],
-    ['93000', '3/4', '300', 'Stem SS316', '2800', 'TRUE'],
+    // Series 91000 with different materials
+    ['91000', '1/2', '150', 'SS304 Stem', '1200', 'TRUE'],
+    ['91000', '1/2', '150', 'SS316 Stem', '1500', 'TRUE'],
+    ['91000', '1/2', '150', 'SS410 Stem', '1000', 'TRUE'],
+    ['91000', '1/2', '300', 'SS304 Stem', '1400', 'TRUE'],
+    ['91000', '1/2', '300', 'SS316 Stem', '1700', 'TRUE'],
+    ['91000', '3/4', '150', 'SS304 Stem', '1600', 'TRUE'],
+    ['91000', '3/4', '150', 'SS316 Stem', '2000', 'TRUE'],
+    ['91000', '3/4', '300', 'SS304 Stem', '1800', 'TRUE'],
+    ['91000', '3/4', '300', 'SS316 Stem', '2200', 'TRUE'],
+    ['91000', '1', '150', 'SS304 Stem', '2000', 'TRUE'],
+    ['91000', '1', '150', 'SS316 Stem', '2500', 'TRUE'],
+    ['91000', '1', '300', 'SS304 Stem', '2400', 'TRUE'],
+    ['91000', '1', '300', 'SS316 Stem', '3000', 'TRUE'],
+    ['91000', '1-1/2', '150', 'SS304 Stem', '3000', 'TRUE'],
+    ['91000', '1-1/2', '150', 'SS316 Stem', '3800', 'TRUE'],
+    ['91000', '2', '150', 'SS304 Stem', '4000', 'TRUE'],
+    ['91000', '2', '150', 'SS316 Stem', '5000', 'TRUE'],
+    // Series 92000
+    ['92000', '1/2', '150', 'SS304 Stem', '1300', 'TRUE'],
+    ['92000', '1/2', '150', 'SS316 Stem', '1600', 'TRUE'],
+    ['92000', '3/4', '150', 'SS304 Stem', '1700', 'TRUE'],
+    ['92000', '3/4', '150', 'SS316 Stem', '2100', 'TRUE'],
+    ['92000', '1', '150', 'SS304 Stem', '2100', 'TRUE'],
+    ['92000', '1', '150', 'SS316 Stem', '2600', 'TRUE'],
+    ['92000', '1', '300', 'SS304 Stem', '2500', 'TRUE'],
+    ['92000', '1', '300', 'SS316 Stem', '3100', 'TRUE'],
+    // Series 93000
+    ['93000', '1/2', '150', 'SS304 Stem', '1350', 'TRUE'],
+    ['93000', '1/2', '150', 'SS316 Stem', '1650', 'TRUE'],
+    ['93000', '3/4', '150', 'SS304 Stem', '1750', 'TRUE'],
+    ['93000', '3/4', '150', 'SS316 Stem', '2150', 'TRUE'],
+    ['93000', '3/4', '300', 'SS304 Stem', '2000', 'TRUE'],
+    ['93000', '3/4', '300', 'SS316 Stem', '2450', 'TRUE'],
+    ['93000', '1', '150', 'SS304 Stem', '2150', 'TRUE'],
+    ['93000', '1', '150', 'SS316 Stem', '2650', 'TRUE'],
+    // Series 94000
+    ['94000', '1/2', '150', 'SS304 Stem', '1400', 'TRUE'],
+    ['94000', '1/2', '150', 'SS316 Stem', '1700', 'TRUE'],
+    ['94000', '1', '150', 'SS304 Stem', '2200', 'TRUE'],
+    ['94000', '1', '150', 'SS316 Stem', '2700', 'TRUE'],
+    ['94000', '2', '150', 'SS304 Stem', '4200', 'TRUE'],
+    ['94000', '2', '150', 'SS316 Stem', '5200', 'TRUE'],
   ];
   const stemFixedPricesWs = XLSX.utils.aoa_to_sheet(stemFixedPricesData);
   XLSX.utils.book_append_sheet(wb, stemFixedPricesWs, 'Stem Fixed Prices');
@@ -152,12 +290,18 @@ export function generateExcelTemplate(): void {
   // Sheet 10: Actuator Models
   const actuatorModelsData = [
     ['Type', 'Series', 'Model', 'Standard/Special', 'Fixed Price', 'Active'],
+    ['Pneumatic', 'Series A', 'PA-50', 'standard', '12000', 'TRUE'],
     ['Pneumatic', 'Series A', 'PA-100', 'standard', '15000', 'TRUE'],
     ['Pneumatic', 'Series A', 'PA-200', 'standard', '18000', 'TRUE'],
-    ['Pneumatic', 'Series A', 'PA-300', 'special', '22000', 'TRUE'],
-    ['Electric', 'Series B', 'EB-100', 'standard', '25000', 'TRUE'],
-    ['Electric', 'Series B', 'EB-200', 'special', '30000', 'TRUE'],
-    ['Manual', 'Series C', 'MC-50', 'standard', '8000', 'TRUE'],
+    ['Pneumatic', 'Series A', 'PA-300', 'standard', '22000', 'TRUE'],
+    ['Pneumatic', 'Series A', 'PA-400', 'special', '28000', 'TRUE'],
+    ['Pneumatic', 'Series B', 'PB-100', 'standard', '16000', 'TRUE'],
+    ['Pneumatic', 'Series B', 'PB-200', 'standard', '19000', 'TRUE'],
+    ['Electric', 'Series E', 'EL-100', 'standard', '25000', 'TRUE'],
+    ['Electric', 'Series E', 'EL-200', 'standard', '30000', 'TRUE'],
+    ['Electric', 'Series E', 'EL-300', 'special', '38000', 'TRUE'],
+    ['Manual', 'Series M', 'MN-50', 'standard', '5000', 'TRUE'],
+    ['Manual', 'Series M', 'MN-100', 'standard', '8000', 'TRUE'],
   ];
   const actuatorModelsWs = XLSX.utils.aoa_to_sheet(actuatorModelsData);
   XLSX.utils.book_append_sheet(wb, actuatorModelsWs, 'Actuator Models');
@@ -165,15 +309,19 @@ export function generateExcelTemplate(): void {
   // Sheet 11: Handwheel Prices
   const handwheelPricesData = [
     ['Type', 'Series', 'Model', 'Standard/Special', 'Fixed Price', 'Active'],
+    ['Manual', 'Series H', 'HW-50', 'standard', '1500', 'TRUE'],
     ['Manual', 'Series H', 'HW-100', 'standard', '2000', 'TRUE'],
     ['Manual', 'Series H', 'HW-200', 'standard', '2500', 'TRUE'],
-    ['Manual', 'Series H', 'HW-300', 'special', '3000', 'TRUE'],
+    ['Manual', 'Series H', 'HW-300', 'standard', '3000', 'TRUE'],
+    ['Manual', 'Series H', 'HW-400', 'special', '3500', 'TRUE'],
+    ['Chainwheel', 'Series C', 'CW-100', 'standard', '3000', 'TRUE'],
+    ['Chainwheel', 'Series C', 'CW-200', 'standard', '4000', 'TRUE'],
   ];
   const handwheelPricesWs = XLSX.utils.aoa_to_sheet(handwheelPricesData);
   XLSX.utils.book_append_sheet(wb, handwheelPricesWs, 'Handwheel Prices');
 
   // Generate and download
-  XLSX.writeFile(wb, 'Unicorn_Valves_Pricing_Template.xlsx');
+  XLSX.writeFile(wb, 'Unicorn_Valves_Pricing_Template_COMPLETE.xlsx');
 }
 
 export function parseExcelFile(file: File): Promise<ExcelData> {

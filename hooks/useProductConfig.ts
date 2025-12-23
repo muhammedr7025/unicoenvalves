@@ -29,6 +29,15 @@ import {
     getAvailableHandwheelSeries,
     getAvailableHandwheelModels,
     getMaterialById,
+    // Machine pricing imports
+    getAvailableTrimTypes,
+    getWorkHourForBody,
+    getWorkHourForBonnet,
+    getWorkHourForPlug,
+    getWorkHourForSeat,
+    getWorkHourForStem,
+    getWorkHourForCage,
+    getWorkHourForSealRing,
 } from '@/lib/firebase/productConfigHelper';
 
 interface UseProductConfigProps {
@@ -62,6 +71,9 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
     const [availableHandwheelTypes, setAvailableHandwheelTypes] = useState<string[]>([]);
     const [availableHandwheelSeries, setAvailableHandwheelSeries] = useState<string[]>([]);
     const [availableHandwheelModels, setAvailableHandwheelModels] = useState<string[]>([]);
+
+    // NEW: Trim types for machine pricing
+    const [availableTrimTypes, setAvailableTrimTypes] = useState<string[]>([]);
 
     // Additional items
     const [tubingAndFittingItems, setTubingAndFittingItems] = useState<TubingAndFittingItem[]>(initialProduct?.tubingAndFitting || []);
@@ -121,6 +133,10 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
                     setAvailableHandwheelModels(hwModels);
                 }
             }
+
+            // Load trim types for machine pricing
+            const trimTypes = await getAvailableTrimTypes();
+            setAvailableTrimTypes(trimTypes);
         };
         loadInitialData();
     }, []);
@@ -142,7 +158,8 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
             }));
         }
 
-        const sizes = await getAvailableSizes(selectedSeries.seriesNumber);
+        // CRITICAL FIX: Pass seriesId (document ID), not seriesNumber
+        const sizes = await getAvailableSizes(seriesId);
         setAvailableSizes(sizes);
     };
 
@@ -150,8 +167,8 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
         if (resetChildren) {
             setCurrentProduct(prev => ({ ...prev, size, rating: '' }));
         }
-        if (currentProduct.seriesNumber) {
-            const ratings = await getAvailableRatings(currentProduct.seriesNumber, size);
+        if (currentProduct.seriesId) {
+            const ratings = await getAvailableRatings(currentProduct.seriesId, size);
             setAvailableRatings(ratings);
         }
     };
@@ -160,14 +177,14 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
         if (resetChildren) {
             setCurrentProduct(prev => ({ ...prev, rating }));
         }
-        if (currentProduct.seriesNumber && currentProduct.size) {
-            const endConnects = await getAvailableEndConnectTypes(currentProduct.seriesNumber, currentProduct.size, rating);
+        if (currentProduct.seriesId && currentProduct.size) {
+            const endConnects = await getAvailableEndConnectTypes(currentProduct.seriesId, currentProduct.size, rating);
             setAvailableEndConnectTypes(endConnects);
 
-            const bonnets = await getAvailableBonnetTypes(currentProduct.seriesNumber, currentProduct.size, rating);
+            const bonnets = await getAvailableBonnetTypes(currentProduct.seriesId, currentProduct.size, rating);
             setAvailableBonnetTypes(bonnets);
 
-            const seals = await getAvailableSealTypes(currentProduct.seriesNumber, currentProduct.size, rating);
+            const seals = await getAvailableSealTypes(currentProduct.seriesId, currentProduct.size, rating);
             setAvailableSealTypes(seals);
         }
     };
@@ -203,90 +220,198 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
     };
 
     const calculateProductPrice = async () => {
-        if (!currentProduct.seriesNumber || !currentProduct.size || !currentProduct.rating) {
-            alert('Please select Series, Size, and Rating');
+        // Enhanced validation with detailed error messages
+        const missingFields: string[] = [];
+
+        if (!currentProduct.productTag || !currentProduct.productTag.trim()) missingFields.push('Product Tag/Name');
+        if (!currentProduct.seriesId) missingFields.push('Series');
+        if (!currentProduct.size) missingFields.push('Size');
+        if (!currentProduct.rating) missingFields.push('Rating');
+        if (!currentProduct.bodyEndConnectType) missingFields.push('End Connection Type');
+        if (!currentProduct.bonnetType) missingFields.push('Bonnet Type');
+        if (!currentProduct.bodyBonnetMaterialId) missingFields.push('Body/Bonnet Material');
+        if (!currentProduct.plugMaterialId) missingFields.push('Plug Material');
+        if (!currentProduct.seatMaterialId) missingFields.push('Seat Material');
+        if (!currentProduct.stemMaterialId) missingFields.push('Stem Material');
+        if (!currentProduct.trimType) missingFields.push('Trim Type');
+
+        if (missingFields.length > 0) {
+            alert(`❌ Please fill in the following required fields:\n\n${missingFields.map(f => `• ${f}`).join('\n')}`);
             return;
         }
 
+        console.log('🔄 Starting price calculation...');
+        console.log('Product data:', {
+            seriesId: currentProduct.seriesId,
+            seriesNumber: currentProduct.seriesNumber,
+            size: currentProduct.size,
+            rating: currentProduct.rating,
+        });
+
         setCalculating(true);
+        const errors: string[] = [];
+
         try {
             const p = currentProduct;
             let updatedProduct = { ...p };
 
             // 1. Body Sub-Assembly
+            console.log('📦 Calculating Body weight and machine cost...');
             if (p.bodyEndConnectType && p.bodyBonnetMaterialId) {
-                const weight = await getBodyWeight(p.seriesNumber!, p.size!, p.rating!, p.bodyEndConnectType!);
+                const weight = await getBodyWeight(p.seriesId!, p.size!, p.rating!, p.bodyEndConnectType!);
                 const material = materials.find(m => m.id === p.bodyBonnetMaterialId);
-                if (weight && material) {
+
+                if (!weight) {
+                    errors.push(`Body Weight not found for: Series ${p.seriesNumber}, Size ${p.size}, Rating ${p.rating}, End Connect ${p.bodyEndConnectType}`);
+                    console.error('❌ Body weight not found');
+                } else if (!material) {
+                    errors.push('Body/Bonnet Material not found in materials list');
+                    console.error('❌ Body material not found');
+                } else {
+                    // Material cost
                     updatedProduct.bodyWeight = weight;
                     updatedProduct.bodyMaterialPrice = material.pricePerKg;
-                    updatedProduct.bodyTotalCost = weight * material.pricePerKg;
+                    const materialCost = weight * material.pricePerKg;
+
+                    // Machine cost (Body doesn't use trimType)
+                    const workHourData = await getWorkHourForBody(p.seriesId!, p.size!, p.rating!);
+                    let machineCost = 0;
+                    if (workHourData) {
+                        updatedProduct.bodyWorkHours = workHourData.workHours;
+                        updatedProduct.bodyMachineTypeId = workHourData.machineTypeId;
+                        updatedProduct.bodyMachineTypeName = workHourData.machineTypeName;
+                        updatedProduct.bodyMachineRate = workHourData.machineRate;
+                        machineCost = workHourData.workHours * workHourData.machineRate;
+                        updatedProduct.bodyMachineCost = machineCost;
+                        console.log(`✅ Body machine cost: ${machineCost} (${workHourData.workHours} hr × ₹${workHourData.machineRate}/hr - ${workHourData.machineTypeName})`);
+                    } else {
+                        console.warn('⚠️ Body work hour data not found - machine cost will be 0');
+                    }
+
+                    // Total = Material + Machine
+                    updatedProduct.bodyTotalCost = materialCost + machineCost;
+                    console.log(`✅ Body total: ₹${updatedProduct.bodyTotalCost} (Material: ₹${materialCost} + Machine: ₹${machineCost})`);
                 }
             }
 
             // 2. Bonnet
+            console.log('📦 Calculating Bonnet weight...');
             if (p.bonnetType && p.bodyBonnetMaterialId) {
-                const weight = await getBonnetWeight(p.seriesNumber!, p.size!, p.rating!, p.bonnetType!);
+                const weight = await getBonnetWeight(p.seriesId!, p.size!, p.rating!, p.bonnetType!);
                 const material = materials.find(m => m.id === p.bodyBonnetMaterialId);
-                if (weight && material) {
+
+                if (!weight) {
+                    errors.push(`Bonnet Weight not found for: Series ${p.seriesNumber}, Size ${p.size}, Rating ${p.rating}, Bonnet Type ${p.bonnetType} `);
+                    console.error('❌ Bonnet weight not found');
+                } else if (!material) {
+                    errors.push('Bonnet Material not found');
+                    console.error('❌ Bonnet material not found');
+                } else {
                     updatedProduct.bonnetWeight = weight;
                     updatedProduct.bonnetMaterialPrice = material.pricePerKg;
                     updatedProduct.bonnetTotalCost = weight * material.pricePerKg;
+                    console.log('✅ Bonnet calculated:', updatedProduct.bonnetTotalCost);
                 }
             }
 
             // 3. Plug
+            console.log('📦 Calculating Plug weight...');
             if (p.plugMaterialId) {
-                const plugData = await getPlugWeight(p.seriesNumber!, p.size!, p.rating!);
+                const plugData = await getPlugWeight(p.seriesId!, p.size!, p.rating!);
                 const material = materials.find(m => m.id === p.plugMaterialId);
-                if (plugData && material) {
+
+                if (!plugData) {
+                    errors.push(`Plug Weight not found for: Series ${p.seriesNumber}, Size ${p.size}, Rating ${p.rating} `);
+                    console.error('❌ Plug weight not found');
+                } else if (!material) {
+                    errors.push('Plug Material not found');
+                    console.error('❌ Plug material not found');
+                } else {
                     updatedProduct.plugWeight = plugData.weight;
                     updatedProduct.plugMaterialPrice = material.pricePerKg;
                     updatedProduct.plugTotalCost = plugData.weight * material.pricePerKg;
+                    console.log('✅ Plug calculated:', updatedProduct.plugTotalCost);
                 }
             }
 
             // 4. Seat
+            console.log('📦 Calculating Seat weight...');
             if (p.seatMaterialId) {
-                const seatData = await getSeatWeight(p.seriesNumber!, p.size!, p.rating!);
+                const seatData = await getSeatWeight(p.seriesId!, p.size!, p.rating!);
                 const material = materials.find(m => m.id === p.seatMaterialId);
-                if (seatData && material) {
+
+                if (!seatData) {
+                    errors.push(`Seat Weight not found for: Series ${p.seriesNumber}, Size ${p.size}, Rating ${p.rating} `);
+                    console.error('❌ Seat weight not found');
+                } else if (!material) {
+                    errors.push('Seat Material not found');
+                    console.error('❌ Seat material not found');
+                } else {
                     updatedProduct.seatWeight = seatData.weight;
                     updatedProduct.seatMaterialPrice = material.pricePerKg;
                     updatedProduct.seatTotalCost = seatData.weight * material.pricePerKg;
+                    console.log('✅ Seat calculated:', updatedProduct.seatTotalCost);
                 }
             }
 
             // 5. Stem
+            console.log('📦 Calculating Stem price...');
             if (p.stemMaterialId) {
                 const material = materials.find(m => m.id === p.stemMaterialId);
-                if (material) {
-                    const fixedPrice = await getStemFixedPrice(p.seriesNumber!, p.size!, p.rating!, material.name);
-                    if (fixedPrice) {
+                if (!material) {
+                    errors.push('Stem Material not found');
+                    console.error('❌ Stem material not found');
+                } else {
+                    const fixedPrice = await getStemFixedPrice(p.seriesId!, p.size!, p.rating!, material.name);
+                    if (!fixedPrice) {
+                        errors.push(`Stem Fixed Price not found for: Series ${p.seriesNumber}, Size ${p.size}, Rating ${p.rating}, Material ${material.name} `);
+                        console.error('❌ Stem fixed price not found');
+                    } else {
                         updatedProduct.stemFixedPrice = fixedPrice;
                         updatedProduct.stemTotalCost = fixedPrice;
+                        console.log('✅ Stem calculated:', updatedProduct.stemTotalCost);
                     }
                 }
             }
 
             // 6. Cage
             if (p.hasCage && p.cageMaterialId) {
-                const weight = await getCageWeight(p.seriesNumber!, p.size!, p.rating!);
+                console.log('📦 Calculating Cage weight...');
+                const weight = await getCageWeight(p.seriesId!, p.size!, p.rating!);
                 const material = materials.find(m => m.id === p.cageMaterialId);
-                if (weight && material) {
+
+                if (!weight) {
+                    errors.push(`Cage Weight not found for: Series ${p.seriesNumber}, Size ${p.size}, Rating ${p.rating} `);
+                    console.error('❌ Cage weight not found');
+                } else if (!material) {
+                    errors.push('Cage Material not found');
+                    console.error('❌ Cage material not found');
+                } else {
                     updatedProduct.cageWeight = weight;
                     updatedProduct.cageMaterialPrice = material.pricePerKg;
                     updatedProduct.cageTotalCost = weight * material.pricePerKg;
+                    console.log('✅ Cage calculated:', updatedProduct.cageTotalCost);
                 }
             }
 
             // 7. Seal Ring
             if (p.hasSealRing && p.sealType) {
-                const price = await getSealRingPrice(p.seriesNumber!, p.sealType!, p.size!, p.rating!);
-                if (price) {
+                console.log('📦 Calculating Seal Ring price...');
+                const price = await getSealRingPrice(p.seriesId!, p.sealType!, p.size!, p.rating!);
+                if (!price) {
+                    errors.push(`Seal Ring Price not found for: Series ${p.seriesNumber}, Seal Type ${p.sealType}, Size ${p.size}, Rating ${p.rating} `);
+                    console.error('❌ Seal ring price not found');
+                } else {
                     updatedProduct.sealRingFixedPrice = price;
                     updatedProduct.sealRingTotalCost = price;
+                    console.log('✅ Seal ring calculated:', updatedProduct.sealRingTotalCost);
                 }
+            }
+
+            // Show errors if any components failed
+            if (errors.length > 0) {
+                console.error('❌ Pricing errors:', errors);
+                alert(`⚠️ Warning: Some pricing data could not be found: \n\n${errors.map(e => `• ${e}`).join('\n')} \n\nPlease ensure all necessary pricing data exists in the database or contact admin.`);
             }
 
             // Sum Body Sub-Assembly
@@ -298,11 +423,16 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
                 (updatedProduct.cageTotalCost || 0) +
                 (updatedProduct.sealRingTotalCost || 0);
 
+            console.log('💰 Body Sub-Assembly Total:', updatedProduct.bodySubAssemblyTotal);
+
             // 8. Actuator
             if (p.hasActuator && p.actuatorType && p.actuatorSeries && p.actuatorModel && p.actuatorStandard) {
                 const price = await getActuatorPrice(p.actuatorType!, p.actuatorSeries!, p.actuatorModel!, p.actuatorStandard!);
                 if (price) {
                     updatedProduct.actuatorFixedPrice = price;
+                    console.log('✅ Actuator calculated:', price);
+                } else {
+                    console.warn('⚠️ Actuator price not found');
                 }
             } else {
                 updatedProduct.actuatorFixedPrice = 0;
@@ -313,6 +443,9 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
                 const price = await getHandwheelPrice(p.handwheelType!, p.handwheelSeries!, p.handwheelModel!, p.handwheelStandard!);
                 if (price) {
                     updatedProduct.handwheelFixedPrice = price;
+                    console.log('✅ Handwheel calculated:', price);
+                } else {
+                    console.warn('⚠️ Handwheel price not found');
                 }
             } else {
                 updatedProduct.handwheelFixedPrice = 0;
@@ -331,15 +464,18 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
             updatedProduct.accessoriesTotal = accessoryItems.reduce((sum, item) => sum + item.price, 0);
 
             // Totals
-            updatedProduct.manufacturingCost = updatedProduct.bodySubAssemblyTotal;
+            // Manufacturing Cost = Body Sub-Assembly + Actuator Sub-Assembly + Tubing & Fitting + Testing
+            updatedProduct.manufacturingCost = (updatedProduct.bodySubAssemblyTotal || 0) +
+                (updatedProduct.actuatorSubAssemblyTotal || 0) +
+                (updatedProduct.tubingAndFittingTotal || 0) +
+                (updatedProduct.testingTotal || 0);
+
             updatedProduct.manufacturingProfitPercentage = manufacturingProfit;
             updatedProduct.manufacturingProfitAmount = (updatedProduct.manufacturingCost * manufacturingProfit) / 100;
             updatedProduct.manufacturingCostWithProfit = updatedProduct.manufacturingCost + updatedProduct.manufacturingProfitAmount;
 
-            updatedProduct.boughtoutItemCost = (updatedProduct.actuatorSubAssemblyTotal || 0) +
-                (updatedProduct.tubingAndFittingTotal || 0) +
-                (updatedProduct.testingTotal || 0) +
-                (updatedProduct.accessoriesTotal || 0);
+            // Bought-out Item Cost = Accessories Total ONLY
+            updatedProduct.boughtoutItemCost = updatedProduct.accessoriesTotal || 0;
 
             updatedProduct.boughtoutProfitPercentage = boughtoutProfit;
             updatedProduct.boughtoutProfitAmount = (updatedProduct.boughtoutItemCost * boughtoutProfit) / 100;
@@ -349,10 +485,16 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
             updatedProduct.productTotalCost = updatedProduct.unitCost;
             updatedProduct.lineTotal = updatedProduct.unitCost * (updatedProduct.quantity || 1);
 
+            console.log('✅ FINAL TOTAL COST:', updatedProduct.productTotalCost);
+
+            if (errors.length === 0) {
+                alert(`✅ Price calculated successfully!\n\nTotal Cost: ₹${updatedProduct.productTotalCost.toLocaleString('en-IN')} `);
+            }
+
             setCurrentProduct(updatedProduct);
-        } catch (error) {
-            console.error('Error calculating price:', error);
-            alert('Error calculating price. Please check console.');
+        } catch (error: any) {
+            console.error('❌ Critical error calculating price:', error);
+            alert(`❌ Error calculating price: \n\n${error.message} \n\nPlease check the browser console for details.`);
         } finally {
             setCalculating(false);
         }
@@ -372,6 +514,7 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
         availableHandwheelTypes,
         availableHandwheelSeries,
         availableHandwheelModels,
+        availableTrimTypes,
         tubingAndFittingItems,
         setTubingAndFittingItems,
         testingItems,

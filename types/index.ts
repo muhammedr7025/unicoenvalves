@@ -118,6 +118,29 @@ export interface HandwheelPrice {
   isActive: boolean;
 }
 
+// Machine Pricing System
+export interface MachineType {
+  id: string;
+  name: string;              // e.g., "CNC Lathe", "Milling Machine"
+  hourlyRate: number;        // ₹ per hour
+  isActive: boolean;
+}
+
+export type ComponentType = 'Body' | 'Bonnet' | 'Plug' | 'Seat' | 'Stem' | 'Cage' | 'SealRing';
+
+export interface WorkHourData {
+  id: string;
+  seriesId: string;
+  size: string;
+  rating: string;
+  trimType?: string;         // Only for Plug, Seat, Cage, Seal Ring, Stem (not for Body, Bonnet)
+  component: ComponentType;
+  workHours: number;
+  machineTypeId: string;     // Reference to MachineType
+  machineTypeName?: string;  // Denormalized for display
+  isActive: boolean;
+}
+
 export interface TubingAndFittingItem {
   id: string;
   title: string;
@@ -157,33 +180,66 @@ export interface QuoteProduct {
   // NEW: Product Identification
   productTag?: string; // Custom name/identifier for this product
 
+  // NEW: Trim Type - used for machine hour calculations
+  trimType?: string; // For Plug, Seat, Stem, Cage, Seal Ring (not for Body, Bonnet)
+
   // Body Sub-Assembly - UPDATED with separate material groups
   bodyEndConnectType: EndConnectType;
   bodyBonnetMaterialId: string; // NEW: Shared material for body & bonnet
   bodyWeight: number;
   bodyMaterialPrice: number;
   bodyTotalCost: number;
+  // Machine costs for Body
+  bodyWorkHours?: number;
+  bodyMachineTypeId?: string;
+  bodyMachineTypeName?: string;
+  bodyMachineRate?: number;
+  bodyMachineCost?: number;
 
   bonnetType: BonnetType;
   bonnetWeight: number;
   bonnetMaterialPrice: number;
   bonnetTotalCost: number;
+  // Machine costs for Bonnet
+  bonnetWorkHours?: number;
+  bonnetMachineTypeId?: string;
+  bonnetMachineTypeName?: string;
+  bonnetMachineRate?: number;
+  bonnetMachineCost?: number;
 
   // Removed plugType
   plugMaterialId: string; // NEW: Separate material for plug
   plugWeight: number;
   plugMaterialPrice: number;
   plugTotalCost: number;
+  // Machine costs for Plug
+  plugWorkHours?: number;
+  plugMachineTypeId?: string;
+  plugMachineTypeName?: string;
+  plugMachineRate?: number;
+  plugMachineCost?: number;
 
   // Removed seatType
   seatMaterialId: string; // NEW: Separate material for seat
   seatWeight: number;
   seatMaterialPrice: number;
   seatTotalCost: number;
+  // Machine costs for Seat
+  seatWorkHours?: number;
+  seatMachineTypeId?: string;
+  seatMachineTypeName?: string;
+  seatMachineRate?: number;
+  seatMachineCost?: number;
 
   stemMaterialId: string; // NEW: Separate material for stem
   stemFixedPrice: number; // NEW: Fixed price lookup
   stemTotalCost: number;
+  // Machine costs for Stem
+  stemWorkHours?: number;
+  stemMachineTypeId?: string;
+  stemMachineTypeName?: string;
+  stemMachineRate?: number;
+  stemMachineCost?: number;
 
   // Cage - UPDATED to weight-based calculation
   hasCage: boolean;
@@ -191,12 +247,24 @@ export interface QuoteProduct {
   cageWeight?: number; // NEW
   cageMaterialPrice?: number; // NEW
   cageTotalCost?: number;
+  // Machine costs for Cage
+  cageWorkHours?: number;
+  cageMachineTypeId?: string;
+  cageMachineTypeName?: string;
+  cageMachineRate?: number;
+  cageMachineCost?: number;
 
   // NEW: Seal Ring
   hasSealRing: boolean;
   sealType?: string; // NEW: Seal Type selection
   sealRingFixedPrice?: number;
   sealRingTotalCost?: number;
+  // Machine costs for Seal Ring
+  sealRingWorkHours?: number;
+  sealRingMachineTypeId?: string;
+  sealRingMachineTypeName?: string;
+  sealRingMachineRate?: number;
+  sealRingMachineCost?: number;
 
   bodySubAssemblyTotal: number;
 

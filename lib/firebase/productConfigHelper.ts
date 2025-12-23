@@ -40,17 +40,17 @@ export async function getMaterialsByGroup(group: MaterialGroup): Promise<Materia
 
 // Get body weight
 export async function getBodyWeight(
-  seriesNumber: string,
+  seriesId: string,
   size: string,
   rating: string,
   endConnectType: string
 ): Promise<number | null> {
   try {
-    console.log('Looking for body weight:', { seriesNumber, size, rating, endConnectType });
+    console.log('Looking for body weight:', { seriesId, size, rating, endConnectType });
     const weightsRef = collection(db, 'bodyWeights');
     const q = query(
       weightsRef,
-      where('seriesId', '==', seriesNumber),
+      where('seriesId', '==', seriesId),
       where('size', '==', size),
       where('rating', '==', rating),
       where('endConnectType', '==', endConnectType)
@@ -70,17 +70,17 @@ export async function getBodyWeight(
 
 // Get bonnet weight
 export async function getBonnetWeight(
-  seriesNumber: string,
+  seriesId: string,
   size: string,
   rating: string,
   bonnetType: string
 ): Promise<number | null> {
   try {
-    console.log('Looking for bonnet weight:', { seriesNumber, size, rating, bonnetType });
+    console.log('Looking for bonnet weight:', { seriesId, size, rating, bonnetType });
     const weightsRef = collection(db, 'bonnetWeights');
     const q = query(
       weightsRef,
-      where('seriesId', '==', seriesNumber),
+      where('seriesId', '==', seriesId),
       where('size', '==', size),
       where('rating', '==', rating),
       where('bonnetType', '==', bonnetType)
@@ -106,16 +106,16 @@ export interface PlugWeightResult {
 }
 
 export async function getPlugWeight(
-  seriesNumber: string,
+  seriesId: string,
   size: string,
   rating: string
 ): Promise<PlugWeightResult | null> {
   try {
-    console.log('Looking for plug weight:', { seriesNumber, size, rating });
+    console.log('Looking for plug weight:', { seriesId, size, rating });
     const weightsRef = collection(db, 'plugWeights');
     const q = query(
       weightsRef,
-      where('seriesId', '==', seriesNumber),
+      where('seriesId', '==', seriesId),
       where('size', '==', size),
       where('rating', '==', rating)
     );
@@ -145,16 +145,16 @@ export interface SeatWeightResult {
 }
 
 export async function getSeatWeight(
-  seriesNumber: string,
+  seriesId: string,
   size: string,
   rating: string
 ): Promise<SeatWeightResult | null> {
   try {
-    console.log('Looking for seat weight:', { seriesNumber, size, rating });
+    console.log('Looking for seat weight:', { seriesId, size, rating });
     const weightsRef = collection(db, 'seatWeights');
     const q = query(
       weightsRef,
-      where('seriesId', '==', seriesNumber),
+      where('seriesId', '==', seriesId),
       where('size', '==', size),
       where('rating', '==', rating)
     );
@@ -178,17 +178,17 @@ export async function getSeatWeight(
 
 // Get stem fixed price (based on series, size, rating, material name)
 export async function getStemFixedPrice(
-  seriesNumber: string,
+  seriesId: string,
   size: string,
   rating: string,
   materialName: string
 ): Promise<number | null> {
   try {
-    console.log('Looking for stem fixed price:', { seriesNumber, size, rating, materialName });
+    console.log('Looking for stem fixed price:', { seriesId, size, rating, materialName });
     const pricesRef = collection(db, 'stemFixedPrices');
     const q = query(
       pricesRef,
-      where('seriesId', '==', seriesNumber),
+      where('seriesId', '==', seriesId),
       where('size', '==', size),
       where('rating', '==', rating),
       where('materialName', '==', materialName),
@@ -209,16 +209,16 @@ export async function getStemFixedPrice(
 
 // Get cage weight (kept for backward compatibility, uses cageWeights collection)
 export async function getCageWeight(
-  seriesNumber: string,
+  seriesId: string,
   size: string,
   rating: string
 ): Promise<number | null> {
   try {
-    console.log('Looking for cage weight:', { seriesNumber, size, rating });
+    console.log('Looking for cage weight:', { seriesId, size, rating });
     const weightsRef = collection(db, 'cageWeights');
     const q = query(
       weightsRef,
-      where('seriesId', '==', seriesNumber),
+      where('seriesId', '==', seriesId),
       where('size', '==', size),
       where('rating', '==', rating),
       where('isActive', '==', true)
@@ -238,17 +238,17 @@ export async function getCageWeight(
 
 // NEW: Get seal ring fixed price - UPDATED to use sealType
 export async function getSealRingPrice(
-  seriesNumber: string,
+  seriesId: string,
   sealType: string,
   size: string,
   rating: string
 ): Promise<number | null> {
   try {
-    console.log('Looking for seal ring price:', { seriesNumber, sealType, size, rating });
+    console.log('Looking for seal ring price:', { seriesId, sealType, size, rating });
     const pricesRef = collection(db, 'sealRingPrices');
     const q = query(
       pricesRef,
-      where('seriesId', '==', seriesNumber),
+      where('seriesId', '==', seriesId),
       where('sealType', '==', sealType),
       where('size', '==', size),
       where('rating', '==', rating),
@@ -268,11 +268,11 @@ export async function getSealRingPrice(
 }
 
 // Get available sizes for a series
-export async function getAvailableSizes(seriesNumber: string): Promise<string[]> {
+export async function getAvailableSizes(seriesId: string): Promise<string[]> {
   try {
-    console.log('Looking for sizes for series:', seriesNumber);
+    console.log('Looking for sizes for seriesId:', seriesId);
     const weightsRef = collection(db, 'bodyWeights');
-    const q = query(weightsRef, where('seriesId', '==', seriesNumber));
+    const q = query(weightsRef, where('seriesId', '==', seriesId));
     const snapshot = await getDocs(q);
 
     console.log('Found body weight documents:', snapshot.docs.length);
@@ -293,14 +293,14 @@ export async function getAvailableSizes(seriesNumber: string): Promise<string[]>
   }
 }
 
-// Get available ratings for a size
-export async function getAvailableRatings(seriesNumber: string, size: string): Promise<string[]> {
+// Get available ratings for  a size
+export async function getAvailableRatings(seriesId: string, size: string): Promise<string[]> {
   try {
-    console.log('Looking for ratings for:', seriesNumber, size);
+    console.log('Looking for ratings for:', seriesId, size);
     const weightsRef = collection(db, 'bodyWeights');
     const q = query(
       weightsRef,
-      where('seriesId', '==', seriesNumber),
+      where('seriesId', '==', seriesId),
       where('size', '==', size)
     );
     const snapshot = await getDocs(q);
@@ -325,7 +325,7 @@ export async function getAvailableRatings(seriesNumber: string, size: string): P
 
 // Get available end connect types
 export async function getAvailableEndConnectTypes(
-  seriesNumber: string,
+  seriesId: string,
   size: string,
   rating: string
 ): Promise<string[]> {
@@ -333,7 +333,7 @@ export async function getAvailableEndConnectTypes(
     const weightsRef = collection(db, 'bodyWeights');
     const q = query(
       weightsRef,
-      where('seriesId', '==', seriesNumber),
+      where('seriesId', '==', seriesId),
       where('size', '==', size),
       where('rating', '==', rating)
     );
@@ -351,7 +351,7 @@ export async function getAvailableEndConnectTypes(
 
 // Get available bonnet types
 export async function getAvailableBonnetTypes(
-  seriesNumber: string,
+  seriesId: string,
   size: string,
   rating: string
 ): Promise<string[]> {
@@ -359,7 +359,7 @@ export async function getAvailableBonnetTypes(
     const weightsRef = collection(db, 'bonnetWeights');
     const q = query(
       weightsRef,
-      where('seriesId', '==', seriesNumber),
+      where('seriesId', '==', seriesId),
       where('size', '==', size),
       where('rating', '==', rating)
     );
@@ -377,7 +377,7 @@ export async function getAvailableBonnetTypes(
 
 // NEW: Get available seal types
 export async function getAvailableSealTypes(
-  seriesNumber: string,
+  seriesId: string,
   size: string,
   rating: string
 ): Promise<string[]> {
@@ -385,7 +385,7 @@ export async function getAvailableSealTypes(
     const pricesRef = collection(db, 'sealRingPrices');
     const q = query(
       pricesRef,
-      where('seriesId', '==', seriesNumber),
+      where('seriesId', '==', seriesId),
       where('size', '==', size),
       where('rating', '==', rating),
       where('isActive', '==', true)
@@ -589,4 +589,135 @@ export async function getAvailableHandwheelModels(
     console.error('Error fetching handwheel models:', error);
     return [];
   }
+}
+
+// ============================================
+// MACHINE PRICING HELPERS
+// ============================================
+
+/**
+ * Get available trim types
+ * Used for Plug, Seat, Stem, Cage, Seal Ring machine hour lookups
+ */
+export async function getAvailableTrimTypes(): Promise<string[]> {
+  // Hardcoded list for Phase 1
+  // In Phase 2, this can be made dynamic from Firestore
+  return [
+    'Metal Seated',
+    'Soft Seated',
+    'Hard Faced',
+    'PTFE Seated',
+    'Ceramic Seated',
+  ];
+}
+
+/**
+ * Get work hour data and machine info for a component
+ * Returns an object with workHours, machineTypeId, machineTypeName, machineRate
+ */
+interface WorkHourResult {
+  workHours: number;
+  machineTypeId: string;
+  machineTypeName: string;
+  machineRate: number;
+}
+
+/**
+ * Helper to fetch work hour data from machinePricingService
+ */
+async function getWorkHourDataHelper(
+  seriesId: string,
+  size: string,
+  rating: string,
+  component: 'Body' | 'Bonnet' | 'Plug' | 'Seat' | 'Stem' | 'Cage' | 'SealRing',
+  trimType?: string
+): Promise<WorkHourResult | null> {
+  try {
+    // Import the function dynamically to avoid circular dependencies
+    const { getWorkHourData, getMachineTypeById } = await import('./machinePricingService');
+
+    const workHourData = await getWorkHourData(seriesId, size, rating, component, trimType);
+    if (!workHourData) return null;
+
+    const machineType = await getMachineTypeById(workHourData.machineTypeId);
+    if (!machineType) return null;
+
+    return {
+      workHours: workHourData.workHours,
+      machineTypeId: machineType.id,
+      machineTypeName: machineType.name,
+      machineRate: machineType.hourlyRate,
+    };
+  } catch (error) {
+    console.error(`Error fetching work hour data for ${component}:`, error);
+    return null;
+  }
+}
+
+// Body work hours (no trim type needed)
+export async function getWorkHourForBody(
+  seriesId: string,
+  size: string,
+  rating: string
+): Promise<WorkHourResult | null> {
+  return getWorkHourDataHelper(seriesId, size, rating, 'Body');
+}
+
+// Bonnet work hours (no trim type needed)
+export async function getWorkHourForBonnet(
+  seriesId: string,
+  size: string,
+  rating: string
+): Promise<WorkHourResult | null> {
+  return getWorkHourDataHelper(seriesId, size, rating, 'Bonnet');
+}
+
+// Plug work hours (requires trim type)
+export async function getWorkHourForPlug(
+  seriesId: string,
+  size: string,
+  rating: string,
+  trimType: string
+): Promise<WorkHourResult | null> {
+  return getWorkHourDataHelper(seriesId, size, rating, 'Plug', trimType);
+}
+
+// Seat work hours (requires trim type)
+export async function getWorkHourForSeat(
+  seriesId: string,
+  size: string,
+  rating: string,
+  trimType: string
+): Promise<WorkHourResult | null> {
+  return getWorkHourDataHelper(seriesId, size, rating, 'Seat', trimType);
+}
+
+// Stem work hours (requires trim type)
+export async function getWorkHourForStem(
+  seriesId: string,
+  size: string,
+  rating: string,
+  trimType: string
+): Promise<WorkHourResult | null> {
+  return getWorkHourDataHelper(seriesId, size, rating, 'Stem', trimType);
+}
+
+// Cage work hours (requires trim type)
+export async function getWorkHourForCage(
+  seriesId: string,
+  size: string,
+  rating: string,
+  trimType: string
+): Promise<WorkHourResult | null> {
+  return getWorkHourDataHelper(seriesId, size, rating, 'Cage', trimType);
+}
+
+// Seal Ring work hours (requires trim type)
+export async function getWorkHourForSealRing(
+  seriesId: string,
+  size: string,
+  rating: string,
+  trimType: string
+): Promise<WorkHourResult | null> {
+  return getWorkHourDataHelper(seriesId, size, rating, 'SealRing', trimType);
 }

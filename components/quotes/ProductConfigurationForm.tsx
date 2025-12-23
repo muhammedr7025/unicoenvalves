@@ -195,17 +195,18 @@ export default function ProductConfigurationForm({
             </h2>
 
             {/* Product Tag/Name */}
-            <div className="mb-6 bg-yellow-50 border-2 border-yellow-200 rounded-lg p-4">
-                <label className="block text-sm font-medium mb-2">Product Tag/Name (Optional)</label>
+            <div className="mb-6 bg-red-50 border-2 border-red-300 rounded-lg p-4">
+                <label className="block text-sm font-medium mb-2">Product Tag/Name *</label>
                 <input
                     type="text"
                     value={currentProduct.productTag || ''}
                     onChange={(e) => setCurrentProduct({ ...currentProduct, productTag: e.target.value })}
                     placeholder="e.g., Main Control Valve, Backup Unit, Emergency System"
-                    className="w-full px-4 py-3 border rounded-lg text-lg"
+                    className="w-full px-4 py-3 border-2 border-red-300 rounded-lg text-lg focus:ring-2 focus:ring-red-500"
+                    required
                 />
-                <p className="text-xs text-gray-600 mt-2">
-                    Add a custom identifier to easily distinguish this product in the quote
+                <p className="text-xs text-red-700 mt-2 font-medium">
+                    ⚠️ Required: Add a custom identifier to easily distinguish this product in the quote
                 </p>
             </div>
 
@@ -221,7 +222,7 @@ export default function ProductConfigurationForm({
                         <option value="">Select Series</option>
                         {series.map((s) => (
                             <option key={s.id} value={s.id}>
-                                {s.name} ({s.productType})
+                                {s.seriesNumber} - {s.name}
                             </option>
                         ))}
                     </select>
@@ -954,6 +955,209 @@ export default function ProductConfigurationForm({
                 </div>
             </div>
 
+            {/* PRICE SUMMARY - Shows after calculation */}
+            {currentProduct.productTotalCost && (
+                <div className="border-4 border-green-500 rounded-xl p-6 mb-6 bg-gradient-to-br from-green-50 to-emerald-50">
+                    <h2 className="text-2xl font-bold mb-6 text-green-900 flex items-center">
+                        <span className="text-3xl mr-3">💰</span>
+                        Price Summary
+                    </h2>
+
+                    {/* Body Sub-Assembly Breakdown */}
+                    <div className="bg-white rounded-lg p-4 mb-4">
+                        <h3 className="font-bold text-lg mb-3 text-blue-900">🔧 Body Sub-Assembly</h3>
+                        <div className="space-y-2 text-sm">
+                            {(currentProduct.bodyTotalCost || 0) > 0 && (
+                                <div className="flex justify-between">
+                                    <span>Body ({currentProduct.bodyWeight}kg × ₹{currentProduct.bodyMaterialPrice}/kg)</span>
+                                    <span className="font-semibold">₹{(currentProduct.bodyTotalCost || 0).toLocaleString('en-IN')}</span>
+                                </div>
+                            )}
+                            {(currentProduct.bonnetTotalCost || 0) > 0 && (
+                                <div className="flex justify-between">
+                                    <span>Bonnet ({currentProduct.bonnetWeight}kg × ₹{currentProduct.bonnetMaterialPrice}/kg)</span>
+                                    <span className="font-semibold">₹{(currentProduct.bonnetTotalCost || 0).toLocaleString('en-IN')}</span>
+                                </div>
+                            )}
+                            {(currentProduct.plugTotalCost || 0) > 0 && (
+                                <div className="flex justify-between">
+                                    <span>Plug ({currentProduct.plugWeight}kg × ₹{currentProduct.plugMaterialPrice}/kg)</span>
+                                    <span className="font-semibold">₹{(currentProduct.plugTotalCost || 0).toLocaleString('en-IN')}</span>
+                                </div>
+                            )}
+                            {(currentProduct.seatTotalCost || 0) > 0 && (
+                                <div className="flex justify-between">
+                                    <span>Seat ({currentProduct.seatWeight}kg × ₹{currentProduct.seatMaterialPrice}/kg)</span>
+                                    <span className="font-semibold">₹{(currentProduct.seatTotalCost || 0).toLocaleString('en-IN')}</span>
+                                </div>
+                            )}
+                            {(currentProduct.stemTotalCost || 0) > 0 && (
+                                <div className="flex justify-between">
+                                    <span>Stem (Fixed Price)</span>
+                                    <span className="font-semibold">₹{(currentProduct.stemTotalCost || 0).toLocaleString('en-IN')}</span>
+                                </div>
+                            )}
+                            {(currentProduct.cageTotalCost || 0) > 0 && (
+                                <div className="flex justify-between">
+                                    <span>Cage ({currentProduct.cageWeight}kg × ₹{currentProduct.cageMaterialPrice}/kg)</span>
+                                    <span className="font-semibold">₹{(currentProduct.cageTotalCost || 0).toLocaleString('en-IN')}</span>
+                                </div>
+                            )}
+                            {(currentProduct.sealRingTotalCost || 0) > 0 && (
+                                <div className="flex justify-between">
+                                    <span>Seal Ring (Fixed Price)</span>
+                                    <span className="font-semibold">₹{(currentProduct.sealRingTotalCost || 0).toLocaleString('en-IN')}</span>
+                                </div>
+                            )}
+                            <div className="border-t pt-2 mt-2 flex justify-between font-bold text-blue-900">
+                                <span>Subtotal</span>
+                                <span>₹{(currentProduct.bodySubAssemblyTotal || 0).toLocaleString('en-IN')}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Actuator Sub-Assembly Breakdown */}
+                    {(currentProduct.actuatorSubAssemblyTotal || 0) > 0 && (
+                        <div className="bg-white rounded-lg p-4 mb-4">
+                            <h3 className="font-bold text-lg mb-3 text-purple-900">⚙️ Actuator Sub-Assembly</h3>
+                            <div className="space-y-2 text-sm">
+                                {(currentProduct.actuatorFixedPrice || 0) > 0 && (
+                                    <div className="flex justify-between">
+                                        <span>Actuator ({currentProduct.actuatorType} - {currentProduct.actuatorSeries} - {currentProduct.actuatorModel})</span>
+                                        <span className="font-semibold">₹{(currentProduct.actuatorFixedPrice || 0).toLocaleString('en-IN')}</span>
+                                    </div>
+                                )}
+                                {(currentProduct.handwheelFixedPrice || 0) > 0 && (
+                                    <div className="flex justify-between">
+                                        <span>Handwheel ({currentProduct.handwheelType} - {currentProduct.handwheelSeries} - {currentProduct.handwheelModel})</span>
+                                        <span className="font-semibold">₹{(currentProduct.handwheelFixedPrice || 0).toLocaleString('en-IN')}</span>
+                                    </div>
+                                )}
+                                <div className="border-t pt-2 mt-2 flex justify-between font-bold text-purple-900">
+                                    <span>Subtotal</span>
+                                    <span>₹{(currentProduct.actuatorSubAssemblyTotal || 0).toLocaleString('en-IN')}</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Tubing & Fitting Breakdown */}
+                    {(currentProduct.tubingAndFittingTotal || 0) > 0 && (
+                        <div className="bg-white rounded-lg p-4 mb-4">
+                            <h3 className="font-bold text-lg mb-3 text-orange-900">🔧 Tubing & Fitting</h3>
+                            <div className="space-y-2 text-sm">
+                                {currentProduct.tubingAndFitting?.map((item, idx) => (
+                                    <div key={idx} className="flex justify-between">
+                                        <span>{item.title}</span>
+                                        <span className="font-semibold">₹{item.price.toLocaleString('en-IN')}</span>
+                                    </div>
+                                ))}
+                                <div className="border-t pt-2 mt-2 flex justify-between font-bold text-orange-900">
+                                    <span>Subtotal</span>
+                                    <span>₹{(currentProduct.tubingAndFittingTotal || 0).toLocaleString('en-IN')}</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Testing Breakdown */}
+                    {(currentProduct.testingTotal || 0) > 0 && (
+                        <div className="bg-white rounded-lg p-4 mb-4">
+                            <h3 className="font-bold text-lg mb-3 text-teal-900">🔬 Testing</h3>
+                            <div className="space-y-2 text-sm">
+                                {currentProduct.testing?.map((item, idx) => (
+                                    <div key={idx} className="flex justify-between">
+                                        <span>{item.title}</span>
+                                        <span className="font-semibold">₹{item.price.toLocaleString('en-IN')}</span>
+                                    </div>
+                                ))}
+                                <div className="border-t pt-2 mt-2 flex justify-between font-bold text-teal-900">
+                                    <span>Subtotal</span>
+                                    <span>₹{(currentProduct.testingTotal || 0).toLocaleString('en-IN')}</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Accessories Breakdown */}
+                    {(currentProduct.accessoriesTotal || 0) > 0 && (
+                        <div className="bg-white rounded-lg p-4 mb-4">
+                            <h3 className="font-bold text-lg mb-3 text-pink-900">🎯 Accessories (Bought-out Items)</h3>
+                            <div className="space-y-2 text-sm">
+                                {currentProduct.accessories?.map((item, idx) => (
+                                    <div key={idx} className="flex justify-between">
+                                        <span>{item.title}{item.isDefault && <span className="ml-2 text-xs bg-pink-200 px-2 py-0.5 rounded">Default</span>}</span>
+                                        <span className="font-semibold">₹{item.price.toLocaleString('en-IN')}</span>
+                                    </div>
+                                ))}
+                                <div className="border-t pt-2 mt-2 flex justify-between font-bold text-pink-900">
+                                    <span>Subtotal</span>
+                                    <span>₹{(currentProduct.accessoriesTotal || 0).toLocaleString('en-IN')}</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Final Totals */}
+                    <div className="bg-gradient-to-r from-green-100 to-emerald-100 rounded-lg p-6 border-2 border-green-300">
+                        <div className="space-y-3">
+                            <div className="flex justify-between text-lg">
+                                <div>
+                                    <div>Manufacturing Cost:</div>
+                                    <div className="text-xs text-gray-600 mt-1">
+                                        (Body Sub-Assembly + Actuator + Tubing & Fitting + Testing)
+                                    </div>
+                                </div>
+                                <span className="font-semibold">₹{(currentProduct.manufacturingCost || 0).toLocaleString('en-IN')}</span>
+                            </div>
+                            <div className="flex justify-between text-sm text-green-700">
+                                <span>+  Profit ({currentProduct.manufacturingProfitPercentage}%):</span>
+                                <span>₹{(currentProduct.manufacturingProfitAmount || 0).toLocaleString('en-IN')}</span>
+                            </div>
+
+                            <div className="flex justify-between font-semibold border-b pb-2">
+                                <span>Manufacturing with Profit:</span>
+                                <span>₹{(currentProduct.manufacturingCostWithProfit || 0).toLocaleString('en-IN')}</span>
+                            </div>
+
+                            <div className="flex justify-between text-lg">
+                                <div>
+                                    <div>Bought-out Items:</div>
+                                    <div className="text-xs text-gray-600 mt-1">
+                                        (Accessories only)
+                                    </div>
+                                </div>
+                                <span className="font-semibold">₹{(currentProduct.boughtoutItemCost || 0).toLocaleString('en-IN')}</span>
+                            </div>
+                            <div className="flex justify-between text-sm text-green-700">
+                                <span>+ Profit ({currentProduct.boughtoutProfitPercentage}%):</span>
+                                <span>₹{(currentProduct.boughtoutProfitAmount || 0).toLocaleString('en-IN')}</span>
+                            </div>
+
+                            <div className="flex justify-between text-2xl font-bold text-green-900 pt-3 border-t-4 border-green-500">
+                                <span>UNIT COST:</span>
+                                <span>₹{(currentProduct.unitCost || 0).toLocaleString('en-IN')}</span>
+                            </div>
+
+                            <div className="flex justify-between text-xl font-bold text-emerald-900 bg-emerald-200 px-4 py-3 rounded-lg mt-4">
+                                <span>TOTAL (Qty: {currentProduct.quantity || 1}):</span>
+                                <span>₹{(currentProduct.lineTotal || 0).toLocaleString('en-IN')}</span>
+                            </div>
+                        </div>
+
+                        <div className="mt-4 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+                            <p className="text-sm text-yellow-900">
+                                ✅ <strong>Price calculated successfully!</strong> You can:
+                            </p>
+                            <ul className="list-disc list-inside text-sm text-yellow-900 ml-4 mt-2">
+                                <li>Click "Add Product" to save this to the quote</li>
+                                <li>Modify fields above and click "Calculate Price" again</li>
+                                <li>Click "Cancel" to discard</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            )}
             {/* ACTION BUTTONS */}
             <div className="flex justify-end space-x-4">
                 <button
