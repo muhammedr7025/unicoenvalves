@@ -35,6 +35,7 @@ export default function NewQuotePage() {
 
   const [discount, setDiscount] = useState(0);
   const [tax, setTax] = useState(18);
+  const [packagePrice, setPackagePrice] = useState(0);
   const [notes, setNotes] = useState('');
   const [projectName, setProjectName] = useState('');
   const [enquiryId, setEnquiryId] = useState('');
@@ -114,7 +115,13 @@ export default function NewQuotePage() {
     setLoading(true);
 
     try {
-      const totals = calculateQuoteTotals(products, discount, tax);
+      // Calculate totals with package price
+      const baseTotals = calculateQuoteTotals(products, discount, tax);
+      const subtotalWithPackage = baseTotals.subtotal + packagePrice;
+      const discountAmountWithPackage = (subtotalWithPackage * discount) / 100;
+      const taxableWithPackage = subtotalWithPackage - discountAmountWithPackage;
+      const taxAmountWithPackage = (taxableWithPackage * tax) / 100;
+      const totalWithPackage = taxableWithPackage + taxAmountWithPackage;
 
       const now = new Date();
       const currentMonth = now.getMonth();
@@ -171,12 +178,13 @@ export default function NewQuotePage() {
           accessories: p.accessories || [],
           accessoriesTotal: p.accessoriesTotal || 0,
         })),
-        subtotal: totals.subtotal,
+        subtotal: subtotalWithPackage,
         discount,
-        discountAmount: totals.discountAmount,
+        discountAmount: discountAmountWithPackage,
         tax,
-        taxAmount: totals.taxAmount,
-        total: totals.total,
+        taxAmount: taxAmountWithPackage,
+        total: totalWithPackage,
+        packagePrice: packagePrice,
         status,
         createdBy: user.id,
         createdByName: user.name,
@@ -198,9 +206,17 @@ export default function NewQuotePage() {
     }
   };
 
-  const totals = products.length > 0
+  // Calculate totals including package price for display
+  const baseTotals = products.length > 0
     ? calculateQuoteTotals(products, discount, tax)
     : { subtotal: 0, discountAmount: 0, taxableAmount: 0, taxAmount: 0, total: 0 };
+
+  // Add package price to subtotal for display
+  const displaySubtotal = baseTotals.subtotal + packagePrice;
+  const displayDiscountAmount = (displaySubtotal * discount) / 100;
+  const displayTaxable = displaySubtotal - displayDiscountAmount;
+  const displayTaxAmount = (displayTaxable * tax) / 100;
+  const displayTotal = displayTaxable + displayTaxAmount;
 
   if (loading && customers.length === 0) {
     return (
@@ -371,6 +387,18 @@ export default function NewQuotePage() {
                   className="w-full px-3 py-2 border rounded-lg"
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">📦 Package Price (₹)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={packagePrice}
+                  onChange={(e) => setPackagePrice(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-2 border rounded-lg border-orange-300 focus:ring-orange-500 focus:border-orange-500"
+                  placeholder="Enter packaging cost"
+                />
+                <p className="text-xs text-gray-500 mt-1">Added to subtotal before discount/tax calculation</p>
+              </div>
               <div className="col-span-2">
                 <label className="block text-sm font-medium mb-2">Notes</label>
                 <textarea
@@ -403,12 +431,13 @@ export default function NewQuotePage() {
             {/* Totals */}
             <div className="border-t-4 border-gray-300 pt-6 mt-6">
               <QuoteSummary
-                subtotal={totals.subtotal}
+                subtotal={displaySubtotal}
                 discount={discount}
-                discountAmount={totals.discountAmount}
+                discountAmount={displayDiscountAmount}
                 tax={tax}
-                taxAmount={totals.taxAmount}
-                total={totals.total}
+                taxAmount={displayTaxAmount}
+                total={displayTotal}
+                packagePrice={packagePrice}
               />
             </div>
           </div>

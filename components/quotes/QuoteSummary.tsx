@@ -5,6 +5,7 @@ interface QuoteSummaryProps {
     tax: number;
     taxAmount: number;
     total: number;
+    packagePrice?: number;
 }
 
 export default function QuoteSummary({
@@ -14,12 +15,23 @@ export default function QuoteSummary({
     tax,
     taxAmount,
     total,
+    packagePrice = 0,
 }: QuoteSummaryProps) {
     return (
         <div className="flex justify-end">
             <div className="w-96 space-y-3 text-lg">
                 <div className="flex justify-between text-gray-700">
-                    <span>Subtotal:</span>
+                    <span>Products Subtotal:</span>
+                    <span className="font-semibold">₹{(subtotal - packagePrice).toLocaleString('en-IN')}</span>
+                </div>
+                {packagePrice > 0 && (
+                    <div className="flex justify-between text-orange-600">
+                        <span>📦 Package Price:</span>
+                        <span className="font-semibold">+₹{packagePrice.toLocaleString('en-IN')}</span>
+                    </div>
+                )}
+                <div className="flex justify-between text-gray-700 font-medium border-t pt-2">
+                    <span>Total Before Discount:</span>
                     <span className="font-semibold">₹{subtotal.toLocaleString('en-IN')}</span>
                 </div>
                 {discount > 0 && (

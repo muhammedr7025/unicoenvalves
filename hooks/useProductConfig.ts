@@ -273,17 +273,20 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
                     updatedProduct.bodyMaterialPrice = material.pricePerKg;
                     const materialCost = weight * material.pricePerKg;
 
-                    // Machine cost (Body doesn't use trimType)
+                    // Machine cost - use SELECTED machine (not from work hours)
                     const workHourData = await getWorkHourForBody(p.seriesId!, p.size!, p.rating!);
                     let machineCost = 0;
                     if (workHourData) {
                         updatedProduct.bodyWorkHours = workHourData.workHours;
-                        updatedProduct.bodyMachineTypeId = workHourData.machineTypeId;
-                        updatedProduct.bodyMachineTypeName = workHourData.machineTypeName;
-                        updatedProduct.bodyMachineRate = workHourData.machineRate;
-                        machineCost = workHourData.workHours * workHourData.machineRate;
+                        // Use selected machine rate from dropdown (already set by handler)
+                        const selectedMachineRate = p.bodyMachineRate || 0;
+                        machineCost = workHourData.workHours * selectedMachineRate;
                         updatedProduct.bodyMachineCost = machineCost;
-                        console.log(`✅ Body machine cost: ${machineCost} (${workHourData.workHours} hr × ₹${workHourData.machineRate}/hr - ${workHourData.machineTypeName})`);
+                        if (selectedMachineRate > 0) {
+                            console.log(`✅ Body machine cost: ${machineCost} (${workHourData.workHours} hr × ₹${selectedMachineRate}/hr - ${p.bodyMachineTypeName || 'No machine selected'})`);
+                        } else {
+                            console.warn('⚠️ Body machine not selected - machine cost will be 0');
+                        }
                     } else {
                         console.warn('⚠️ Body work hour data not found - machine cost will be 0');
                     }
@@ -312,24 +315,22 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
                     updatedProduct.bonnetMaterialPrice = material.pricePerKg;
                     const materialCost = weight * material.pricePerKg;
 
-                    // Machine cost (Bonnet doesn't use trimType)
+                    // Machine cost - use SELECTED machine
                     const workHourData = await getWorkHourForBonnet(p.seriesId!, p.size!, p.rating!);
                     let machineCost = 0;
                     if (workHourData) {
                         updatedProduct.bonnetWorkHours = workHourData.workHours;
-                        updatedProduct.bonnetMachineTypeId = workHourData.machineTypeId;
-                        updatedProduct.bonnetMachineTypeName = workHourData.machineTypeName;
-                        updatedProduct.bonnetMachineRate = workHourData.machineRate;
-                        machineCost = workHourData.workHours * workHourData.machineRate;
+                        const selectedMachineRate = p.bonnetMachineRate || 0;
+                        machineCost = workHourData.workHours * selectedMachineRate;
                         updatedProduct.bonnetMachineCost = machineCost;
-                        console.log('Bonnet machine cost:', machineCost);
+                        console.log(`✅ Bonnet machine cost: ${machineCost} (${p.bonnetMachineTypeName || 'No machine'})`);
                     } else {
-                        console.warn('Bonnet work hour data not found - machine cost will be 0');
+                        console.warn('Bonnet work hour data not found');
                     }
 
                     // Total = Material + Machine
                     updatedProduct.bonnetTotalCost = materialCost + machineCost;
-                    console.log('Bonnet total:', updatedProduct.bonnetTotalCost);
+                    console.log(`✅ Bonnet total: ₹${updatedProduct.bonnetTotalCost}`);
                 }
             }
 
@@ -351,24 +352,22 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
                     updatedProduct.plugMaterialPrice = material.pricePerKg;
                     const materialCost = plugData.weight * material.pricePerKg;
 
-                    // Machine cost (Plug REQUIRES trimType)
+                    // Machine cost - use SELECTED machine (Plug REQUIRES trimType)
                     const workHourData = await getWorkHourForPlug(p.seriesId!, p.size!, p.rating!, p.trimType!);
                     let machineCost = 0;
                     if (workHourData) {
                         updatedProduct.plugWorkHours = workHourData.workHours;
-                        updatedProduct.plugMachineTypeId = workHourData.machineTypeId;
-                        updatedProduct.plugMachineTypeName = workHourData.machineTypeName;
-                        updatedProduct.plugMachineRate = workHourData.machineRate;
-                        machineCost = workHourData.workHours * workHourData.machineRate;
+                        const selectedMachineRate = p.plugMachineRate || 0;
+                        machineCost = workHourData.workHours * selectedMachineRate;
                         updatedProduct.plugMachineCost = machineCost;
-                        console.log('Plug machine cost:', machineCost);
+                        console.log(`✅ Plug machine cost: ${machineCost} (${p.plugMachineTypeName || 'No machine'})`);
                     } else {
-                        console.warn('Plug work hour data not found - machine cost will be 0');
+                        console.warn('Plug work hour data not found');
                     }
 
                     // Total = Material + Machine
                     updatedProduct.plugTotalCost = materialCost + machineCost;
-                    console.log('Plug total:', updatedProduct.plugTotalCost);
+                    console.log(`✅ Plug total: ₹${updatedProduct.plugTotalCost}`);
                 }
             }
 
@@ -390,24 +389,22 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
                     updatedProduct.seatMaterialPrice = material.pricePerKg;
                     const materialCost = seatData.weight * material.pricePerKg;
 
-                    // Machine cost (Seat REQUIRES trimType)
+                    // Machine cost - use SELECTED machine (Seat REQUIRES trimType)
                     const workHourData = await getWorkHourForSeat(p.seriesId!, p.size!, p.rating!, p.trimType!);
                     let machineCost = 0;
                     if (workHourData) {
                         updatedProduct.seatWorkHours = workHourData.workHours;
-                        updatedProduct.seatMachineTypeId = workHourData.machineTypeId;
-                        updatedProduct.seatMachineTypeName = workHourData.machineTypeName;
-                        updatedProduct.seatMachineRate = workHourData.machineRate;
-                        machineCost = workHourData.workHours * workHourData.machineRate;
+                        const selectedMachineRate = p.seatMachineRate || 0;
+                        machineCost = workHourData.workHours * selectedMachineRate;
                         updatedProduct.seatMachineCost = machineCost;
-                        console.log('Seat machine cost:', machineCost);
+                        console.log(`✅ Seat machine cost: ${machineCost}`);
                     } else {
-                        console.warn('Seat work hour data not found - machine cost will be 0');
+                        console.warn('Seat work hour data not found');
                     }
 
                     // Total = Material + Machine
                     updatedProduct.seatTotalCost = materialCost + machineCost;
-                    console.log('Seat total:', updatedProduct.seatTotalCost);
+                    console.log(`✅ Seat total: ₹${updatedProduct.seatTotalCost}`);
                 }
             }
 
@@ -428,24 +425,22 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
                         updatedProduct.stemFixedPrice = fixedPrice;
                         const materialCost = fixedPrice;
 
-                        // Machine cost (Stem REQUIRES trimType)
+                        // Machine cost - use SELECTED machine (Stem REQUIRES trimType)
                         const workHourData = await getWorkHourForStem(p.seriesId!, p.size!, p.rating!, p.trimType!);
                         let machineCost = 0;
                         if (workHourData) {
                             updatedProduct.stemWorkHours = workHourData.workHours;
-                            updatedProduct.stemMachineTypeId = workHourData.machineTypeId;
-                            updatedProduct.stemMachineTypeName = workHourData.machineTypeName;
-                            updatedProduct.stemMachineRate = workHourData.machineRate;
-                            machineCost = workHourData.workHours * workHourData.machineRate;
+                            const selectedMachineRate = p.stemMachineRate || 0;
+                            machineCost = workHourData.workHours * selectedMachineRate;
                             updatedProduct.stemMachineCost = machineCost;
-                            console.log('Stem machine cost:', machineCost);
+                            console.log(`✅ Stem machine cost: ${machineCost}`);
                         } else {
-                            console.warn('Stem work hour data not found - machine cost will be 0');
+                            console.warn('Stem work hour data not found');
                         }
 
                         // Total = Material + Machine
                         updatedProduct.stemTotalCost = materialCost + machineCost;
-                        console.log('Stem total:', updatedProduct.stemTotalCost);
+                        console.log(`✅ Stem total: ₹${updatedProduct.stemTotalCost}`);
                     }
                 }
             }
@@ -468,24 +463,22 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
                     updatedProduct.cageMaterialPrice = material.pricePerKg;
                     const materialCost = weight * material.pricePerKg;
 
-                    // Machine cost (Cage REQUIRES trimType)
+                    // Machine cost - use SELECTED machine (Cage REQUIRES trimType)
                     const workHourData = await getWorkHourForCage(p.seriesId!, p.size!, p.rating!, p.trimType!);
                     let machineCost = 0;
                     if (workHourData) {
                         updatedProduct.cageWorkHours = workHourData.workHours;
-                        updatedProduct.cageMachineTypeId = workHourData.machineTypeId;
-                        updatedProduct.cageMachineTypeName = workHourData.machineTypeName;
-                        updatedProduct.cageMachineRate = workHourData.machineRate;
-                        machineCost = workHourData.workHours * workHourData.machineRate;
+                        const selectedMachineRate = p.cageMachineRate || 0;
+                        machineCost = workHourData.workHours * selectedMachineRate;
                         updatedProduct.cageMachineCost = machineCost;
-                        console.log('Cage machine cost:', machineCost);
+                        console.log(`✅ Cage machine cost: ${machineCost}`);
                     } else {
-                        console.warn('Cage work hour data not found - machine cost will be 0');
+                        console.warn('Cage work hour data not found');
                     }
 
                     // Total = Material + Machine
                     updatedProduct.cageTotalCost = materialCost + machineCost;
-                    console.log('Cage total:', updatedProduct.cageTotalCost);
+                    console.log(`✅ Cage total: ₹${updatedProduct.cageTotalCost}`);
                 }
             }
 
@@ -501,24 +494,22 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
                     updatedProduct.sealRingFixedPrice = price;
                     const materialCost = price;
 
-                    // Machine cost (Seal Ring REQUIRES trimType)
+                    // Machine cost - use SELECTED machine (Seal Ring REQUIRES trimType)
                     const workHourData = await getWorkHourForSealRing(p.seriesId!, p.size!, p.rating!, p.trimType!);
                     let machineCost = 0;
                     if (workHourData) {
                         updatedProduct.sealRingWorkHours = workHourData.workHours;
-                        updatedProduct.sealRingMachineTypeId = workHourData.machineTypeId;
-                        updatedProduct.sealRingMachineTypeName = workHourData.machineTypeName;
-                        updatedProduct.sealRingMachineRate = workHourData.machineRate;
-                        machineCost = workHourData.workHours * workHourData.machineRate;
+                        const selectedMachineRate = p.sealRingMachineRate || 0;
+                        machineCost = workHourData.workHours * selectedMachineRate;
                         updatedProduct.sealRingMachineCost = machineCost;
-                        console.log('Seal Ring machine cost:', machineCost);
+                        console.log(`✅ Seal Ring machine cost: ${machineCost}`);
                     } else {
-                        console.warn('Seal Ring work hour data not found - machine cost will be 0');
+                        console.warn('Seal Ring work hour data not found');
                     }
 
                     // Total = Material + Machine
                     updatedProduct.sealRingTotalCost = materialCost + machineCost;
-                    console.log('Seal Ring total:', updatedProduct.sealRingTotalCost);
+                    console.log(`✅ Seal Ring total: ₹${updatedProduct.sealRingTotalCost}`);
                 }
             }
 

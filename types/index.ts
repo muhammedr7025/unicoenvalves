@@ -135,9 +135,7 @@ export interface WorkHourData {
   rating: string;
   trimType?: string;         // Only for Plug, Seat, Cage, Seal Ring, Stem (not for Body, Bonnet)
   component: ComponentType;
-  workHours: number;
-  machineTypeId: string;     // Reference to MachineType
-  machineTypeName?: string;  // Denormalized for display
+  workHours: number;         // Just hours - machine selected during quote creation
   isActive: boolean;
 }
 

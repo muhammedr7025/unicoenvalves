@@ -5,11 +5,10 @@ import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { Quote } from '@/types';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import ProductDetailedView from '@/components/quotes/ProductDetailedView';
 import QuoteSummary from '@/components/quotes/QuoteSummary';
+import { exportQuotePDF, PDFExportType } from '@/utils/pdfExporter';
 
 export default function QuoteDetailsPage() {
   const params = useParams();
@@ -67,52 +66,27 @@ export default function QuoteDetailsPage() {
     XLSX.writeFile(wb, `Quote_${quote.quoteNumber}.xlsx`);
   };
 
-  const generatePDF = () => {
+  const handlePDFExport = async (exportType: PDFExportType) => {
     if (!quote) return;
 
-    const doc = new jsPDF();
+    try {
+      // Fetch customer details
+      const customerRef = doc(db, 'customers', quote.customerId);
+      const customerDoc = await getDoc(customerRef);
 
-    // Header
-    doc.setFontSize(20);
-    doc.text('UNICOEN VALVES', 105, 15, { align: 'center' });
-    doc.setFontSize(12);
-    doc.text('Quotation', 105, 25, { align: 'center' });
+      const customerDetails = customerDoc.exists()
+        ? customerDoc.data()
+        : {
+          name: quote.customerName,
+          address: '',
+          country: '',
+        };
 
-    // Quote Info
-    doc.setFontSize(10);
-    doc.text(`Quote No: ${quote.quoteNumber}`, 14, 35);
-    doc.text(`Date: ${quote.createdAt.toLocaleDateString()}`, 14, 40);
-    doc.text(`Customer: ${quote.customerName}`, 14, 45);
-
-    // Products Table
-    const tableData = quote.products.map((p, index) => [
-      index + 1,
-      `${p.productType}\nSeries ${p.seriesNumber}\nSize: ${p.size}, Rating: ${p.rating}`,
-      p.quantity,
-      `Rs. ${p.unitCost?.toLocaleString('en-IN')}`,
-      `Rs. ${p.lineTotal.toLocaleString('en-IN')}`
-    ]);
-
-    autoTable(doc, {
-      startY: 55,
-      head: [['S.No', 'Description', 'Qty', 'Unit Price', 'Total Amount']],
-      body: tableData,
-      theme: 'grid',
-      headStyles: { fillColor: [41, 128, 185] },
-    });
-
-    // Totals
-    const finalY = (doc as any).lastAutoTable.finalY || 60;
-    doc.text(`Subtotal: Rs. ${quote.subtotal.toLocaleString('en-IN')}`, 140, finalY + 10);
-    if (quote.discount > 0) {
-      doc.text(`Discount (${quote.discount}%): -Rs. ${quote.discountAmount.toLocaleString('en-IN')}`, 140, finalY + 15);
+      exportQuotePDF(quote, customerDetails, exportType);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
     }
-    doc.text(`Tax (${quote.tax}%): Rs. ${quote.taxAmount.toLocaleString('en-IN')}`, 140, finalY + 20);
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`Total: Rs. ${quote.total.toLocaleString('en-IN')}`, 140, finalY + 30);
-
-    doc.save(`Quote_${quote.quoteNumber}.pdf`);
   };
 
   if (loading) {
@@ -152,15 +126,63 @@ export default function QuoteDetailsPage() {
             </svg>
             Export Excel
           </button>
-          <button
-            onClick={generatePDF}
-            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 flex items-center"
-          >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-            </svg>
-            PDF
-          </button>
+
+          {/* PDF Export Dropdown */}
+          <div className="relative group">
+            <button className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 flex items-center">
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+              Export PDF
+              <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {/* Dropdown Menu */}
+            <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              <div className="py-2">
+                <button
+                  onClick={() => handlePDFExport('cover')}
+                  className="w-full text-left px-4 py-3 hover:bg-gray-100 flex items-start transition-colors"
+                >
+                  <svg className="w-5 h-5 mr-3 mt-0.5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <div>
+                    <div className="font-semibold text-gray-900">Cover Letter Only</div>
+                    <div className="text-xs text-gray-500">Formal offer covering letter</div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => handlePDFExport('pricing')}
+                  className="w-full text-left px-4 py-3 hover:bg-gray-100 flex items-start transition-colors border-t border-gray-100"
+                >
+                  <svg className="w-5 h-5 mr-3 mt-0.5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                  <div>
+                    <div className="font-semibold text-gray-900">Price Summary Only</div>
+                    <div className="text-xs text-gray-500">Pricing with terms & conditions</div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => handlePDFExport('both')}
+                  className="w-full text-left px-4 py-3 hover:bg-gray-100 flex items-start transition-colors border-t border-gray-100"
+                >
+                  <svg className="w-5 h-5 mr-3 mt-0.5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                  </svg>
+                  <div>
+                    <div className="font-semibold text-gray-900">Complete Quote</div>
+                    <div className="text-xs text-gray-500">Cover letter + price summary</div>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

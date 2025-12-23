@@ -612,18 +612,16 @@ export async function getAvailableTrimTypes(): Promise<string[]> {
 }
 
 /**
- * Get work hour data and machine info for a component
- * Returns an object with workHours, machineTypeId, machineTypeName, machineRate
+ * Get work hour data for a component
+ * NOTE: Machine type is now selected separately in quote form - this only returns hours!
  */
 interface WorkHourResult {
   workHours: number;
-  machineTypeId: string;
-  machineTypeName: string;
-  machineRate: number;
 }
 
 /**
  * Helper to fetch work hour data from machinePricingService
+ * Machine type is selected separately by employee in the quote form
  */
 async function getWorkHourDataHelper(
   seriesId: string,
@@ -634,19 +632,14 @@ async function getWorkHourDataHelper(
 ): Promise<WorkHourResult | null> {
   try {
     // Import the function dynamically to avoid circular dependencies
-    const { getWorkHourData, getMachineTypeById } = await import('./machinePricingService');
+    const { getWorkHourData } = await import('./machinePricingService');
 
     const workHourData = await getWorkHourData(seriesId, size, rating, component, trimType);
     if (!workHourData) return null;
 
-    const machineType = await getMachineTypeById(workHourData.machineTypeId);
-    if (!machineType) return null;
-
+    // Only return work hours - machine is selected separately in quote form
     return {
       workHours: workHourData.workHours,
-      machineTypeId: machineType.id,
-      machineTypeName: machineType.name,
-      machineRate: machineType.hourlyRate,
     };
   } catch (error) {
     console.error(`Error fetching work hour data for ${component}:`, error);

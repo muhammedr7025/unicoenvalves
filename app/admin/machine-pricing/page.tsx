@@ -46,7 +46,6 @@ export default function MachinePricingPage() {
         trimType: '',
         component: 'Body' as ComponentType,
         workHours: 0,
-        machineTypeId: '',
     });
 
     const [loading, setLoading] = useState(false);
@@ -83,41 +82,50 @@ export default function MachinePricingPage() {
             const { machineTypes: importedMachines, workHours: importedWorkHours, errors } =
                 await parseMachinePricingExcel(file, seriesMap);
 
+            console.log('📊 Import Summary:');
+            console.log(`- Machine Types to import: ${importedMachines.length}`);
+            console.log(`- Work Hours to import: ${importedWorkHours.length}`);
+            console.log(`- Parsing errors: ${errors.length}`);
+
             if (errors.length > 0) {
-                setMessage(`Import completed with ${errors.length} errors:\n${errors.slice(0, 5).join('\n')}`);
-                console.error('Import errors:', errors);
+                console.error('❌ Parsing errors:', errors);
             }
 
             // Import machine types first
+            let machineResult = { success: 0, failed: 0, errors: [] as string[] };
             if (importedMachines.length > 0) {
-                await bulkImportMachineTypes(importedMachines);
+                machineResult = await bulkImportMachineTypes(importedMachines);
+                console.log(`✅ Machine Types: ${machineResult.success} imported, ${machineResult.failed} failed`);
                 await loadMachineTypes(); // Reload to get IDs
             }
 
-            // Then import work hours (after getting machine type IDs)
+            // Import work hours directly (no machine type mapping needed)
+            let workHourResult = { success: 0, failed: 0, errors: [] as string[] };
             if (importedWorkHours.length > 0) {
-                // Map machine type names to IDs
-                const freshMachineTypes = await getMachineTypes();
-                const machineTypeMap = new Map(freshMachineTypes.map((mt) => [mt.name, mt.id]));
-
-                const workHoursWithMachineIds = importedWorkHours.map((wh) => {
-                    const machineId = machineTypeMap.get(wh.machineTypeName || '');
-                    return {
-                        ...wh,
-                        machineTypeId: machineId || '',
-                    };
-                });
-
-                await bulkImportWorkHours(workHoursWithMachineIds);
+                workHourResult = await bulkImportWorkHours(importedWorkHours);
+                console.log(`✅ Work Hours: ${workHourResult.success} imported, ${workHourResult.failed} failed`);
                 await loadWorkHours();
             }
 
-            setMessage(
-                `Import successful! Added ${importedMachines.length} machine types and ${importedWorkHours.length} work hour entries.${errors.length > 0 ? ` (${errors.length} errors - check console)` : ''}`
-            );
-        } catch (error) {
-            setMessage('Error importing data. Please check the file format.');
+            // Combine all errors
+            const allErrors = [...errors, ...machineResult.errors, ...workHourResult.errors];
+
+            // Show detailed message
+            if (allErrors.length > 0) {
+                const errorMessage = allErrors.join('\n');
+                setMessage(`Import completed with errors. See details below.`);
+                alert(`❌ Import Errors:\n\n${errorMessage}`);
+                console.error('All import errors:', allErrors);
+            } else {
+                setMessage(
+                    `✅ Import successful! Added ${machineResult.success} machine types and ${workHourResult.success} work hour entries.`
+                );
+            }
+        } catch (error: any) {
+            const errorMsg = `Error importing data: ${error.message || 'Unknown error'}`;
+            setMessage(errorMsg);
             console.error('Import error:', error);
+            alert(errorMsg);
         }
 
         setLoading(false);
@@ -215,10 +223,11 @@ export default function MachinePricingPage() {
 
     const handleAddWorkHour = async () => {
         if (!newWorkHour.seriesId || !newWorkHour.size || !newWorkHour.rating ||
-            !newWorkHour.machineTypeId || newWorkHour.workHours <= 0) {
+            newWorkHour.workHours <= 0) {
             setMessage('Please fill all required fields');
             return;
         }
+
 
         // Validate trimType for components that need it
         const needsTrimType = ['Plug', 'Seat', 'Stem', 'Cage', 'SealRing'].includes(newWorkHour.component);
@@ -229,13 +238,10 @@ export default function MachinePricingPage() {
 
         setLoading(true);
         try {
-            const machine = machineTypes.find(m => m.id === newWorkHour.machineTypeId);
             await addWorkHourData({
                 ...newWorkHour,
-                machineTypeName: machine?.name || '',
                 isActive: true,
             });
-            setMessage('Work hour data added successfully!');
             setNewWorkHour({
                 seriesId: '',
                 size: '',
@@ -243,7 +249,6 @@ export default function MachinePricingPage() {
                 trimType: '',
                 component: 'Body',
                 workHours: 0,
-                machineTypeId: '',
             });
             loadWorkHours();
         } catch (error) {
@@ -257,10 +262,14 @@ export default function MachinePricingPage() {
 
         setLoading(true);
         try {
-            const machine = machineTypes.find(m => m.id === editingWorkHour.machineTypeId);
             await updateWorkHourData(editingWorkHour.id, {
-                ...editingWorkHour,
-                machineTypeName: machine?.name || '',
+                seriesId: editingWorkHour.seriesId,
+                size: editingWorkHour.size,
+                rating: editingWorkHour.rating,
+                trimType: editingWorkHour.trimType,
+                component: editingWorkHour.component,
+                workHours: editingWorkHour.workHours,
+                isActive: editingWorkHour.isActive,
             });
             setMessage('Work hour data updated successfully!');
             setEditingWorkHour(null);
@@ -650,21 +659,7 @@ export default function MachinePricingPage() {
                                         className="w-full px-4 py-2 border rounded-lg"
                                     />
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-2">Machine Type *</label>
-                                    <select
-                                        value={newWorkHour.machineTypeId}
-                                        onChange={(e) => setNewWorkHour({ ...newWorkHour, machineTypeId: e.target.value })}
-                                        className="w-full px-4 py-2 border rounded-lg"
-                                    >
-                                        <option value="">Select Machine</option>
-                                        {machineTypes.map((machine) => (
-                                            <option key={machine.id} value={machine.id}>
-                                                {machine.name} (₹{machine.hourlyRate}/hr)
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
+
                                 <div className="flex items-end">
                                     <button
                                         onClick={handleAddWorkHour}
@@ -709,7 +704,6 @@ export default function MachinePricingPage() {
                                             <th className="px-2 py-2 text-left">Rating</th>
                                             <th className="px-2 py-2 text-left">Trim Type</th>
                                             <th className="px-2 py-2 text-left">Hours</th>
-                                            <th className="px-2 py-2 text-left">Machine</th>
                                             <th className="px-2 py-2 text-left">Actions</th>
                                         </tr>
                                     </thead>
@@ -724,7 +718,7 @@ export default function MachinePricingPage() {
                                                     <td className="px-2 py-2">{wh.rating}</td>
                                                     <td className="px-2 py-2">{wh.trimType || '-'}</td>
                                                     <td className="px-2 py-2">{wh.workHours}hr</td>
-                                                    <td className="px-2 py-2">{wh.machineTypeName}</td>
+
                                                     <td className="px-2 py-2">
                                                         <button
                                                             onClick={() => handleDeleteWorkHour(wh.id)}

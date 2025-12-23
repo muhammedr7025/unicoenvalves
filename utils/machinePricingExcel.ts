@@ -2,8 +2,8 @@ import * as XLSX from 'xlsx';
 import { MachineType, WorkHourData } from '@/types';
 
 /**
- * Generate Excel template for Machine Pricing data
- * Creates two sheets: Machine Types and Work Hours
+ * Generate machine pricing template Excel file for download
+ * Work hours NO LONGER include machine type - employee selects during quote
  */
 export function generateMachinePricingTemplate() {
     const wb = XLSX.utils.book_new();
@@ -22,7 +22,7 @@ export function generateMachinePricingTemplate() {
     ws1['!cols'] = [{ wch: 25 }, { wch: 20 }, { wch: 12 }];
     XLSX.utils.book_append_sheet(wb, ws1, 'Machine Types');
 
-    // Sheet 2: Work Hours Data
+    // Sheet 2: Work Hours Data (NO MACHINE TYPE - just hours)
     const workHoursData = [
         [
             'Component',
@@ -31,17 +31,16 @@ export function generateMachinePricingTemplate() {
             'Rating',
             'Trim Type',
             'Work Hours',
-            'Machine Type',
             'Active',
         ],
-        ['⚠️ IMPORTANT: Replace "YOUR-SERIES" below with actual series numbers from your database!', '', '', '', '', '', '', ''],
-        ['Body', 'YOUR-SERIES', '1"', '150#', '', 2.5, 'CNC Lathe', 'TRUE'],
-        ['Bonnet', 'YOUR-SERIES', '1"', '150#', '', 1.5, 'CNC Lathe', 'TRUE'],
-        ['Plug', 'YOUR-SERIES', '1"', '150#', 'Metal Seated', 1.0, 'Milling Machine', 'TRUE'],
-        ['Seat', 'YOUR-SERIES', '1"', '150#', 'Metal Seated', 1.0, 'Grinding Machine', 'TRUE'],
-        ['Stem', 'YOUR-SERIES', '1"', '150#', 'Metal Seated', 0.8, 'CNC Lathe', 'TRUE'],
-        ['Cage', 'YOUR-SERIES', '1"', '150#', 'Metal Seated', 1.2, 'Milling Machine', 'TRUE'],
-        ['SealRing', 'YOUR-SERIES', '1"', '150#', 'Metal Seated', 0.5, 'Grinding Machine', 'TRUE'],
+        ['⚠️ IMPORTANT: Replace "YOUR-SERIES" with actual series numbers from your database!', '', '', '', '', '', ''],
+        ['Body', 'YOUR-SERIES', '1"', '150#', '', 2.5, 'TRUE'],
+        ['Bonnet', 'YOUR-SERIES', '1"', '150#', '', 1.5, 'TRUE'],
+        ['Plug', 'YOUR-SERIES', '1"', '150#', 'Metal Seated', 1.0, 'TRUE'],
+        ['Seat', 'YOUR-SERIES', '1"', '150#', 'Metal Seated', 1.0, 'TRUE'],
+        ['Stem', 'YOUR-SERIES', '1"', '150#', 'Metal Seated', 0.8, 'TRUE'],
+        ['Cage', 'YOUR-SERIES', '1"', '150#', 'Metal Seated', 1.2, 'TRUE'],
+        ['SealRing', 'YOUR-SERIES', '1"', '150#', 'Metal Seated', 0.5, 'TRUE'],
     ];
 
     const ws2 = XLSX.utils.aoa_to_sheet(workHoursData);
@@ -52,7 +51,6 @@ export function generateMachinePricingTemplate() {
         { wch: 10 },
         { wch: 18 },
         { wch: 12 },
-        { wch: 20 },
         { wch: 8 },
     ];
     XLSX.utils.book_append_sheet(wb, ws2, 'Work Hours');
@@ -85,7 +83,7 @@ export function exportMachinePricingData(
     ws1['!cols'] = [{ wch: 25 }, { wch: 20 }, { wch: 12 }];
     XLSX.utils.book_append_sheet(wb, ws1, 'Machine Types');
 
-    // Sheet 2: Work Hours Data
+    // Sheet 2: Work Hours Data (NO MACHINE TYPE)
     const workHoursData = [
         [
             'Component',
@@ -94,7 +92,6 @@ export function exportMachinePricingData(
             'Rating',
             'Trim Type',
             'Work Hours',
-            'Machine Type',
             'Active',
         ],
         ...workHours.map((wh) => {
@@ -106,7 +103,6 @@ export function exportMachinePricingData(
                 wh.rating,
                 wh.trimType || '',
                 wh.workHours,
-                wh.machineTypeName,
                 wh.isActive ? 'TRUE' : 'FALSE',
             ];
         }),
@@ -120,7 +116,6 @@ export function exportMachinePricingData(
         { wch: 10 },
         { wch: 18 },
         { wch: 12 },
-        { wch: 20 },
         { wch: 8 },
     ];
     XLSX.utils.book_append_sheet(wb, ws2, 'Work Hours');
@@ -184,31 +179,52 @@ export function parseMachinePricingExcel(
                     }
                 }
 
-                // Parse Work Hours sheet
+                // Parse Work Hours sheet (NO MACHINE TYPE)
                 const workHoursSheet = workbook.Sheets['Work Hours'];
+                console.log('📋 Work Hours sheet found:', !!workHoursSheet);
+
                 if (workHoursSheet) {
                     const workHoursData: any[][] = XLSX.utils.sheet_to_json(workHoursSheet, {
                         header: 1,
                     });
+                    console.log(`📋 Total rows in Work Hours sheet: ${workHoursData.length}`);
+                    console.log('📋 First 3 rows:', workHoursData.slice(0, 3));
 
-                    // Skip header row
+                    // Skip header row and comment/instruction rows
                     for (let i = 1; i < workHoursData.length; i++) {
                         const row = workHoursData[i];
-                        if (!row[0]) continue; // Skip empty rows
+                        if (!row || !row[0]) {
+                            console.log(`Row ${i + 1}: Skipped - empty`);
+                            continue;
+                        }
 
-                        const component = String(row[0]).trim();
-                        const seriesNumber = String(row[1]).trim();
-                        const size = String(row[2]).trim();
-                        const rating = String(row[3]).trim();
+                        const firstCell = String(row[0]).trim();
+                        if (firstCell.startsWith('⚠️') || firstCell.startsWith('IMPORTANT') || firstCell.startsWith('//')) {
+                            console.log(`Row ${i + 1}: Skipped - instruction`);
+                            continue;
+                        }
+
+                        const component = firstCell;
+                        const seriesNumber = String(row[1] || '').trim();
+                        const size = String(row[2] || '').trim();
+                        const rating = String(row[3] || '').trim();
                         const trimType = row[4] ? String(row[4]).trim() : '';
-                        const workHoursValue = parseFloat(String(row[5]));
-                        const machineTypeName = String(row[6]).trim();
-                        const activeStr = String(row[7] || 'TRUE').trim().toUpperCase();
+                        const workHoursValue = parseFloat(String(row[5] || ''));
+                        const activeStr = String(row[6] || 'TRUE').trim().toUpperCase();
                         const isActive = activeStr === 'TRUE';
 
+                        console.log(`Row ${i + 1}: Component="${component}", Series="${seriesNumber}", Size="${size}", Rating="${rating}", Hours=${workHoursValue}`);
+
+                        // Skip rows with placeholder series
+                        if (seriesNumber === 'YOUR-SERIES' || seriesNumber.startsWith('YOUR-')) {
+                            console.log(`Row ${i + 1}: Skipped - placeholder`);
+                            continue;
+                        }
+
                         // Validate required fields
-                        if (!component || !seriesNumber || !size || !rating || isNaN(workHoursValue) || !machineTypeName) {
-                            errors.push(`Row ${i + 1}: Missing required fields in work hours`);
+                        if (!component || !seriesNumber || !size || !rating || isNaN(workHoursValue)) {
+                            console.log(`Row ${i + 1}: Skipped - missing fields`);
+                            errors.push(`Row ${i + 1}: Missing fields (Comp=${component}, Ser=${seriesNumber}, Size=${size}, Rat=${rating}, Hrs=${workHoursValue})`);
                             continue;
                         }
 
@@ -247,17 +263,6 @@ export function parseMachinePricingExcel(
                             continue;
                         }
 
-                        // Find machine type ID (we'll need to match by name later)
-                        const matchingMachineType = machineTypes.find(
-                            (mt) => mt.name === machineTypeName
-                        );
-                        if (!matchingMachineType) {
-                            errors.push(
-                                `Row ${i + 1}: Machine type '${machineTypeName}' not found. Make sure it exists in Machine Types sheet.`
-                            );
-                            continue;
-                        }
-
                         workHours.push({
                             seriesId: seriesData.id,
                             size,
@@ -265,8 +270,6 @@ export function parseMachinePricingExcel(
                             trimType: trimType || undefined,
                             component: component as any,
                             workHours: workHoursValue,
-                            machineTypeId: '', // Will be filled after machine types are imported
-                            machineTypeName,
                             isActive,
                         });
                     }

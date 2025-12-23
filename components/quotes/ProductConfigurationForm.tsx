@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     Material,
+    MachineType,
     Series,
     QuoteProduct,
     TubingAndFittingItem,
@@ -9,6 +10,8 @@ import {
     DEFAULT_ACCESSORIES,
 } from '@/types';
 import { useProductConfig } from '@/hooks/useProductConfig';
+import { getMachineTypes } from '@/lib/firebase/machinePricingService';
+
 
 interface ProductConfigurationFormProps {
     initialProduct?: Partial<QuoteProduct>;
@@ -66,6 +69,17 @@ export default function ProductConfigurationForm({
         calculateProductPrice,
     } = useProductConfig({ initialProduct, series, materials });
 
+    // Load available machines for selection
+    const [availableMachines, setAvailableMachines] = useState<MachineType[]>([]);
+
+    useEffect(() => {
+        async function loadMachines() {
+            const machines = await getMachineTypes();
+            setAvailableMachines(machines);
+        }
+        loadMachines();
+    }, []);
+
     // Temporary states for adding items
     const [newTubingTitle, setNewTubingTitle] = useState('');
     const [newTubingPrice, setNewTubingPrice] = useState(0);
@@ -75,6 +89,84 @@ export default function ProductConfigurationForm({
     const [newAccessoryPrice, setNewAccessoryPrice] = useState(0);
     const [showAccessoryPriceInput, setShowAccessoryPriceInput] = useState<string | null>(null);
     const [customAccessoryPrice, setCustomAccessoryPrice] = useState<{ [key: string]: number }>({});
+
+    // Machine selection change handlers
+    const handleBodyMachineChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const machineId = e.target.value;
+        const machine = availableMachines.find(m => m.id === machineId);
+        setCurrentProduct(prev => ({
+            ...prev,
+            bodyMachineTypeId: machineId,
+            bodyMachineTypeName: machine?.name,
+            bodyMachineRate: machine?.hourlyRate,
+        }));
+    };
+
+    const handleBonnetMachineChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const machineId = e.target.value;
+        const machine = availableMachines.find(m => m.id === machineId);
+        setCurrentProduct(prev => ({
+            ...prev,
+            bonnetMachineTypeId: machineId,
+            bonnetMachineTypeName: machine?.name,
+            bonnetMachineRate: machine?.hourlyRate,
+        }));
+    };
+
+    const handlePlugMachineChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const machineId = e.target.value;
+        const machine = availableMachines.find(m => m.id === machineId);
+        setCurrentProduct(prev => ({
+            ...prev,
+            plugMachineTypeId: machineId,
+            plugMachineTypeName: machine?.name,
+            plugMachineRate: machine?.hourlyRate,
+        }));
+    };
+
+    const handleSeatMachineChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const machineId = e.target.value;
+        const machine = availableMachines.find(m => m.id === machineId);
+        setCurrentProduct(prev => ({
+            ...prev,
+            seatMachineTypeId: machineId,
+            seatMachineTypeName: machine?.name,
+            seatMachineRate: machine?.hourlyRate,
+        }));
+    };
+
+    const handleStemMachineChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const machineId = e.target.value;
+        const machine = availableMachines.find(m => m.id === machineId);
+        setCurrentProduct(prev => ({
+            ...prev,
+            stemMachineTypeId: machineId,
+            stemMachineTypeName: machine?.name,
+            stemMachineRate: machine?.hourlyRate,
+        }));
+    };
+
+    const handleCageMachineChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const machineId = e.target.value;
+        const machine = availableMachines.find(m => m.id === machineId);
+        setCurrentProduct(prev => ({
+            ...prev,
+            cageMachineTypeId: machineId,
+            cageMachineTypeName: machine?.name,
+            cageMachineRate: machine?.hourlyRate,
+        }));
+    };
+
+    const handleSealRingMachineChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const machineId = e.target.value;
+        const machine = availableMachines.find(m => m.id === machineId);
+        setCurrentProduct(prev => ({
+            ...prev,
+            sealRingMachineTypeId: machineId,
+            sealRingMachineTypeName: machine?.name,
+            sealRingMachineRate: machine?.hourlyRate,
+        }));
+    };
 
     // Tubing & Fitting functions
     const addTubingAndFittingItem = () => {
@@ -323,6 +415,38 @@ export default function ProductConfigurationForm({
                                         * This material is shared for both Body and Bonnet
                                     </p>
                                 </div>
+                                <div>
+                                    <label className="block text-sm mb-1">Body Machine *</label>
+                                    <select
+                                        value={currentProduct.bodyMachineTypeId || ''}
+                                        onChange={handleBodyMachineChange}
+                                        className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-purple-500"
+                                        required
+                                    >
+                                        <option value="">Select Machine</option>
+                                        {availableMachines.map((machine) => (
+                                            <option key={machine.id} value={machine.id}>
+                                                {machine.name} - ₹{machine.hourlyRate}/hr
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm mb-1">Bonnet Machine *</label>
+                                    <select
+                                        value={currentProduct.bonnetMachineTypeId || ''}
+                                        onChange={handleBonnetMachineChange}
+                                        className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-purple-500"
+                                        required
+                                    >
+                                        <option value="">Select Machine</option>
+                                        {availableMachines.map((machine) => (
+                                            <option key={machine.id} value={machine.id}>
+                                                {machine.name} - ₹{machine.hourlyRate}/hr
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
                         </div>
 
@@ -375,6 +499,22 @@ export default function ProductConfigurationForm({
                                         ))}
                                     </select>
                                 </div>
+                                <div>
+                                    <label className="block text-sm mb-1">Plug Machine *</label>
+                                    <select
+                                        value={currentProduct.plugMachineTypeId || ''}
+                                        onChange={handlePlugMachineChange}
+                                        className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-purple-500"
+                                        required
+                                    >
+                                        <option value="">Select Machine</option>
+                                        {availableMachines.map((machine) => (
+                                            <option key={machine.id} value={machine.id}>
+                                                {machine.name} - ₹{machine.hourlyRate}/hr
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
                         </div>
 
@@ -396,6 +536,22 @@ export default function ProductConfigurationForm({
                                         <option value="">Select Material</option>
                                         {seatMaterials.map((m) => (
                                             <option key={m.id} value={m.id}>{m.name} (₹{m.pricePerKg}/kg)</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm mb-1">Seat Machine *</label>
+                                    <select
+                                        value={currentProduct.seatMachineTypeId || ''}
+                                        onChange={handleSeatMachineChange}
+                                        className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-purple-500"
+                                        required
+                                    >
+                                        <option value="">Select Machine</option>
+                                        {availableMachines.map((machine) => (
+                                            <option key={machine.id} value={machine.id}>
+                                                {machine.name} - ₹{machine.hourlyRate}/hr
+                                            </option>
                                         ))}
                                     </select>
                                 </div>
@@ -424,6 +580,22 @@ export default function ProductConfigurationForm({
                                     <p className="text-xs text-gray-500 mt-1">
                                         * Stem price = Fixed price based on series, size, rating, and material
                                     </p>
+                                </div>
+                                <div>
+                                    <label className="block text-sm mb-1">Stem Machine *</label>
+                                    <select
+                                        value={currentProduct.stemMachineTypeId || ''}
+                                        onChange={handleStemMachineChange}
+                                        className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-purple-500"
+                                        required
+                                    >
+                                        <option value="">Select Machine</option>
+                                        {availableMachines.map((machine) => (
+                                            <option key={machine.id} value={machine.id}>
+                                                {machine.name} - ₹{machine.hourlyRate}/hr
+                                            </option>
+                                        ))}
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -457,6 +629,22 @@ export default function ProductConfigurationForm({
                                             * Cage price = Weight × Material price
                                         </p>
                                     </div>
+                                    <div>
+                                        <label className="block text-sm mb-1">Cage Machine *</label>
+                                        <select
+                                            value={currentProduct.cageMachineTypeId || ''}
+                                            onChange={handleCageMachineChange}
+                                            className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-purple-500"
+                                            required
+                                        >
+                                            <option value="">Select Machine</option>
+                                            {availableMachines.map((machine) => (
+                                                <option key={machine.id} value={machine.id}>
+                                                    {machine.name} - ₹{machine.hourlyRate}/hr
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -487,6 +675,22 @@ export default function ProductConfigurationForm({
                                         <p className="text-xs text-gray-500 mt-1">
                                             Fixed price based on seal type, size, and rating
                                         </p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm mb-1">Seal Ring Machine *</label>
+                                        <select
+                                            value={currentProduct.sealRingMachineTypeId || ''}
+                                            onChange={handleSealRingMachineChange}
+                                            className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-purple-500"
+                                            required
+                                        >
+                                            <option value="">Select Machine</option>
+                                            {availableMachines.map((machine) => (
+                                                <option key={machine.id} value={machine.id}>
+                                                    {machine.name} - ₹{machine.hourlyRate}/hr
+                                                </option>
+                                            ))}
+                                        </select>
                                     </div>
                                 </div>
                             </div>
@@ -1214,6 +1418,55 @@ export default function ProductConfigurationForm({
                     {/* Final Totals */}
                     <div className="bg-gradient-to-r from-green-100 to-emerald-100 rounded-lg p-6 border-2 border-green-300">
                         <div className="space-y-3">
+                            {/* Manufacturing Cost Breakdown */}
+                            <div className="bg-white rounded-lg p-4 mb-3 border border-gray-200">
+                                <div className="text-sm font-semibold text-gray-700 mb-2">Manufacturing Cost Breakdown:</div>
+                                <div className="space-y-1 text-sm">
+                                    {(() => {
+                                        const totalMaterialCost = (
+                                            ((currentProduct.bodyWeight || 0) * (currentProduct.bodyMaterialPrice || 0)) +
+                                            ((currentProduct.bonnetWeight || 0) * (currentProduct.bonnetMaterialPrice || 0)) +
+                                            ((currentProduct.plugWeight || 0) * (currentProduct.plugMaterialPrice || 0)) +
+                                            ((currentProduct.seatWeight || 0) * (currentProduct.seatMaterialPrice || 0)) +
+                                            (currentProduct.stemFixedPrice || 0) +
+                                            ((currentProduct.cageWeight || 0) * (currentProduct.cageMaterialPrice || 0)) +
+                                            (currentProduct.sealRingFixedPrice || 0)
+                                        );
+                                        const totalMachineCost = (
+                                            (currentProduct.bodyMachineCost || 0) +
+                                            (currentProduct.bonnetMachineCost || 0) +
+                                            (currentProduct.plugMachineCost || 0) +
+                                            (currentProduct.seatMachineCost || 0) +
+                                            (currentProduct.stemMachineCost || 0) +
+                                            (currentProduct.cageMachineCost || 0) +
+                                            (currentProduct.sealRingMachineCost || 0)
+                                        );
+                                        return (
+                                            <>
+                                                <div className="flex justify-between text-blue-700">
+                                                    <span>• Material Costs (Body Sub-Assembly)</span>
+                                                    <span className="font-semibold">₹{totalMaterialCost.toLocaleString('en-IN')}</span>
+                                                </div>
+                                                {totalMachineCost > 0 && (
+                                                    <div className="flex justify-between text-purple-700">
+                                                        <span>• Machine Costs (Body Sub-Assembly)</span>
+                                                        <span className="font-semibold">₹{totalMachineCost.toLocaleString('en-IN')}</span>
+                                                    </div>
+                                                )}
+                                                <div className="flex justify-between text-gray-700">
+                                                    <span>• Actuator + Tubing  + Testing</span>
+                                                    <span className="font-semibold">₹{(
+                                                        (currentProduct.actuatorSubAssemblyTotal || 0) +
+                                                        (currentProduct.tubingAndFittingTotal || 0) +
+                                                        (currentProduct.testingTotal || 0)
+                                                    ).toLocaleString('en-IN')}</span>
+                                                </div>
+                                            </>
+                                        );
+                                    })()}
+                                </div>
+                            </div>
+
                             <div className="flex justify-between text-lg">
                                 <div>
                                     <div>Manufacturing Cost:</div>
