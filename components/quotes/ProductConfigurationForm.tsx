@@ -39,6 +39,7 @@ export default function ProductConfigurationForm({
         availableHandwheelTypes,
         availableHandwheelSeries,
         availableHandwheelModels,
+        availableTrimTypes,
         tubingAndFittingItems,
         setTubingAndFittingItems,
         testingItems,
@@ -207,6 +208,27 @@ export default function ProductConfigurationForm({
                 />
                 <p className="text-xs text-red-700 mt-2 font-medium">
                     ⚠️ Required: Add a custom identifier to easily distinguish this product in the quote
+                </p>
+            </div>
+
+            {/* Trim Type Selection - Required for Machine Pricing */}
+            <div className="mb-6 bg-orange-50 border-2 border-orange-300 rounded-lg p-4">
+                <label className="block text-sm font-medium mb-2">Trim Type *</label>
+                <select
+                    value={currentProduct.trimType || ''}
+                    onChange={(e) => setCurrentProduct({ ...currentProduct, trimType: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-orange-300 rounded-lg text-lg focus:ring-2 focus:ring-orange-500"
+                    required
+                >
+                    <option value="">Select Trim Type</option>
+                    {availableTrimTypes.map((type) => (
+                        <option key={type} value={type}>
+                            {type}
+                        </option>
+                    ))}
+                </select>
+                <p className="text-xs text-orange-700 mt-2 font-medium">
+                    ⚠️ Required: Trim type is used for machine hour calculations (affects Plug, Seat, Stem, Cage, Seal Ring)
                 </p>
             </div>
 
