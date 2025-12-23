@@ -98,13 +98,18 @@ export async function getBonnetWeight(
   }
 }
 
-// Get plug weight (simplified - no type, just series+size+rating)
+// Get plug weight (from plugWeights collection) - REMOVED plugType dependency
+export interface PlugWeightResult {
+  weight: number;
+  hasSealRing: boolean;
+  sealRingPrice: number | null;
+}
 
 export async function getPlugWeight(
   seriesNumber: string,
   size: string,
   rating: string
-): Promise<number | null> {
+): Promise<PlugWeightResult | null> {
   try {
     console.log('Looking for plug weight:', { seriesNumber, size, rating });
     const weightsRef = collection(db, 'plugWeights');
@@ -120,19 +125,30 @@ export async function getPlugWeight(
 
     if (snapshot.empty) return null;
 
-    return snapshot.docs[0].data().weight;
+    const data = snapshot.docs[0].data();
+    return {
+      weight: data.weight,
+      hasSealRing: data.hasSealRing || false,
+      sealRingPrice: data.sealRingPrice || null,
+    };
   } catch (error) {
     console.error('Error fetching plug weight:', error);
     return null;
   }
 }
 
-// Get seat weight (simple weight lookup by series+size+rating)
+// Get seat weight (from seatWeights collection) - REMOVED seatType dependency
+export interface SeatWeightResult {
+  weight: number;
+  hasCage: boolean;
+  cageWeight: number | null;
+}
+
 export async function getSeatWeight(
   seriesNumber: string,
   size: string,
   rating: string
-): Promise<number | null> {
+): Promise<SeatWeightResult | null> {
   try {
     console.log('Looking for seat weight:', { seriesNumber, size, rating });
     const weightsRef = collection(db, 'seatWeights');
@@ -148,7 +164,12 @@ export async function getSeatWeight(
 
     if (snapshot.empty) return null;
 
-    return snapshot.docs[0].data().weight;
+    const data = snapshot.docs[0].data();
+    return {
+      weight: data.weight,
+      hasCage: data.hasCage || false,
+      cageWeight: data.cageWeight || null,
+    };
   } catch (error) {
     console.error('Error fetching seat weight:', error);
     return null;
@@ -215,7 +236,7 @@ export async function getCageWeight(
   }
 }
 
-// Get seal ring fixed price (using sealType)
+// NEW: Get seal ring fixed price - UPDATED to use sealType
 export async function getSealRingPrice(
   seriesNumber: string,
   sealType: string,
@@ -354,7 +375,7 @@ export async function getAvailableBonnetTypes(
   }
 }
 
-// Get available seal types (for seal ring configuration)
+// NEW: Get available seal types
 export async function getAvailableSealTypes(
   seriesNumber: string,
   size: string,
@@ -374,14 +395,13 @@ export async function getAvailableSealTypes(
     const types = new Set<string>();
     snapshot.docs.forEach(doc => types.add(doc.data().sealType));
 
-    return Array.from(types).sort();
+    return Array.from(types);
   } catch (error) {
-    console.error('Error fetching seal ring types:', error);
+    console.error('Error fetching seal types:', error);
     return [];
   }
 }
 
-// Get available seat types
 // Get actuator price by details
 export async function getActuatorPrice(
   type: string,
@@ -413,7 +433,8 @@ export async function getActuatorPrice(
   }
 }
 
-// Get handwheel price by actuator combination (type, series, model, standard)
+// Get handwheel price for actuator model
+// Get handwheel price by details
 export async function getHandwheelPrice(
   type: string,
   series: string,
@@ -421,7 +442,7 @@ export async function getHandwheelPrice(
   standard: 'standard' | 'special'
 ): Promise<number | null> {
   try {
-    console.log('Looking for handwheel price for:', { type, series, model, standard });
+    console.log('Looking for handwheel price:', { type, series, model, standard });
     const pricesRef = collection(db, 'handwheelPrices');
     const q = query(
       pricesRef,
@@ -507,48 +528,65 @@ export async function getAvailableActuatorModels(
   }
 }
 
-// Get machining hours
-export async function getMachiningHours(
-  seriesNumber: string,
-  size: string,
-  rating: string,
-  partType: string,
-  trimType?: string
-): Promise<number | null> {
+// Get available handwheel types
+export async function getAvailableHandwheelTypes(): Promise<string[]> {
   try {
-    console.log('Looking for machining hours:', { seriesNumber, size, rating, partType, trimType });
-    const hoursRef = collection(db, 'machiningHours');
-    let q;
-
-    if (trimType) {
-      q = query(
-        hoursRef,
-        where('seriesId', '==', seriesNumber),
-        where('size', '==', size),
-        where('rating', '==', rating),
-        where('partType', '==', partType),
-        where('trimType', '==', trimType),
-        where('isActive', '==', true)
-      );
-    } else {
-      q = query(
-        hoursRef,
-        where('seriesId', '==', seriesNumber),
-        where('size', '==', size),
-        where('rating', '==', rating),
-        where('partType', '==', partType),
-        where('isActive', '==', true)
-      );
-    }
-
+    const pricesRef = collection(db, 'handwheelPrices');
+    const q = query(pricesRef, where('isActive', '==', true));
     const snapshot = await getDocs(q);
-    console.log('Machining hours results:', snapshot.docs.length);
 
-    if (snapshot.empty) return null;
+    const types = new Set<string>();
+    snapshot.docs.forEach(doc => types.add(doc.data().type));
 
-    return snapshot.docs[0].data().hours;
+    return Array.from(types).sort();
   } catch (error) {
-    console.error('Error fetching machining hours:', error);
-    return null;
+    console.error('Error fetching handwheel types:', error);
+    return [];
+  }
+}
+
+// Get available handwheel series for a type
+export async function getAvailableHandwheelSeries(type: string): Promise<string[]> {
+  try {
+    const pricesRef = collection(db, 'handwheelPrices');
+    const q = query(
+      pricesRef,
+      where('type', '==', type),
+      where('isActive', '==', true)
+    );
+    const snapshot = await getDocs(q);
+
+    const seriesSet = new Set<string>();
+    snapshot.docs.forEach(doc => seriesSet.add(doc.data().series));
+
+    return Array.from(seriesSet).sort();
+  } catch (error) {
+    console.error('Error fetching handwheel series:', error);
+    return [];
+  }
+}
+
+// Get available handwheel models for type and series
+export async function getAvailableHandwheelModels(
+  type: string,
+  series: string
+): Promise<string[]> {
+  try {
+    const pricesRef = collection(db, 'handwheelPrices');
+    const q = query(
+      pricesRef,
+      where('type', '==', type),
+      where('series', '==', series),
+      where('isActive', '==', true)
+    );
+    const snapshot = await getDocs(q);
+
+    const models = new Set<string>();
+    snapshot.docs.forEach(doc => models.add(doc.data().model));
+
+    return Array.from(models).sort();
+  } catch (error) {
+    console.error('Error fetching handwheel models:', error);
+    return [];
   }
 }

@@ -7,6 +7,8 @@ import { db } from '@/lib/firebase/config';
 import { Quote } from '@/types';
 import { formatDate } from '@/utils/dateFormat';
 import Link from 'next/link';
+import ProductDetailedView from '@/components/quotes/ProductDetailedView';
+import QuoteSummary from '@/components/quotes/QuoteSummary';
 
 export default function AdminViewQuotePage() {
   const params = useParams();
@@ -34,15 +36,12 @@ export default function AdminViewQuotePage() {
           quoteNumber: data.quoteNumber,
           customerId: data.customerId,
           customerName: data.customerName,
-          projectName: data.projectName || '',
-          enquiryId: data.enquiryId || '',
           products: data.products || [],
           subtotal: data.subtotal || 0,
           discount: data.discount || 0,
           discountAmount: data.discountAmount || 0,
           tax: data.tax || 0,
           taxAmount: data.taxAmount || 0,
-          packagingPrice: data.packagingPrice || 0,
           total: data.total || 0,
           status: data.status || 'draft',
           createdBy: data.createdBy,
@@ -50,12 +49,6 @@ export default function AdminViewQuotePage() {
           createdAt: data.createdAt?.toDate() || new Date(),
           updatedAt: data.updatedAt?.toDate() || new Date(),
           notes: data.notes || '',
-          // Commercial Terms
-          priceType: data.priceType || 'Ex-Works INR each net',
-          validity: data.validity || '30 days from the date of quote',
-          delivery: data.delivery || '24 working weeks from the date of advance payment and approved technical documents (whichever comes later)',
-          warranty: data.warranty || 'UVPL Standard Warranty - 18 months from shipping or 12 months from installation (on material & workmanship)',
-          payment: data.payment || '20% with the order + 30% against drawings + Balance before shipping',
           isArchived: data.isArchived || false,
         } as Quote);
       } else {
@@ -212,359 +205,23 @@ export default function AdminViewQuotePage() {
         <h3 className="text-2xl font-bold text-gray-900 mb-6">Products Details</h3>
 
         {quote.products.map((product, index) => (
-          <div key={product.id} className="mb-8 p-6 border-2 border-gray-200 rounded-lg">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h4 className="text-xl font-bold text-gray-900">
-                  Product #{index + 1}: {product.productType} - Series {product.seriesNumber}
-                </h4>
-                <p className="text-gray-600">Size: {product.size} | Rating: {product.rating} | Quantity: {product.quantity}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-gray-500">Line Total</p>
-                <p className="text-2xl font-bold text-green-600">₹{product.lineTotal.toLocaleString('en-IN')}</p>
-              </div>
-            </div>
-
-            {/* Quick Summary Card */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-              <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                <p className="text-xs text-blue-700 font-medium">Manufacturing</p>
-                <p className="text-lg font-bold text-blue-900">₹{product.manufacturingCost?.toLocaleString('en-IN')}</p>
-                {product.manufacturingProfitPercentage && product.manufacturingProfitPercentage > 0 && (
-                  <p className="text-xs text-blue-600">+{product.manufacturingProfitPercentage}% profit</p>
-                )}
-              </div>
-
-              <div className="bg-pink-50 p-3 rounded-lg border border-pink-200">
-                <p className="text-xs text-pink-700 font-medium">Boughtout Items</p>
-                <p className="text-lg font-bold text-pink-900">₹{product.boughtoutItemCost?.toLocaleString('en-IN')}</p>
-                {product.boughtoutProfitPercentage && product.boughtoutProfitPercentage > 0 && (
-                  <p className="text-xs text-pink-600">+{product.boughtoutProfitPercentage}% profit</p>
-                )}
-              </div>
-
-              <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-                <p className="text-xs text-green-700 font-medium">Unit Cost</p>
-                <p className="text-lg font-bold text-green-900">₹{product.unitCost?.toLocaleString('en-IN')}</p>
-                <p className="text-xs text-green-600">with profit</p>
-              </div>
-
-              <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
-                <p className="text-xs text-yellow-700 font-medium">Total Profit</p>
-                <p className="text-lg font-bold text-yellow-900">
-                  ₹{((product.manufacturingProfitAmount || 0) + (product.boughtoutProfitAmount || 0)).toLocaleString('en-IN')}
-                </p>
-                <p className="text-xs text-yellow-600">on this item</p>
-              </div>
-            </div>
-
-            {/* Body Sub-Assembly */}
-            <div className="bg-blue-50 p-4 rounded-lg mb-4">
-              <h5 className="font-semibold text-blue-900 mb-3">🔧 Body Sub-Assembly</h5>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                <div>
-                  <p className="text-gray-600">Body End Connect:</p>
-                  <p className="font-semibold">{product.bodyEndConnectType}</p>
-                  <p className="text-xs text-gray-500">Weight: {product.bodyWeight}kg × ₹{product.bodyMaterialPrice}/kg</p>
-                  <p className="text-green-700 font-semibold">₹{product.bodyTotalCost.toFixed(2)}</p>
-                </div>
-                <div>
-                  <p className="text-gray-600">Bonnet:</p>
-                  <p className="font-semibold">{product.bonnetType}</p>
-                  <p className="text-xs text-gray-500">Weight: {product.bonnetWeight}kg × ₹{product.bonnetMaterialPrice}/kg</p>
-                  <p className="text-green-700 font-semibold">₹{product.bonnetTotalCost.toFixed(2)}</p>
-                </div>
-                <div>
-                  <p className="text-gray-600">Plug:</p>
-                  <p className="text-xs text-gray-500">Weight: {product.plugWeight}kg × ₹{product.plugMaterialPrice}/kg</p>
-                  <p className="text-green-700 font-semibold">₹{product.plugTotalCost.toFixed(2)}</p>
-                </div>
-                <div>
-                  <p className="text-gray-600">Seat:</p>
-
-                  <p className="text-xs text-gray-500">Weight: {product.seatWeight}kg × ₹{product.seatMaterialPrice}/kg</p>
-                  <p className="text-green-700 font-semibold">₹{product.seatTotalCost.toFixed(2)}</p>
-                </div>
-                <div>
-                  <p className="text-gray-600">Stem:</p>
-                  <p className="text-xs text-gray-500">Fixed Price</p>
-                  <p className="text-green-700 font-semibold">₹{product.stemTotalCost.toFixed(2)}</p>
-                </div>
-                {product.hasCage && product.cageTotalCost && (
-                  <div>
-                    <p className="text-gray-600">Cage:</p>
-                    <p className="font-semibold">Fixed Price</p>
-                    <p className="text-green-700 font-semibold">₹{product.cageTotalCost.toFixed(2)}</p>
-                  </div>
-                )}
-              </div>
-              <div className="mt-3 pt-3 border-t border-blue-200">
-                <p className="font-bold text-blue-900">Body Sub-Assembly Total: ₹{product.bodySubAssemblyTotal.toLocaleString('en-IN')}</p>
-              </div>
-            </div>
-
-            {/* Actuator Sub-Assembly */}
-            {product.hasActuator && product.actuatorSubAssemblyTotal && (
-              <div className="bg-purple-50 p-4 rounded-lg mb-4">
-                <h5 className="font-semibold text-purple-900 mb-3">⚙️ Actuator Sub-Assembly</h5>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <p className="text-gray-600">Type:</p>
-                    <p className="font-semibold">{product.actuatorType}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">Series:</p>
-                    <p className="font-semibold">{product.actuatorSeries}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">Model:</p>
-                    <p className="font-semibold">{product.actuatorModel}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">Configuration:</p>
-                    <p className="font-semibold capitalize">{product.actuatorStandard}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">Actuator Price:</p>
-                    <p className="text-green-700 font-semibold">₹{product.actuatorFixedPrice?.toLocaleString('en-IN')}</p>
-                  </div>
-                  {product.hasHandwheel && product.handwheelFixedPrice && (
-                    <div>
-                      <p className="text-gray-600">Handwheel:</p>
-                      <p className="text-green-700 font-semibold">₹{product.handwheelFixedPrice.toLocaleString('en-IN')}</p>
-                    </div>
-                  )}
-                </div>
-                <div className="mt-3 pt-3 border-t border-purple-200">
-                  <p className="font-bold text-purple-900">Actuator Sub-Assembly Total: ₹{product.actuatorSubAssemblyTotal.toLocaleString('en-IN')}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Tubing & Fitting */}
-            {product.tubingAndFitting && product.tubingAndFitting.length > 0 && (
-              <div className="bg-orange-50 p-4 rounded-lg mb-4">
-                <h5 className="font-semibold text-orange-900 mb-3">🔧 Tubing & Fitting</h5>
-                <div className="space-y-2 text-sm">
-                  {product.tubingAndFitting.map((item) => (
-                    <div key={item.id} className="flex justify-between">
-                      <span>{item.title}</span>
-                      <span className="font-semibold text-green-700">₹{item.price.toLocaleString('en-IN')}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-3 pt-3 border-t border-orange-200">
-                  <p className="font-bold text-orange-900">Tubing & Fitting Total: ₹{product.tubingAndFittingTotal?.toLocaleString('en-IN')}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Machine Cost */}
-            {product.machineCost && product.machineCost.length > 0 && (
-              <div className="bg-cyan-50 p-4 rounded-lg mb-4">
-                <h5 className="font-semibold text-cyan-900 mb-3">⚙️ Machine Cost</h5>
-                <div className="space-y-2 text-sm">
-                  {product.machineCost.map((item) => (
-                    <div key={item.id} className="flex justify-between">
-                      <span>{item.title}</span>
-                      <span className="font-semibold text-green-700">₹{item.price.toLocaleString('en-IN')}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-3 pt-3 border-t border-cyan-200">
-                  <p className="font-bold text-cyan-900">Machine Cost Total: ₹{product.machineCostTotal?.toLocaleString('en-IN')}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Testing */}
-            {product.testing && product.testing.length > 0 && (
-              <div className="bg-teal-50 p-4 rounded-lg mb-4">
-                <h5 className="font-semibold text-teal-900 mb-3">🔬 Testing</h5>
-                <div className="space-y-2 text-sm">
-                  {product.testing.map((item) => (
-                    <div key={item.id} className="flex justify-between">
-                      <span>{item.title}</span>
-                      <span className="font-semibold text-green-700">₹{item.price.toLocaleString('en-IN')}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-3 pt-3 border-t border-teal-200">
-                  <p className="font-bold text-teal-900">Testing Total: ₹{product.testingTotal?.toLocaleString('en-IN')}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Accessories */}
-            {product.accessories && product.accessories.length > 0 && (
-              <div className="bg-pink-50 p-4 rounded-lg mb-4">
-                <h5 className="font-semibold text-pink-900 mb-3">🎯 Accessories</h5>
-                <div className="space-y-2 text-sm">
-                  {product.accessories.map((item) => (
-                    <div key={item.id} className="flex justify-between">
-                      <span>
-                        {item.title}
-                        {item.isDefault && <span className="ml-2 text-xs bg-pink-200 px-2 py-1 rounded">Default</span>}
-                      </span>
-                      <span className="font-semibold text-green-700">₹{item.price.toLocaleString('en-IN')}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-3 pt-3 border-t border-pink-200">
-                  <p className="font-bold text-pink-900">Accessories Total: ₹{product.accessoriesTotal?.toLocaleString('en-IN')}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Cost Summary for this Product */}
-            <div className="bg-gradient-to-r from-blue-50 to-green-50 p-6 rounded-lg border-2 border-green-200">
-              <h5 className="font-bold text-lg mb-4">📊 Product Cost Summary</h5>
-
-              {/* Manufacturing Cost Section */}
-              <div className="bg-white p-4 rounded-lg mb-4">
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="font-semibold text-gray-700">Manufacturing Cost (Base):</span>
-                    <span className="font-bold text-blue-700">₹{product.manufacturingCost?.toLocaleString('en-IN')}</span>
-                  </div>
-                  <p className="text-xs text-gray-500 pl-4">
-                    (Body + Actuator + Tubing & Fitting + Machine Cost + Testing)
-                  </p>
-
-                  {product.manufacturingProfitPercentage && product.manufacturingProfitPercentage > 0 ? (
-                    <>
-                      <div className="flex justify-between items-center bg-blue-50 p-2 rounded">
-                        <span className="text-blue-700">
-                          <span className="font-semibold">Profit Margin:</span> {product.manufacturingProfitPercentage}%
-                        </span>
-                        <span className="font-semibold text-blue-700">+₹{product.manufacturingProfitAmount?.toLocaleString('en-IN')}</span>
-                      </div>
-                      <div className="flex justify-between font-bold text-blue-900 pt-2 border-t border-blue-200">
-                        <span>Manufacturing Cost (with profit):</span>
-                        <span>₹{product.manufacturingCostWithProfit?.toLocaleString('en-IN')}</span>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="bg-gray-50 p-2 rounded text-center">
-                      <span className="text-xs text-gray-500">No profit margin applied</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Boughtout Item Cost Section */}
-              <div className="bg-white p-4 rounded-lg mb-4">
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="font-semibold text-gray-700">Boughtout Item Cost (Base):</span>
-                    <span className="font-bold text-pink-700">₹{product.boughtoutItemCost?.toLocaleString('en-IN')}</span>
-                  </div>
-                  <p className="text-xs text-gray-500 pl-4">
-                    (Accessories)
-                  </p>
-
-                  {product.boughtoutProfitPercentage && product.boughtoutProfitPercentage > 0 ? (
-                    <>
-                      <div className="flex justify-between items-center bg-pink-50 p-2 rounded">
-                        <span className="text-pink-700">
-                          <span className="font-semibold">Profit Margin:</span> {product.boughtoutProfitPercentage}%
-                        </span>
-                        <span className="font-semibold text-pink-700">+₹{product.boughtoutProfitAmount?.toLocaleString('en-IN')}</span>
-                      </div>
-                      <div className="flex justify-between font-bold text-pink-900 pt-2 border-t border-pink-200">
-                        <span>Boughtout Cost (with profit):</span>
-                        <span>₹{product.boughtoutCostWithProfit?.toLocaleString('en-IN')}</span>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="bg-gray-50 p-2 rounded text-center">
-                      <span className="text-xs text-gray-500">No profit margin applied</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Final Totals */}
-              <div className="space-y-3">
-                <div className="flex justify-between text-lg font-bold pt-3 border-t-2 border-green-400">
-                  <span>Unit Cost:</span>
-                  <span className="text-green-700">₹{product.unitCost?.toLocaleString('en-IN')}</span>
-                </div>
-                <p className="text-xs text-gray-500 pl-4">
-                  (Manufacturing Cost + Boughtout Cost with profit margins)
-                </p>
-
-                <div className="flex justify-between text-lg font-bold bg-gray-50 p-3 rounded">
-                  <span>Quantity:</span>
-                  <span>×{product.quantity}</span>
-                </div>
-
-                <div className="flex justify-between text-2xl font-bold pt-2 border-t-4 border-green-600 bg-green-50 p-4 rounded-lg">
-                  <span>Line Total:</span>
-                  <span className="text-green-600">₹{product.lineTotal.toLocaleString('en-IN')}</span>
-                </div>
-              </div>
-
-              {/* Profit Summary Badge */}
-              {(product.manufacturingProfitPercentage && product.manufacturingProfitPercentage > 0) ||
-                (product.boughtoutProfitPercentage && product.boughtoutProfitPercentage > 0) ? (
-                <div className="mt-4 p-3 bg-gradient-to-r from-yellow-50 to-green-50 border-2 border-yellow-300 rounded-lg">
-                  <p className="text-sm font-semibold text-gray-800 mb-2">💰 Profit Summary:</p>
-                  <div className="grid grid-cols-2 gap-4 text-xs">
-                    {product.manufacturingProfitPercentage && product.manufacturingProfitPercentage > 0 && (
-                      <div>
-                        <p className="text-gray-600">Manufacturing Profit:</p>
-                        <p className="font-bold text-blue-700">
-                          {product.manufacturingProfitPercentage}% = ₹{product.manufacturingProfitAmount?.toLocaleString('en-IN')}
-                        </p>
-                      </div>
-                    )}
-                    {product.boughtoutProfitPercentage && product.boughtoutProfitPercentage > 0 && (
-                      <div>
-                        <p className="text-gray-600">Boughtout Profit:</p>
-                        <p className="font-bold text-pink-700">
-                          {product.boughtoutProfitPercentage}% = ₹{product.boughtoutProfitAmount?.toLocaleString('en-IN')}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                  <div className="mt-2 pt-2 border-t border-yellow-300">
-                    <p className="text-sm font-bold text-green-700">
-                      Total Profit: ₹{((product.manufacturingProfitAmount || 0) + (product.boughtoutProfitAmount || 0)).toLocaleString('en-IN')}
-                    </p>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          </div>
+          <ProductDetailedView
+            key={product.id || index}
+            product={product}
+            index={index}
+          />
         ))}
 
         {/* Quote Totals */}
         <div className="border-t-4 border-gray-300 pt-6 mt-6">
-          <h3 className="text-xl font-bold mb-4">Quote Summary</h3>
-          <div className="flex justify-end">
-            <div className="w-96 space-y-3 text-lg">
-              <div className="flex justify-between text-gray-700">
-                <span>Subtotal:</span>
-                <span className="font-semibold">₹{quote.subtotal.toLocaleString('en-IN')}</span>
-              </div>
-              {quote.discount > 0 && (
-                <div className="flex justify-between text-red-600">
-                  <span>Discount ({quote.discount}%):</span>
-                  <span className="font-semibold">-₹{quote.discountAmount.toLocaleString('en-IN')}</span>
-                </div>
-              )}
-              <div className="flex justify-between text-gray-700">
-                <span>Tax ({quote.tax}%):</span>
-                <span className="font-semibold">₹{quote.taxAmount.toLocaleString('en-IN')}</span>
-              </div>
-              <div className="flex justify-between text-3xl font-bold text-gray-900 pt-4 border-t-4 border-green-600">
-                <span>Grand Total:</span>
-                <span className="text-green-600">₹{quote.total.toLocaleString('en-IN')}</span>
-              </div>
-            </div>
-          </div>
+          <QuoteSummary
+            subtotal={quote.subtotal}
+            discount={quote.discount}
+            discountAmount={quote.discountAmount}
+            tax={quote.tax}
+            taxAmount={quote.taxAmount}
+            total={quote.total}
+          />
         </div>
 
         {/* Notes */}

@@ -20,8 +20,8 @@ export function exportQuoteToExcel(quote: EnhancedQuote) {
   const headerRows: any[][] = [
     [], // Empty row 1
     ['Customer Name', quote.customerName], // Row 2
-    ['Enquiry Ref', quote.enquiryId || ''], // Row 3
-    ['Project', quote.projectName || ''], // Row 4
+    ['Enquiry Ref', ''], // Row 3
+    ['Project', ''], // Row 4
     ['Unicorn Ref', quote.quoteNumber], // Row 5
     [], // Empty row 6
     [], // Empty row 7
@@ -65,9 +65,7 @@ export function exportQuoteToExcel(quote: EnhancedQuote) {
   ];
 
   // Add product rows
-  const productRows: any[][] = [];
-
-  quote.products.forEach((product, index) => {
+  const productRows: any[][] = quote.products.map((product, index) => {
     // Get material names from enhanced product data
     const bodyMaterialName = product.bodyMaterialName || 'N/A';
     const seatMaterialName = product.seatMaterialName || 'N/A';
@@ -75,8 +73,8 @@ export function exportQuoteToExcel(quote: EnhancedQuote) {
     const stemMaterialName = product.stemMaterialName || 'N/A';
     const cageMaterialName = product.hasCage ? (product.cageMaterialName || 'N/A') : '';
 
-    // Determine trim type based on seat type
-    const trimType = ''; // Seat type removed
+    // Determine trim type - previously based on seatType, now just empty or could be derived from other fields if needed
+    const trimType = '';
 
     // Check accessories for specific items
     const accessories = product.accessories || [];
@@ -135,8 +133,7 @@ export function exportQuoteToExcel(quote: EnhancedQuote) {
       ? quote.createdAt
       : new Date(quote.createdAt);
 
-    // Add main product row
-    productRows.push([
+    return [
       '', // Empty first column
       index + 1, // ITEM number
       product.productTag || `Product ${index + 1}`, // TAG#
@@ -149,7 +146,7 @@ export function exportQuoteToExcel(quote: EnhancedQuote) {
       product.bonnetType, // BONNET TYPE
       trimType, // TRIM TYPE
       product.hasCage ? '1 CAGE' : 'NO CAGE', // NO. OF CAGES
-      product.hasSealRing ? 'WITH SEAL RING' : 'NO SEAL', // SEAL TYPE
+      product.hasSealRing ? (product.sealType || 'WITH SEAL RING') : 'NO SEAL', // SEAL TYPE
       seatMaterialName, // SEAT MATERIAL
       plugMaterialName, // PLUG MATERIAL
       stemMaterialName, // STEM MATERIAL
@@ -172,194 +169,7 @@ export function exportQuoteToExcel(quote: EnhancedQuote) {
       0, // REV
       quote.createdByName.split(' ')[0].toUpperCase(), // By
       createdDate, // DATE
-    ]);
-
-    // Add body sub-assembly component prices as separate rows
-    // Body
-    productRows.push([
-      '', '', 'Body', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-    ]);
-    productRows.push([
-      '', '', `₹${product.bodyTotalCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-    ]);
-
-    // Bonnet
-    productRows.push([
-      '', '', 'Bonnet', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-    ]);
-    productRows.push([
-      '', '', `₹${product.bonnetTotalCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-    ]);
-
-    // Plug
-    productRows.push([
-      '', '', 'Plug', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-    ]);
-    productRows.push([
-      '', '', `₹${product.plugTotalCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-    ]);
-
-    // Seat
-    productRows.push([
-      '', '', 'Seat', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-    ]);
-    productRows.push([
-      '', '', `₹${product.seatTotalCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-    ]);
-
-    // Stem
-    productRows.push([
-      '', '', 'Stem', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-    ]);
-    productRows.push([
-      '', '', `₹${product.stemTotalCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-    ]);
-
-    // Cage (if applicable)
-    if (product.hasCage && product.cageTotalCost) {
-      productRows.push([
-        '', '', 'Cage', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-      ]);
-      productRows.push([
-        '', '', `₹${product.cageTotalCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-      ]);
-    }
-
-    // Seal Ring (if applicable)
-    if (product.hasSealRing && product.sealRingTotalCost) {
-      productRows.push([
-        '', '', 'Seal Ring', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-      ]);
-      productRows.push([
-        '', '', `₹${product.sealRingTotalCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-      ]);
-    }
-
-    // Actuator (if applicable)
-    if (product.hasActuator && product.actuatorFixedPrice) {
-      productRows.push([
-        '', '', 'Actuator', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-      ]);
-      productRows.push([
-        '', '', `₹${product.actuatorFixedPrice.toLocaleString('en-IN')}`, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-      ]);
-    }
-
-    // Handwheel (if applicable)
-    if (product.hasHandwheel && product.handwheelFixedPrice) {
-      productRows.push([
-        '', '', 'Handwheel', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-      ]);
-      productRows.push([
-        '', '', `₹${product.handwheelFixedPrice.toLocaleString('en-IN')}`, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-      ]);
-    }
-
-    // Add tubing & fitting items as separate rows (if any)
-    if (product.tubingAndFitting && product.tubingAndFitting.length > 0) {
-      product.tubingAndFitting.forEach((item) => {
-        productRows.push([
-          '', '', item.title, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-        ]);
-        productRows.push([
-          '', '', `₹${item.price.toLocaleString('en-IN')}`, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-        ]);
-      });
-    }
-
-    // Add machine cost items as separate rows (if any)
-    if (product.machineCost && product.machineCost.length > 0) {
-      product.machineCost.forEach((item) => {
-        productRows.push([
-          '', '', item.title, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-        ]);
-        productRows.push([
-          '', '', `₹${item.price.toLocaleString('en-IN')}`, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-        ]);
-      });
-    }
-
-    // Add testing items as separate rows (if any)
-    if (product.testing && product.testing.length > 0) {
-      product.testing.forEach((item) => {
-        productRows.push([
-          '', '', item.title, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-        ]);
-        productRows.push([
-          '', '', `₹${item.price.toLocaleString('en-IN')}`, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-        ]);
-      });
-    }
-
-    // Add accessories as separate rows (if any)
-    if (accessories && accessories.length > 0) {
-      accessories.forEach((item) => {
-        productRows.push([
-          '', '', item.title, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-        ]);
-        productRows.push([
-          '', '', `₹${item.price.toLocaleString('en-IN')}`, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-        ]);
-      });
-    }
-
-    // Add blank row for spacing
-    productRows.push(['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-
-    // Add pricing summary section
-    productRows.push(['', '', '--- COST BREAKDOWN ---', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-    productRows.push(['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-
-    // Manufacturing Cost Section
-    productRows.push(['', '', 'Manufacturing Cost (Base)', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-    productRows.push(['', '', `₹${(product.manufacturingCost || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-
-    if (product.manufacturingProfitPercentage && product.manufacturingProfitPercentage > 0) {
-      productRows.push(['', '', `Manufacturing Profit (${product.manufacturingProfitPercentage}%)`, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-      productRows.push(['', '', `₹${(product.manufacturingProfitAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-      productRows.push(['', '', 'Manufacturing Cost (With Profit)', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-      productRows.push(['', '', `₹${(product.manufacturingCostWithProfit || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-    }
-
-    productRows.push(['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-
-    // Boughtout Cost Section
-    productRows.push(['', '', 'Boughtout Item Cost (Base)', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-    productRows.push(['', '', `₹${(product.boughtoutItemCost || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-
-    if (product.boughtoutProfitPercentage && product.boughtoutProfitPercentage > 0) {
-      productRows.push(['', '', `Boughtout Profit (${product.boughtoutProfitPercentage}%)`, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-      productRows.push(['', '', `₹${(product.boughtoutProfitAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-      productRows.push(['', '', 'Boughtout Cost (With Profit)', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-      productRows.push(['', '', `₹${(product.boughtoutCostWithProfit || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-    }
-
-    productRows.push(['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-
-    // Total Profit
-    const totalProfit = (product.manufacturingProfitAmount || 0) + (product.boughtoutProfitAmount || 0);
-    if (totalProfit > 0) {
-      productRows.push(['', '', 'Total Profit', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-      productRows.push(['', '', `₹${totalProfit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-      productRows.push(['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-    }
-
-    // Unit Cost
-    productRows.push(['', '', '=== UNIT COST ===', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-    productRows.push(['', '', `₹${(product.unitCost || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-    productRows.push(['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-
-    // Quantity
-    productRows.push(['', '', `Quantity: ${product.quantity}`, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-    productRows.push(['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-
-    // Line Total
-    productRows.push(['', '', '=== LINE TOTAL ===', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-    productRows.push(['', '', `₹${(product.lineTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-
-    // Add blank rows for spacing between products
-    productRows.push(['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-    productRows.push(['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
+    ];
   });
 
   // Combine all rows

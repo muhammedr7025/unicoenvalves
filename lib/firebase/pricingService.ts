@@ -4,7 +4,6 @@ import {
   getDocs,
   deleteDoc,
   doc,
-  updateDoc,
   writeBatch,
   query,
   where,
@@ -17,8 +16,6 @@ import {
   Series,
   BodyWeight,
   BonnetWeight,
-  MachineRate,
-  MachiningHour,
 } from '@/types';
 
 // Materials
@@ -222,574 +219,243 @@ export async function getAllHandwheelPrices() {
   }
 }
 
-// Machine Rates
-export async function getAllMachineRates(): Promise<MachineRate[]> {
-  try {
-    const snapshot = await getDocs(collection(db, 'machineRates'));
-    return snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as MachineRate[];
-  } catch (error) {
-    console.error('Error fetching machine rates:', error);
-    return [];
+// Helper to generate unique keys for merging
+const getMaterialKey = (m: any) => m.name;
+const getSeriesKey = (s: any) => s.seriesNumber;
+const getBodyWeightKey = (b: any) => `${b.seriesId}_${b.size}_${b.rating}_${b.endConnectType}`;
+const getBonnetWeightKey = (b: any) => `${b.seriesId}_${b.size}_${b.rating}_${b.bonnetType}`;
+const getPlugWeightKey = (p: any) => `${p.seriesId}_${p.size}_${p.rating}`;
+const getSeatWeightKey = (s: any) => `${s.seriesId}_${s.size}_${s.rating}`;
+const getStemPriceKey = (s: any) => `${s.seriesId}_${s.size}_${s.rating}_${s.materialName}`;
+const getCageWeightKey = (c: any) => `${c.seriesId}_${c.size}_${c.rating}`;
+const getSealRingPriceKey = (s: any) => `${s.seriesId}_${s.sealType}_${s.size}_${s.rating}`;
+const getActuatorModelKey = (a: any) => `${a.type}_${a.series}_${a.model}_${a.standard}`;
+const getHandwheelPriceKey = (h: any) => h.actuatorModel;
+
+// Generic merge function
+async function mergeCollection(
+  collectionName: string,
+  data: any[],
+  getKey: (item: any) => string
+) {
+  console.log(`Merging ${collectionName}...`);
+  const colRef = collection(db, collectionName);
+  const snapshot = await getDocs(colRef);
+
+  // Map existing docs by key
+  const existingDocs = new Map();
+  snapshot.docs.forEach(doc => {
+    const data = doc.data();
+    existingDocs.set(getKey(data), doc.ref);
+  });
+
+  const batchSize = 500;
+  let batch = writeBatch(db);
+  let count = 0;
+
+  for (const item of data) {
+    const key = getKey(item);
+    const docRef = existingDocs.get(key);
+
+    if (docRef) {
+      batch.update(docRef, item);
+    } else {
+      const newDocRef = doc(colRef);
+      batch.set(newDocRef, item);
+    }
+
+    count++;
+    if (count >= batchSize) {
+      await batch.commit();
+      batch = writeBatch(db);
+      count = 0;
+    }
   }
+
+  if (count > 0) {
+    await batch.commit();
+  }
+  console.log(`Merged ${data.length} items into ${collectionName}`);
 }
 
-// Machining Hours
-export async function getAllMachiningHours(): Promise<MachiningHour[]> {
-  try {
-    const snapshot = await getDocs(collection(db, 'machiningHours'));
-    return snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as MachiningHour[];
-  } catch (error) {
-    console.error('Error fetching machining hours:', error);
-    return [];
-  }
-}
-
-// Bulk Import from Excel - SMART MERGE MODE
+// Bulk Import from Excel (Merge Mode)
 export async function importPricingData(data: any): Promise<void> {
   try {
-    console.log('Starting MERGE import process...');
+    console.log('Starting import (merge) process...');
 
-    let stats = {
-      added: 0,
-      updated: 0,
-      skipped: 0,
-      errors: 0
-    };
+    // 1. Materials - Import first
+    const materials = data.materials.map((item: any) => ({
+      name: String(item['Material Name']).trim(),
+      pricePerKg: parseFloat(item['Price Per Kg (INR)']) || 0,
+      materialGroup: String(item['Material Group']).trim() || 'BodyBonnet',
+      isActive: String(item.Active).toUpperCase() === 'TRUE',
+    }));
+    await mergeCollection('materials', materials, getMaterialKey);
 
-    console.log('Importing materials...');
-    // Import materials (unique key: name)
-    for (const item of data.materials) {
-      try {
-        const name = String(item['Material Name']).trim();
+    // 2. Series - Import second and build lookup map
+    const series = data.series.map((item: any) => ({
+      productType: String(item['Product Type']).trim(),
+      seriesNumber: String(item['Series Number']).trim(),
+      name: String(item['Series Name']).trim(),
+      hasCage: String(item['Has Cage']).toUpperCase() === 'TRUE',
+      hasSealRing: String(item['Has Seal Ring']).toUpperCase() === 'TRUE',
+      isActive: String(item.Active).toUpperCase() === 'TRUE',
+    }));
+    await mergeCollection('series', series, getSeriesKey);
 
-        // Check if exists
-        const existingQuery = query(
-          collection(db, 'materials'),
-          where('name', '==', name)
-        );
-        const existingDocs = await getDocs(existingQuery);
+    // Build series lookup map: seriesNumber -> seriesId
+    const seriesSnapshot = await getDocs(collection(db, 'series'));
+    const seriesMap = new Map<string, string>();
+    seriesSnapshot.docs.forEach(doc => {
+      seriesMap.set(doc.data().seriesNumber, doc.id);
+    });
 
-        const newData = {
-          name,
-          pricePerKg: parseFloat(item['Price Per Kg (INR)']) || 0,
-          materialGroup: String(item['Material Group']).trim() || 'BodyBonnet',
-          isActive: String(item.Active).toUpperCase() === 'TRUE',
-        };
-
-        if (!existingDocs.empty) {
-          // Update existing
-          const docRef = doc(db, 'materials', existingDocs.docs[0].id);
-          await updateDoc(docRef, newData);
-          stats.updated++;
-          console.log(`Updated material: ${name}`);
-        } else {
-          // Add new
-          await addDoc(collection(db, 'materials'), newData);
-          stats.added++;
-          console.log(`Added new material: ${name}`);
-        }
-      } catch (error) {
-        console.error('Error processing material:', error);
-        stats.errors++;
+    // 3. Body Weights - Use actual series ID
+    const bodyWeights = data.bodyWeights.map((item: any) => {
+      const seriesNumber = String(item['Series Number']).trim();
+      const seriesId = seriesMap.get(seriesNumber);
+      if (!seriesId) {
+        console.warn(`Series not found for number: ${seriesNumber}`);
       }
-    }
+      return {
+        seriesId: seriesId || seriesNumber, // Fallback to seriesNumber if not found
+        size: String(item.Size).trim(),
+        rating: String(item.Rating).trim(),
+        endConnectType: String(item['End Connect Type']).trim(),
+        weight: parseFloat(item['Weight (kg)']) || 0,
+        isActive: String(item.Active).toUpperCase() === 'TRUE',
+      };
+    });
+    await mergeCollection('bodyWeights', bodyWeights, getBodyWeightKey);
 
-    console.log('Importing series...');
-    // Import series (unique key: seriesNumber)
-    for (const item of data.series) {
-      try {
+    // 4. Bonnet Weights
+    const bonnetWeights = data.bonnetWeights.map((item: any) => {
+      const seriesNumber = String(item['Series Number']).trim();
+      const seriesId = seriesMap.get(seriesNumber);
+      return {
+        seriesId: seriesId || seriesNumber,
+        size: String(item.Size).trim(),
+        rating: String(item.Rating).trim(),
+        bonnetType: String(item['Bonnet Type']).trim(),
+        weight: parseFloat(item['Weight (kg)']) || 0,
+        isActive: String(item.Active).toUpperCase() === 'TRUE',
+      };
+    });
+    await mergeCollection('bonnetWeights', bonnetWeights, getBonnetWeightKey);
+
+    // 5. Plug Weights
+    const plugWeights = data.plugWeights.map((item: any) => {
+      const seriesNumber = String(item['Series Number']).trim();
+      const seriesId = seriesMap.get(seriesNumber);
+      const hasSealRing = String(item['Has Seal Ring'] || '').toUpperCase() === 'TRUE';
+      const sealRingPrice = hasSealRing ? (parseFloat(item['Seal Ring Price']) || 0) : null;
+      return {
+        seriesId: seriesId || seriesNumber,
+        size: String(item.Size).trim(),
+        rating: String(item.Rating).trim(),
+        weight: parseFloat(item['Weight (kg)']) || 0,
+        hasSealRing: hasSealRing,
+        sealRingPrice: sealRingPrice,
+        isActive: String(item.Active).toUpperCase() === 'TRUE',
+      };
+    });
+    await mergeCollection('plugWeights', plugWeights, getPlugWeightKey);
+
+    // 6. Seat Weights
+    const seatWeights = data.seatWeights.map((item: any) => {
+      const seriesNumber = String(item['Series Number']).trim();
+      const seriesId = seriesMap.get(seriesNumber);
+      const hasCage = String(item['Has Cage'] || '').toUpperCase() === 'TRUE';
+      const cageWeight = hasCage ? (parseFloat(item['Cage Weight']) || null) : null;
+      return {
+        seriesId: seriesId || seriesNumber,
+        size: String(item.Size).trim(),
+        rating: String(item.Rating).trim(),
+        weight: parseFloat(item['Weight (kg)']) || 0,
+        hasCage: hasCage,
+        cageWeight: cageWeight,
+        isActive: String(item.Active).toUpperCase() === 'TRUE',
+      };
+    });
+    await mergeCollection('seatWeights', seatWeights, getSeatWeightKey);
+
+    // 7. Stem Fixed Prices
+    const stemFixedPrices = data.stemFixedPrices.map((item: any) => {
+      const seriesNumber = String(item['Series Number']).trim();
+      const seriesId = seriesMap.get(seriesNumber);
+      return {
+        seriesId: seriesId || seriesNumber,
+        size: String(item.Size).trim(),
+        rating: String(item.Rating).trim(),
+        materialName: String(item['Material Name']).trim(),
+        fixedPrice: parseFloat(item['Fixed Price']) || 0,
+        isActive: String(item.Active).toUpperCase() === 'TRUE',
+      };
+    });
+    await mergeCollection('stemFixedPrices', stemFixedPrices, getStemPriceKey);
+
+    // 8. Cage Weights
+    if (data.cageWeights && data.cageWeights.length > 0) {
+      const cageWeights = data.cageWeights.map((item: any) => {
         const seriesNumber = String(item['Series Number']).trim();
-
-        const existingQuery = query(
-          collection(db, 'series'),
-          where('seriesNumber', '==', seriesNumber)
-        );
-        const existingDocs = await getDocs(existingQuery);
-
-        const newData = {
-          productType: String(item['Product Type']).trim(),
-          seriesNumber,
-          name: String(item['Series Name']).trim(),
-          hasCage: String(item['Has Cage']).toUpperCase() === 'TRUE',
-          hasSealRing: String(item['Has Seal Ring']).toUpperCase() === 'TRUE',
-          isActive: String(item.Active).toUpperCase() === 'TRUE',
-        };
-
-        if (!existingDocs.empty) {
-          const docRef = doc(db, 'series', existingDocs.docs[0].id);
-          await updateDoc(docRef, newData);
-          stats.updated++;
-        } else {
-          await addDoc(collection(db, 'series'), newData);
-          stats.added++;
-        }
-      } catch (error) {
-        console.error('Error processing series:', error);
-        stats.errors++;
-      }
-    }
-
-    console.log('Importing body weights...');
-    // Import body weights (unique key: seriesId + size + rating + endConnectType)
-    for (const item of data.bodyWeights) {
-      try {
-        const seriesId = String(item['Series Number']).trim();
-        const size = String(item.Size).trim();
-        const rating = String(item.Rating).trim();
-        const endConnectType = String(item['End Connect Type']).trim();
-
-        const existingQuery = query(
-          collection(db, 'bodyWeights'),
-          where('seriesId', '==', seriesId),
-          where('size', '==', size),
-          where('rating', '==', rating),
-          where('endConnectType', '==', endConnectType)
-        );
-        const existingDocs = await getDocs(existingQuery);
-
-        const newData = {
-          seriesId,
-          size,
-          rating,
-          endConnectType,
+        const seriesId = seriesMap.get(seriesNumber);
+        return {
+          seriesId: seriesId || seriesNumber,
+          size: String(item.Size).trim(),
+          rating: String(item.Rating).trim(),
           weight: parseFloat(item['Weight (kg)']) || 0,
           isActive: String(item.Active).toUpperCase() === 'TRUE',
         };
-
-        if (!existingDocs.empty) {
-          const docRef = doc(db, 'bodyWeights', existingDocs.docs[0].id);
-          await updateDoc(docRef, newData);
-          stats.updated++;
-        } else {
-          await addDoc(collection(db, 'bodyWeights'), newData);
-          stats.added++;
-        }
-      } catch (error) {
-        console.error('Error processing body weight:', error);
-        stats.errors++;
-      }
+      });
+      await mergeCollection('cageWeights', cageWeights, getCageWeightKey);
     }
 
-    console.log('Importing bonnet weights...');
-    // Import bonnet weights (unique key: seriesId + size + rating + bonnetType)
-    for (const item of data.bonnetWeights) {
-      try {
-        const seriesId = String(item['Series Number']).trim();
-        const size = String(item.Size).trim();
-        const rating = String(item.Rating).trim();
-        const bonnetType = String(item['Bonnet Type']).trim();
-
-        const existingQuery = query(
-          collection(db, 'bonnetWeights'),
-          where('seriesId', '==', seriesId),
-          where('size', '==', size),
-          where('rating', '==', rating),
-          where('bonnetType', '==', bonnetType)
-        );
-        const existingDocs = await getDocs(existingQuery);
-
-        const newData = {
-          seriesId,
-          size,
-          rating,
-          bonnetType,
-          weight: parseFloat(item['Weight (kg)']) || 0,
-          isActive: String(item.Active).toUpperCase() === 'TRUE',
-        };
-
-        if (!existingDocs.empty) {
-          const docRef = doc(db, 'bonnetWeights', existingDocs.docs[0].id);
-          await updateDoc(docRef, newData);
-          stats.updated++;
-        } else {
-          await addDoc(collection(db, 'bonnetWeights'), newData);
-          stats.added++;
-        }
-      } catch (error) {
-        console.error('Error processing bonnet weight:', error);
-        stats.errors++;
-      }
-    }
-
-    console.log('Importing plug weights...');
-    // Import plug weights (unique key: seriesId + size + rating) - UPDATED
-    for (const item of data.plugWeights) {
-      try {
-        const seriesId = String(item['Series Number']).trim();
-        const size = String(item.Size).trim();
-        const rating = String(item.Rating).trim();
-
-        const existingQuery = query(
-          collection(db, 'plugWeights'),
-          where('seriesId', '==', seriesId),
-          where('size', '==', size),
-          where('rating', '==', rating)
-        );
-        const existingDocs = await getDocs(existingQuery);
-
-        const newData = {
-          seriesId,
-          size,
-          rating,
-          weight: parseFloat(item['Weight (kg)']) || 0,
-          isActive: String(item.Active).toUpperCase() === 'TRUE',
-        };
-
-        if (!existingDocs.empty) {
-          const docRef = doc(db, 'plugWeights', existingDocs.docs[0].id);
-          await updateDoc(docRef, newData);
-          stats.updated++;
-        } else {
-          await addDoc(collection(db, 'plugWeights'), newData);
-          stats.added++;
-        }
-      } catch (error) {
-        console.error('Error processing plug weight:', error);
-        stats.errors++;
-      }
-    }
-
-    console.log('Importing seat weights...');
-    // Import seat weights (unique key: seriesId + size + rating + seatType)
-    for (const item of data.seatWeights) {
-      try {
-        const seriesId = String(item['Series Number']).trim();
-        const size = String(item.Size).trim();
-        const rating = String(item.Rating).trim();
-
-        const existingQuery = query(
-          collection(db, 'seatWeights'),
-          where('seriesId', '==', seriesId),
-          where('size', '==', size),
-          where('rating', '==', rating)
-        );
-        const existingDocs = await getDocs(existingQuery);
-
-        const newData = {
-          seriesId,
-          size,
-          rating,
-          weight: parseFloat(item['Weight (kg)']) || 0,
-          isActive: String(item.Active).toUpperCase() === 'TRUE',
-        };
-
-        if (!existingDocs.empty) {
-          const docRef = doc(db, 'seatWeights', existingDocs.docs[0].id);
-          await updateDoc(docRef, newData);
-          stats.updated++;
-        } else {
-          await addDoc(collection(db, 'seatWeights'), newData);
-          stats.added++;
-        }
-      } catch (error) {
-        console.error('Error processing seat weight:', error);
-        stats.errors++;
-      }
-    }
-
-    console.log('Importing stem fixed prices...');
-    // Import stem fixed prices (unique key: seriesId + size + rating + materialName)
-    for (const item of data.stemFixedPrices) {
-      try {
-        const seriesId = String(item['Series Number']).trim();
-        const size = String(item.Size).trim();
-        const rating = String(item.Rating).trim();
-        const materialName = String(item['Material Name']).trim();
-
-        const existingQuery = query(
-          collection(db, 'stemFixedPrices'),
-          where('seriesId', '==', seriesId),
-          where('size', '==', size),
-          where('rating', '==', rating),
-          where('materialName', '==', materialName)
-        );
-        const existingDocs = await getDocs(existingQuery);
-
-        const newData = {
-          seriesId,
-          size,
-          rating,
-          materialName,
+    // 9. Seal Ring Prices
+    if (data.sealRingPrices && data.sealRingPrices.length > 0) {
+      const sealRingPrices = data.sealRingPrices.map((item: any) => {
+        const seriesNumber = String(item['Series Number']).trim();
+        const seriesId = seriesMap.get(seriesNumber);
+        return {
+          seriesId: seriesId || seriesNumber,
+          sealType: String(item['Seal Type']).trim(),
+          size: String(item.Size).trim(),
+          rating: String(item.Rating).trim(),
           fixedPrice: parseFloat(item['Fixed Price']) || 0,
           isActive: String(item.Active).toUpperCase() === 'TRUE',
         };
-
-        if (!existingDocs.empty) {
-          const docRef = doc(db, 'stemFixedPrices', existingDocs.docs[0].id);
-          await updateDoc(docRef, newData);
-          stats.updated++;
-        } else {
-          await addDoc(collection(db, 'stemFixedPrices'), newData);
-          stats.added++;
-        }
-      } catch (error) {
-        console.error('Error processing stem price:', error);
-        stats.errors++;
-      }
+      });
+      await mergeCollection('sealRingPrices', sealRingPrices, getSealRingPriceKey);
     }
 
-    console.log('Importing cage weights...');
-    // Import cage weights (unique key: seriesId + size + rating)
-    if (data.cageWeights && data.cageWeights.length > 0) {
-      for (const item of data.cageWeights) {
-        try {
-          const seriesId = String(item['Series Number']).trim();
-          const size = String(item.Size).trim();
-          const rating = String(item.Rating).trim();
-
-          const existingQuery = query(
-            collection(db, 'cageWeights'),
-            where('seriesId', '==', seriesId),
-            where('size', '==', size),
-            where('rating', '==', rating)
-          );
-          const existingDocs = await getDocs(existingQuery);
-
-          const newData = {
-            seriesId,
-            size,
-            rating,
-            weight: parseFloat(item['Weight (kg)']) || 0,
-            isActive: String(item.Active).toUpperCase() === 'TRUE',
-          };
-
-          if (!existingDocs.empty) {
-            const docRef = doc(db, 'cageWeights', existingDocs.docs[0].id);
-            await updateDoc(docRef, newData);
-            stats.updated++;
-          } else {
-            await addDoc(collection(db, 'cageWeights'), newData);
-            stats.added++;
-          }
-        } catch (error) {
-          console.error('Error processing cage weight:', error);
-          stats.errors++;
-        }
-      }
-    }
-
-    console.log('Importing seal ring prices...');
-    // Import seal ring prices (unique key: seriesId + sealType + size + rating) - UPDATED
-    if (data.sealRingPrices && data.sealRingPrices.length > 0) {
-      for (const item of data.sealRingPrices) {
-        try {
-          const seriesId = String(item['Series Number']).trim();
-          const sealType = String(item['Seal Type']).trim();  // CHANGED from 'Plug Type'
-          const size = String(item.Size).trim();
-          const rating = String(item.Rating).trim();
-
-          const existingQuery = query(
-            collection(db, 'sealRingPrices'),
-            where('seriesId', '==', seriesId),
-            where('sealType', '==', sealType),  // CHANGED from plugType
-            where('size', '==', size),
-            where('rating', '==', rating)
-          );
-          const existingDocs = await getDocs(existingQuery);
-
-          const newData = {
-            seriesId,
-            sealType,  // CHANGED from plugType
-            size,
-            rating,
-            fixedPrice: parseFloat(item['Fixed Price']) || 0,
-            isActive: String(item.Active).toUpperCase() === 'TRUE',
-          };
-
-          if (!existingDocs.empty) {
-            const docRef = doc(db, 'sealRingPrices', existingDocs.docs[0].id);
-            await updateDoc(docRef, newData);
-            stats.updated++;
-          } else {
-            await addDoc(collection(db, 'sealRingPrices'), newData);
-            stats.added++;
-          }
-        } catch (error) {
-          console.error('Error processing seal ring price:', error);
-          stats.errors++;
-        }
-      }
-    }
-
-    console.log('Importing actuator models...');
-    // Import actuator models (unique key: type + series + model + standard)
+    // 10. Actuator Models
     if (data.actuatorModels && data.actuatorModels.length > 0) {
-      for (const item of data.actuatorModels) {
-        try {
-          const type = String(item.Type).trim();
-          const series = String(item.Series).trim();
-          const model = String(item.Model).trim();
-          const standard = String(item['Standard/Special']).toLowerCase().trim();
-
-          const existingQuery = query(
-            collection(db, 'actuatorModels'),
-            where('type', '==', type),
-            where('series', '==', series),
-            where('model', '==', model),
-            where('standard', '==', standard)
-          );
-          const existingDocs = await getDocs(existingQuery);
-
-          const newData = {
-            type,
-            series,
-            model,
-            standard,
-            fixedPrice: parseFloat(item['Fixed Price']) || 0,
-            isActive: String(item.Active).toUpperCase() === 'TRUE',
-          };
-
-          if (!existingDocs.empty) {
-            const docRef = doc(db, 'actuatorModels', existingDocs.docs[0].id);
-            await updateDoc(docRef, newData);
-            stats.updated++;
-          } else {
-            await addDoc(collection(db, 'actuatorModels'), newData);
-            stats.added++;
-          }
-        } catch (error) {
-          console.error('Error processing actuator model:', error);
-          stats.errors++;
-        }
-      }
+      const actuatorModels = data.actuatorModels.map((item: any) => ({
+        type: String(item.Type).trim(),
+        series: String(item.Series).trim(),
+        model: String(item.Model).trim(),
+        standard: String(item['Standard/Special']).toLowerCase().trim(),
+        fixedPrice: parseFloat(item['Fixed Price']) || 0,
+        isActive: String(item.Active).toUpperCase() === 'TRUE',
+      }));
+      await mergeCollection('actuatorModels', actuatorModels, getActuatorModelKey);
     }
 
-    console.log('Importing handwheel prices...');
-    // Import handwheel prices (unique key: type + series + model + standard)
+    // 11. Handwheel Prices
     if (data.handwheelPrices && data.handwheelPrices.length > 0) {
-      for (const item of data.handwheelPrices) {
-        try {
-          const type = String(item.Type).trim();
-          const series = String(item.Series).trim();
-          const model = String(item.Model).trim();
-          const standard = String(item['Standard/Special']).toLowerCase().trim();
-
-          const existingQuery = query(
-            collection(db, 'handwheelPrices'),
-            where('type', '==', type),
-            where('series', '==', series),
-            where('model', '==', model),
-            where('standard', '==', standard)
-          );
-          const existingDocs = await getDocs(existingQuery);
-
-          const newData = {
-            type,
-            series,
-            model,
-            standard,
-            fixedPrice: parseFloat(item['Fixed Price']) || 0,
-            isActive: String(item.Active).toUpperCase() === 'TRUE',
-          };
-
-          if (!existingDocs.empty) {
-            const docRef = doc(db, 'handwheelPrices', existingDocs.docs[0].id);
-            await updateDoc(docRef, newData);
-            stats.updated++;
-          } else {
-            await addDoc(collection(db, 'handwheelPrices'), newData);
-            stats.added++;
-          }
-        } catch (error) {
-          console.error('Error processing handwheel price:', error);
-          stats.errors++;
-        }
-      }
+      const handwheelPrices = data.handwheelPrices.map((item: any) => ({
+        type: String(item.Type).trim(),
+        series: String(item.Series).trim(),
+        model: String(item.Model).trim(),
+        standard: String(item['Standard/Special']).toLowerCase().trim(),
+        fixedPrice: parseFloat(item['Fixed Price']) || 0,
+        isActive: String(item.Active).toUpperCase() === 'TRUE',
+      }));
+      await mergeCollection('handwheelPrices', handwheelPrices, (h: any) => `${h.type}_${h.series}_${h.model}_${h.standard}`);
     }
 
-    console.log('Importing machine rates...');
-    // Import machine rates (unique key: name)
-    if (data.machineRates && data.machineRates.length > 0) {
-      for (const item of data.machineRates) {
-        try {
-          const name = String(item['Machine Name']).trim();
-
-          const existingQuery = query(
-            collection(db, 'machineRates'),
-            where('name', '==', name)
-          );
-          const existingDocs = await getDocs(existingQuery);
-
-          const newData = {
-            name,
-            ratePerHour: parseFloat(item['Rate Per Hour']) || 0,
-            isActive: String(item.Active).toUpperCase() === 'TRUE',
-          };
-
-          if (!existingDocs.empty) {
-            const docRef = doc(db, 'machineRates', existingDocs.docs[0].id);
-            await updateDoc(docRef, newData);
-            stats.updated++;
-          } else {
-            await addDoc(collection(db, 'machineRates'), newData);
-            stats.added++;
-          }
-        } catch (error) {
-          console.error('Error processing machine rate:', error);
-          stats.errors++;
-        }
-      }
-    }
-
-    console.log('Importing machining hours...');
-    // Import machining hours (unique key: seriesId + size + rating + partType + trimType)
-    if (data.machiningHours && data.machiningHours.length > 0) {
-      for (const item of data.machiningHours) {
-        try {
-          const seriesId = String(item['Series Number']).trim();
-          const size = String(item.Size).trim();
-          const rating = String(item.Rating).trim();
-          const partType = String(item['Part Type']).trim();
-          const trimType = String(item['Trim Type'] || '').trim();
-
-          const existingQuery = query(
-            collection(db, 'machiningHours'),
-            where('seriesId', '==', seriesId),
-            where('size', '==', size),
-            where('rating', '==', rating),
-            where('partType', '==', partType),
-            where('trimType', '==', trimType)
-          );
-          const existingDocs = await getDocs(existingQuery);
-
-          const newData = {
-            seriesId,
-            size,
-            rating,
-            partType,
-            trimType,
-            hours: parseFloat(item.Hours) || 0,
-            isActive: String(item.Active).toUpperCase() === 'TRUE',
-          };
-
-          if (!existingDocs.empty) {
-            const docRef = doc(db, 'machiningHours', existingDocs.docs[0].id);
-            await updateDoc(docRef, newData);
-            stats.updated++;
-          } else {
-            await addDoc(collection(db, 'machiningHours'), newData);
-            stats.added++;
-          }
-        } catch (error) {
-          console.error('Error processing machining hour:', error);
-          stats.errors++;
-        }
-      }
-    }
-
-    console.log('✅ MERGE Import completed successfully!');
-    console.log(`📊 Statistics: ${stats.added} added, ${stats.updated} updated, ${stats.errors} errors`);
-
-    // Return stats for UI display
-    return stats as any;
+    console.log('Import (merge) completed successfully!');
   } catch (error) {
-    console.error('❌ Error in merge import:', error);
+    console.error('Error importing pricing data:', error);
     throw error;
   }
 }
@@ -811,8 +477,6 @@ export async function clearAllPricingData(): Promise<void> {
       'sealRingPrices',
       'actuatorModels',
       'handwheelPrices',
-      'machineRates',
-      'machiningHours',
     ];
 
     for (const collectionName of collections) {
@@ -832,6 +496,40 @@ export async function clearAllPricingData(): Promise<void> {
     console.log('All pricing data cleared successfully!');
   } catch (error) {
     console.error('Error clearing pricing data:', error);
+    throw error;
+  }
+}
+
+// Update a single document in any collection
+export async function updatePricingDocument(
+  collectionName: string,
+  docId: string,
+  data: any
+): Promise<void> {
+  try {
+    const docRef = doc(db, collectionName, docId);
+    const batch = writeBatch(db);
+    batch.update(docRef, data);
+    await batch.commit();
+    console.log(`Updated document ${docId} in ${collectionName}`);
+  } catch (error) {
+    console.error(`Error updating document in ${collectionName}:`, error);
+    throw error;
+  }
+}
+
+
+// Delete a single document from any collection
+export async function deletePricingDocument(
+  collectionName: string,
+  docId: string
+): Promise<void> {
+  try {
+    const docRef = doc(db, collectionName, docId);
+    await deleteDoc(docRef);
+    console.log(`Deleted document ${docId} from ${collectionName}`);
+  } catch (error) {
+    console.error(`Error deleting document from ${collectionName}:`, error);
     throw error;
   }
 }

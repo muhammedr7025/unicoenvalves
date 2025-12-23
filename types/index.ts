@@ -35,8 +35,6 @@ export interface Series {
 
 export type EndConnectType = 'Type1' | 'Type2';
 export type BonnetType = 'Type1' | 'Type2' | 'Type3';
-export type PlugType = 'Type1' | 'Type2' | 'Type3';
-export type SeatType = 'Type1' | 'Type2' | 'Type3';
 export type StemType = 'Type1' | 'Type2';
 
 // NEW: Material Groups
@@ -68,16 +66,6 @@ export interface BonnetWeight {
   weight: number;
 }
 
-export interface ComponentWeight {
-  id: string;
-  seriesId: string;
-  componentType: 'plug' | 'seat';
-  size: string;
-  rating: string;
-  type: string;
-  weight: number;
-}
-
 // Stem Fixed Price (uses material name for lookup)
 export interface StemFixedPrice {
   id: string;
@@ -99,11 +87,11 @@ export interface CageWeight {
   isActive: boolean;
 }
 
-// Seal Ring Price (Independent from Plug - uses seal type)
+// NEW: Seal Ring Price
 export interface SealRingPrice {
   id: string;
   seriesId: string;
-  sealType: string; // Changed from plugType - seal has its own type
+  sealType: string; // Changed from plugType
   size: string;
   rating: string;
   fixedPrice: number;
@@ -122,21 +110,15 @@ export interface ActuatorModel {
 
 export interface HandwheelPrice {
   id: string;
-  type: string; // Actuator type (e.g., Pneumatic, Electric)
-  series: string; // Actuator series
-  model: string; // Actuator model
-  standard: 'standard' | 'special'; // Standard or special configuration
+  type: string;
+  series: string;
+  model: string;
+  standard: 'standard' | 'special';
   fixedPrice: number;
   isActive: boolean;
 }
 
 export interface TubingAndFittingItem {
-  id: string;
-  title: string;
-  price: number;
-}
-
-export interface MachineCostItem {
   id: string;
   title: string;
   price: number;
@@ -163,24 +145,6 @@ export const DEFAULT_ACCESSORIES = [
   'Airlock',
 ];
 
-export interface MachineRate {
-  id: string;
-  name: string;
-  ratePerHour: number;
-  isActive: boolean;
-}
-
-export interface MachiningHour {
-  id: string;
-  seriesId: string;
-  size: string;
-  rating: string;
-  partType: 'Body' | 'Bonnet' | 'Plug' | 'Seat' | 'Stem' | 'Cage' | 'SealRing';
-  trimType?: string; // Only for Plug, Seat, Stem, Cage, SealRing
-  hours: number;
-  isActive: boolean;
-}
-
 export interface QuoteProduct {
   id: string;
   productType: ProductType;
@@ -193,83 +157,45 @@ export interface QuoteProduct {
   // NEW: Product Identification
   productTag?: string; // Custom name/identifier for this product
 
-  // NEW: Common Trim Type for internal parts
-  trimType?: string;
-
   // Body Sub-Assembly - UPDATED with separate material groups
   bodyEndConnectType: EndConnectType;
-  bodyBonnetMaterialId: string; // Shared material for body & bonnet
+  bodyBonnetMaterialId: string; // NEW: Shared material for body & bonnet
   bodyWeight: number;
   bodyMaterialPrice: number;
-  // Machine Cost Fields
-  bodyMachineTypeId?: string;
-  bodyMachiningHours?: number;
-  bodyMachineRate?: number;
-  bodyMachineCost?: number;
   bodyTotalCost: number;
 
   bonnetType: BonnetType;
   bonnetWeight: number;
   bonnetMaterialPrice: number;
-  // Machine Cost Fields
-  bonnetMachineTypeId?: string;
-  bonnetMachiningHours?: number;
-  bonnetMachineRate?: number;
-  bonnetMachineCost?: number;
   bonnetTotalCost: number;
 
-  // Plug - NO TYPE, just weight lookup by series+size+rating
-  plugMaterialId: string; // Material for plug
+  // Removed plugType
+  plugMaterialId: string; // NEW: Separate material for plug
   plugWeight: number;
   plugMaterialPrice: number;
-  // Machine Cost Fields
-  plugMachineTypeId?: string;
-  plugMachiningHours?: number;
-  plugMachineRate?: number;
-  plugMachineCost?: number;
   plugTotalCost: number;
 
-  // Seat - NO TYPE, just weight lookup by series+size+rating
-  seatMaterialId: string; // Separate material for seat
+  // Removed seatType
+  seatMaterialId: string; // NEW: Separate material for seat
   seatWeight: number;
   seatMaterialPrice: number;
-  // Machine Cost Fields
-  seatMachineTypeId?: string;
-  seatMachiningHours?: number;
-  seatMachineRate?: number;
-  seatMachineCost?: number;
   seatTotalCost: number;
 
-  stemMaterialId: string; // Separate material for stem
-  stemFixedPrice: number; // Fixed price lookup
-  // Machine Cost Fields
-  stemMachineTypeId?: string;
-  stemMachiningHours?: number;
-  stemMachineRate?: number;
-  stemMachineCost?: number;
+  stemMaterialId: string; // NEW: Separate material for stem
+  stemFixedPrice: number; // NEW: Fixed price lookup
   stemTotalCost: number;
 
-  // Cage - weight-based calculation
+  // Cage - UPDATED to weight-based calculation
   hasCage: boolean;
-  cageMaterialId?: string; // Separate material for cage
-  cageWeight?: number;
-  cageMaterialPrice?: number;
-  // Machine Cost Fields
-  cageMachineTypeId?: string;
-  cageMachiningHours?: number;
-  cageMachineRate?: number;
-  cageMachineCost?: number;
+  cageMaterialId?: string; // NEW: Separate material for cage
+  cageWeight?: number; // NEW
+  cageMaterialPrice?: number; // NEW
   cageTotalCost?: number;
 
-  // Seal Ring - Independent sub-assembly with its own type
+  // NEW: Seal Ring
   hasSealRing: boolean;
-  sealType?: string; // NEW: Seal has its own type
+  sealType?: string; // NEW: Seal Type selection
   sealRingFixedPrice?: number;
-  // Machine Cost Fields
-  sealRingMachineTypeId?: string;
-  sealRingMachiningHours?: number;
-  sealRingMachineRate?: number;
-  sealRingMachineCost?: number;
   sealRingTotalCost?: number;
 
   bodySubAssemblyTotal: number;
@@ -281,15 +207,19 @@ export interface QuoteProduct {
   actuatorModel?: string;
   actuatorStandard?: 'standard' | 'special';
   actuatorFixedPrice?: number;
+
   hasHandwheel?: boolean;
+  handwheelType?: string;
+  handwheelSeries?: string;
+  handwheelModel?: string;
+  handwheelStandard?: 'standard' | 'special';
   handwheelFixedPrice?: number;
+
   actuatorSubAssemblyTotal?: number;
 
   // Additional Modules
   tubingAndFitting?: TubingAndFittingItem[];
   tubingAndFittingTotal?: number;
-  machineCost?: MachineCostItem[]; // NOTE: This is for EXTRA machine cost, separate from manufacturing
-  machineCostTotal?: number;
   testing?: TestingItem[];
   testingTotal?: number;
   accessories?: AccessoryItem[];
@@ -328,7 +258,6 @@ export interface Quote {
   discountAmount: number;
   tax: number;
   taxAmount: number;
-  packagingPrice: number;
   total: number;
   status: QuoteStatus;
   createdBy: string;
@@ -336,12 +265,6 @@ export interface Quote {
   createdAt: Date;
   updatedAt: Date;
   notes?: string;
-  // Commercial Terms
-  priceType: string; // e.g., "Ex-Works INR each net", "F.O.R sites"
-  validity: string;
-  delivery: string;
-  warranty: string;
-  payment: string;
   isArchived: boolean;
 }
 
