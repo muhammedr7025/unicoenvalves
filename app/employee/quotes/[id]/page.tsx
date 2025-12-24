@@ -188,7 +188,7 @@ export default function QuoteDetailsPage() {
 
       {/* Quote Info */}
       <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
           <div>
             <h3 className="text-sm font-medium text-gray-500">Customer</h3>
             <p className="text-lg font-semibold text-gray-900">{quote.customerName}</p>
@@ -219,6 +219,66 @@ export default function QuoteDetailsPage() {
             <h3 className="text-sm font-medium text-gray-500">Date</h3>
             <p className="text-lg font-semibold text-gray-900">{quote.createdAt.toLocaleDateString()}</p>
           </div>
+          <div>
+            <h3 className="text-sm font-medium text-gray-500">📅 Validity</h3>
+            <p className="text-lg font-semibold text-purple-700">{quote.validity || '30 days'}</p>
+          </div>
+          <div>
+            <h3 className="text-sm font-medium text-gray-500">💰 Pricing Type</h3>
+            <p className="text-lg font-semibold text-green-700">{quote.pricingType || 'Ex-Works'}</p>
+          </div>
+        </div>
+
+        {/* New Settings Row */}
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Warranty Terms */}
+            <div className="bg-blue-50 rounded-lg p-3">
+              <h3 className="text-sm font-medium text-blue-700 mb-1">🛡️ Warranty (Months)</h3>
+              <div className="flex space-x-4">
+                <div>
+                  <span className="text-xs text-gray-500">Shipment:</span>
+                  <span className="ml-1 font-semibold text-blue-800">{quote.warrantyTerms?.shipmentDays || 12}</span>
+                </div>
+                <div>
+                  <span className="text-xs text-gray-500">Installation:</span>
+                  <span className="ml-1 font-semibold text-blue-800">{quote.warrantyTerms?.installationDays || 12}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Delivery */}
+            <div className="bg-teal-50 rounded-lg p-3">
+              <h3 className="text-sm font-medium text-teal-700 mb-1">🚚 Delivery</h3>
+              <p className="font-semibold text-teal-800">{quote.deliveryDays || '-'}</p>
+            </div>
+
+            {/* Payment Terms */}
+            <div className="bg-green-50 rounded-lg p-3">
+              <h3 className="text-sm font-medium text-green-700 mb-1">💳 Payment Terms</h3>
+              <div className="flex space-x-4">
+                <div>
+                  <span className="text-xs text-gray-500">Advance:</span>
+                  <span className="ml-1 font-semibold text-green-800">{quote.paymentTerms?.advancePercentage || 30}%</span>
+                </div>
+                <div>
+                  <span className="text-xs text-gray-500">Approval:</span>
+                  <span className="ml-1 font-semibold text-green-800">{quote.paymentTerms?.approvalPercentage || 70}%</span>
+                </div>
+              </div>
+              {quote.paymentTerms?.customTerms && (
+                <p className="text-xs text-gray-500 mt-1">Custom: {quote.paymentTerms.customTerms}</p>
+              )}
+            </div>
+
+            {/* Currency Exchange (if applicable) */}
+            {quote.currencyExchangeRate && (
+              <div className="bg-amber-50 rounded-lg p-3">
+                <h3 className="text-sm font-medium text-amber-700 mb-1">💱 Exchange Rate</h3>
+                <p className="font-semibold text-amber-800">1 USD = ₹{quote.currencyExchangeRate}</p>
+              </div>
+            )}
+          </div>
         </div>
 
         {quote.notes && (
@@ -245,6 +305,7 @@ export default function QuoteDetailsPage() {
         <div className="border-t-4 border-gray-300 pt-6 mt-6">
           <QuoteSummary
             subtotal={quote.subtotal}
+            packagePrice={quote.packagePrice}
             discount={quote.discount}
             discountAmount={quote.discountAmount}
             tax={quote.tax}

@@ -12,6 +12,10 @@ import {
   Material,
   Series,
   QuoteProduct,
+  ValidityPeriod,
+  PricingType,
+  PaymentTerms,
+  WarrantyTerms,
 } from '@/types';
 import { calculateQuoteTotals } from '@/utils/priceCalculator';
 import ProductList from '@/components/quotes/ProductList';
@@ -41,6 +45,18 @@ export default function NewQuotePage() {
   const [enquiryId, setEnquiryId] = useState('');
   const [status, setStatus] = useState<'draft' | 'sent'>('draft');
   const [loading, setLoading] = useState(false);
+
+  // NEW: Additional quote settings
+  const [customQuoteNumber, setCustomQuoteNumber] = useState('');
+  const [validity, setValidity] = useState<ValidityPeriod>('30 days');
+  const [warrantyShipment, setWarrantyShipment] = useState(12);
+  const [warrantyInstallation, setWarrantyInstallation] = useState(12);
+  const [deliveryDays, setDeliveryDays] = useState('');
+  const [advancePercentage, setAdvancePercentage] = useState(30);
+  const [approvalPercentage, setApprovalPercentage] = useState(70);
+  const [customPaymentTerms, setCustomPaymentTerms] = useState('');
+  const [currencyExchangeRate, setCurrencyExchangeRate] = useState<number | null>(null);
+  const [pricingType, setPricingType] = useState<PricingType>('Ex-Works');
 
   useEffect(() => {
     fetchInitialData();
@@ -146,7 +162,8 @@ export default function NewQuotePage() {
 
       const quotesRef = collection(db, 'quotes');
       await addDoc(quotesRef, {
-        quoteNumber: quoteNumber,
+        quoteNumber: customQuoteNumber || quoteNumber, // Use custom if provided
+        customQuoteNumber: customQuoteNumber || null,
         customerId: selectedCustomer.id,
         customerName: selectedCustomer.name,
         products: products.map(p => ({
@@ -192,6 +209,20 @@ export default function NewQuotePage() {
         enquiryId: enquiryId || '',
         notes: notes || '',
         isArchived: false,
+        // NEW: Additional quote settings for PDF generation
+        validity: validity,
+        warrantyTerms: {
+          shipmentDays: warrantyShipment,
+          installationDays: warrantyInstallation,
+        },
+        deliveryDays: deliveryDays || null,
+        paymentTerms: {
+          advancePercentage: advancePercentage,
+          approvalPercentage: approvalPercentage,
+          customTerms: customPaymentTerms || null,
+        },
+        currencyExchangeRate: currencyExchangeRate || null,
+        pricingType: pricingType,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
       });
@@ -344,7 +375,20 @@ export default function NewQuotePage() {
             <h2 className="text-2xl font-bold mb-6">Review Quote</h2>
 
             {/* Quote Details Form */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              {/* Custom Quote Number */}
+              <div>
+                <label className="block text-sm font-medium mb-2">📝 Custom Quote Number</label>
+                <input
+                  type="text"
+                  value={customQuoteNumber}
+                  onChange={(e) => setCustomQuoteNumber(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg border-blue-300 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Leave blank for auto-generate"
+                />
+                <p className="text-xs text-gray-500 mt-1">Override default quote number</p>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium mb-2">Project Name</label>
                 <input
@@ -365,6 +409,152 @@ export default function NewQuotePage() {
                   placeholder="e.g., RFQ-2023-001"
                 />
               </div>
+
+              {/* Validity Period Dropdown */}
+              <div>
+                <label className="block text-sm font-medium mb-2">📅 Validity Period</label>
+                <select
+                  value={validity}
+                  onChange={(e) => setValidity(e.target.value as ValidityPeriod)}
+                  className="w-full px-3 py-2 border rounded-lg border-purple-300 focus:ring-purple-500 focus:border-purple-500"
+                >
+                  <option value="15 days">15 Days</option>
+                  <option value="30 days">30 Days</option>
+                  <option value="45 days">45 Days</option>
+                  <option value="50 days">50 Days</option>
+                  <option value="60 days">60 Days</option>
+                  <option value="90 days">90 Days</option>
+                </select>
+              </div>
+
+              {/* Pricing Type Dropdown */}
+              <div>
+                <label className="block text-sm font-medium mb-2">💰 Pricing Type</label>
+                <select
+                  value={pricingType}
+                  onChange={(e) => setPricingType(e.target.value as PricingType)}
+                  className="w-full px-3 py-2 border rounded-lg border-green-300 focus:ring-green-500 focus:border-green-500"
+                >
+                  <option value="Ex-Works">Ex-Works</option>
+                  <option value="FOR">FOR (Freight on Road)</option>
+                </select>
+              </div>
+
+              {/* Delivery Days */}
+              <div>
+                <label className="block text-sm font-medium mb-2">🚚 Delivery Timeline</label>
+                <input
+                  type="text"
+                  value={deliveryDays}
+                  onChange={(e) => setDeliveryDays(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg border-teal-300 focus:ring-teal-500 focus:border-teal-500"
+                  placeholder="e.g., 4-6 weeks"
+                />
+              </div>
+            </div>
+
+            {/* Warranty Section */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 mb-6">
+              <h3 className="text-md font-bold text-blue-800 mb-3">🛡️ Warranty Terms (Months)</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-blue-700 mb-2">Shipment Warranty</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={warrantyShipment}
+                    onChange={(e) => setWarrantyShipment(parseInt(e.target.value) || 0)}
+                    className="w-full px-3 py-2 border rounded-lg border-blue-300 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="e.g., 12"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-blue-700 mb-2">Installation Warranty</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={warrantyInstallation}
+                    onChange={(e) => setWarrantyInstallation(parseInt(e.target.value) || 0)}
+                    className="w-full px-3 py-2 border rounded-lg border-blue-300 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="e.g., 12"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Payment Terms Section */}
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 mb-6">
+              <h3 className="text-md font-bold text-green-800 mb-3">💳 Payment Terms</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-green-700 mb-2">Advance Payment (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={advancePercentage}
+                    onChange={(e) => setAdvancePercentage(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-2 border rounded-lg border-green-300 focus:ring-green-500 focus:border-green-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-green-700 mb-2">On Approval (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={approvalPercentage}
+                    onChange={(e) => setApprovalPercentage(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-2 border rounded-lg border-green-300 focus:ring-green-500 focus:border-green-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-green-700 mb-2">Custom Terms (Optional)</label>
+                  <input
+                    type="text"
+                    value={customPaymentTerms}
+                    onChange={(e) => setCustomPaymentTerms(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg border-green-300 focus:ring-green-500 focus:border-green-500"
+                    placeholder="e.g., Net 30"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-green-600 mt-2">
+                Total: {advancePercentage + approvalPercentage}%
+                {advancePercentage + approvalPercentage !== 100 && (
+                  <span className="text-orange-600 ml-2">⚠️ Should equal 100%</span>
+                )}
+              </p>
+            </div>
+
+            {/* International Customer - Currency Exchange */}
+            {selectedCustomer && selectedCustomer.country !== 'India' && (
+              <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl p-4 mb-6">
+                <h3 className="text-md font-bold text-amber-800 mb-3">💱 Currency Exchange (International Customer)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-amber-700 mb-2">Exchange Rate (1 USD = ₹)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={currencyExchangeRate || ''}
+                      onChange={(e) => setCurrencyExchangeRate(parseFloat(e.target.value) || null)}
+                      className="w-full px-3 py-2 border rounded-lg border-amber-300 focus:ring-amber-500 focus:border-amber-500"
+                      placeholder="e.g., 83.50"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <p className="text-sm text-amber-600">
+                      Customer Country: <strong>{selectedCustomer.country}</strong>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Pricing & Tax Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
               <div>
                 <label className="block text-sm font-medium mb-2">Discount (%)</label>
                 <input
@@ -397,16 +587,6 @@ export default function NewQuotePage() {
                   className="w-full px-3 py-2 border rounded-lg border-orange-300 focus:ring-orange-500 focus:border-orange-500"
                   placeholder="Enter packaging cost"
                 />
-                <p className="text-xs text-gray-500 mt-1">Added to subtotal before discount/tax calculation</p>
-              </div>
-              <div className="col-span-2">
-                <label className="block text-sm font-medium mb-2">Notes</label>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg h-24"
-                  placeholder="Additional terms, delivery details, etc."
-                />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Status</label>
@@ -419,6 +599,17 @@ export default function NewQuotePage() {
                   <option value="sent">Sent</option>
                 </select>
               </div>
+            </div>
+
+            {/* Notes */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-2">Notes</label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg h-24"
+                placeholder="Additional terms, delivery details, etc."
+              />
             </div>
 
             {/* Products Summary */}

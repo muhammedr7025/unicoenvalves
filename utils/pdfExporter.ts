@@ -14,9 +14,9 @@ const COMPANY = {
     cin: 'CIN: U29199TN2015PTC099699',
 };
 
-// Helper function to format currency
+// Helper function to format currency - no decimals for whole numbers
 const formatINR = (amount: number): string => {
-    return `₹ ${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `₹ ${Math.round(amount).toLocaleString('en-IN')}`;
 };
 
 // Helper function to format date
@@ -326,65 +326,92 @@ export function generatePriceSummaryPDF(quote: Quote, customerDetails: any) {
             valign: 'middle',
         },
         styles: {
-            fontSize: 9,
-            cellPadding: 6,
+            fontSize: 8.5,
+            cellPadding: 5,
             lineColor: [200, 200, 200],
             lineWidth: 0.5,
+            overflow: 'linebreak',
+            cellWidth: 'wrap',
         },
         columnStyles: {
-            0: { halign: 'center', cellWidth: 40 },
-            1: { cellWidth: 80 },
-            2: { cellWidth: 180 },
-            3: { halign: 'right', cellWidth: 90 },
-            4: { halign: 'center', cellWidth: 35 },
+            0: { halign: 'center', cellWidth: 35 },
+            1: { halign: 'left', cellWidth: 70 },
+            2: { halign: 'left', cellWidth: 200 },
+            3: { halign: 'right', cellWidth: 85 },
+            4: { halign: 'center', cellWidth: 30 },
             5: { halign: 'right', cellWidth: 95 },
         },
+        margin: { left: 40, right: 40 },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 15;
+    yPos = (doc as any).lastAutoTable.finalY + 20;
 
-    // Calculate pricing
-    const packingCharges = quote.subtotal * 0.006; // 0.6% of subtotal
+    // Calculate pricing - use stored packagePrice from quote
+    const packingCharges = quote.packagePrice || 0;
 
-    // Summary Table (Right aligned)
+    // Summary Table - Using grid theme like reference PDF for better structure
     const summaryData = [
         ['Ex-Works Price (Coimbatore)', formatINR(quote.subtotal)],
-        ['Packing Charges @ 0.6%', formatINR(packingCharges)],
+        ['Packing Charges', formatINR(packingCharges)],
         ['IGST @ 18%', formatINR(quote.taxAmount)],
     ];
 
     autoTable(doc, {
         startY: yPos,
         body: summaryData,
-        theme: 'plain',
+        theme: 'grid',
         styles: {
-            fontSize: 9.5,
-            cellPadding: 5,
+            fontSize: 9,
+            cellPadding: 6,
+            lineColor: [200, 200, 200],
+            lineWidth: 0.5,
         },
         columnStyles: {
-            0: { fontStyle: 'bold', cellWidth: 400, halign: 'right' },
-            1: { halign: 'right', cellWidth: 120, fontStyle: 'bold' },
+            0: {
+                fontStyle: 'bold',
+                cellWidth: 360,
+                halign: 'right',
+                fillColor: [250, 250, 250]
+            },
+            1: {
+                halign: 'right',
+                cellWidth: 100,
+                fontStyle: 'bold',
+                fillColor: [255, 255, 255]
+            },
         },
-        margin: { left: 50 },
+        margin: { left: 75 },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 5;
+    yPos = (doc as any).lastAutoTable.finalY + 3;
 
-    // Grand Total
+    // Grand Total - Highlighted row
     autoTable(doc, {
         startY: yPos,
         body: [['Total Ex-works Price (Excluding Freight/Insurance)', formatINR(quote.total)]],
-        theme: 'plain',
+        theme: 'grid',
         styles: {
             fontSize: 10,
-            cellPadding: 6,
+            cellPadding: 7,
             fontStyle: 'bold',
+            lineColor: [200, 200, 200],
+            lineWidth: 0.5,
         },
         columnStyles: {
-            0: { cellWidth: 400, halign: 'right', fillColor: [240, 240, 240] },
-            1: { halign: 'right', cellWidth: 120, fillColor: [240, 240, 240] },
+            0: {
+                cellWidth: 360,
+                halign: 'right',
+                fillColor: [240, 240, 240],
+                fontStyle: 'bold'
+            },
+            1: {
+                halign: 'right',
+                cellWidth: 100,
+                fillColor: [240, 240, 240],
+                fontStyle: 'bold'
+            },
         },
-        margin: { left: 50 },
+        margin: { left: 75 },
     });
 
     yPos = (doc as any).lastAutoTable.finalY + 30;
@@ -721,65 +748,92 @@ export function generateCombinedPDF(quote: Quote, customerDetails: any) {
             valign: 'middle',
         },
         styles: {
-            fontSize: 9,
-            cellPadding: 6,
+            fontSize: 8.5,
+            cellPadding: 5,
             lineColor: [200, 200, 200],
             lineWidth: 0.5,
+            overflow: 'linebreak',
+            cellWidth: 'wrap',
         },
         columnStyles: {
-            0: { halign: 'center', cellWidth: 40 },
-            1: { cellWidth: 80 },
-            2: { cellWidth: 180 },
-            3: { halign: 'right', cellWidth: 90 },
-            4: { halign: 'center', cellWidth: 35 },
+            0: { halign: 'center', cellWidth: 35 },
+            1: { halign: 'left', cellWidth: 70 },
+            2: { halign: 'left', cellWidth: 200 },
+            3: { halign: 'right', cellWidth: 85 },
+            4: { halign: 'center', cellWidth: 30 },
             5: { halign: 'right', cellWidth: 95 },
         },
+        margin: { left: 40, right: 40 },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 15;
+    yPos = (doc as any).lastAutoTable.finalY + 20;
 
-    // Calculate pricing
-    const packingCharges = quote.subtotal * 0.006; // 0.6% of subtotal
+    // Calculate pricing - use stored packagePrice from quote
+    const packingCharges = quote.packagePrice || 0;
 
-    // Summary Table (Right aligned)
+    // Summary Table - Using grid theme like reference PDF for better structure
     const summaryData = [
         ['Ex-Works Price (Coimbatore)', formatINR(quote.subtotal)],
-        ['Packing Charges @ 0.6%', formatINR(packingCharges)],
+        ['Packing Charges', formatINR(packingCharges)],
         ['IGST @ 18%', formatINR(quote.taxAmount)],
     ];
 
     autoTable(doc, {
         startY: yPos,
         body: summaryData,
-        theme: 'plain',
+        theme: 'grid',
         styles: {
-            fontSize: 9.5,
-            cellPadding: 5,
+            fontSize: 9,
+            cellPadding: 6,
+            lineColor: [200, 200, 200],
+            lineWidth: 0.5,
         },
         columnStyles: {
-            0: { fontStyle: 'bold', cellWidth: 400, halign: 'right' },
-            1: { halign: 'right', cellWidth: 120, fontStyle: 'bold' },
+            0: {
+                fontStyle: 'bold',
+                cellWidth: 360,
+                halign: 'right',
+                fillColor: [250, 250, 250]
+            },
+            1: {
+                halign: 'right',
+                cellWidth: 100,
+                fontStyle: 'bold',
+                fillColor: [255, 255, 255]
+            },
         },
-        margin: { left: 50 },
+        margin: { left: 75 },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 5;
+    yPos = (doc as any).lastAutoTable.finalY + 3;
 
-    // Grand Total
+    // Grand Total - Highlighted row
     autoTable(doc, {
         startY: yPos,
         body: [['Total Ex-works Price (Excluding Freight/Insurance)', formatINR(quote.total)]],
-        theme: 'plain',
+        theme: 'grid',
         styles: {
             fontSize: 10,
-            cellPadding: 6,
+            cellPadding: 7,
             fontStyle: 'bold',
+            lineColor: [200, 200, 200],
+            lineWidth: 0.5,
         },
         columnStyles: {
-            0: { cellWidth: 400, halign: 'right', fillColor: [240, 240, 240] },
-            1: { halign: 'right', cellWidth: 120, fillColor: [240, 240, 240] },
+            0: {
+                cellWidth: 360,
+                halign: 'right',
+                fillColor: [240, 240, 240],
+                fontStyle: 'bold'
+            },
+            1: {
+                halign: 'right',
+                cellWidth: 100,
+                fillColor: [240, 240, 240],
+                fontStyle: 'bold'
+            },
         },
-        margin: { left: 50 },
+        margin: { left: 75 },
     });
 
     yPos = (doc as any).lastAutoTable.finalY + 30;

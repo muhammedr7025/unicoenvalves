@@ -311,15 +311,45 @@ export interface QuoteProduct {
 
 export type QuoteStatus = 'draft' | 'sent' | 'approved' | 'rejected';
 
+// Validity Period Options
+export type ValidityPeriod = '15 days' | '30 days' | '45 days' | '50 days' | '60 days' | '90 days';
+
+// Pricing Type Options
+export type PricingType = 'Ex-Works' | 'FOR';
+
+// Payment Terms Structure
+export interface PaymentTerms {
+  advancePercentage: number;      // Percentage for advance payment
+  approvalPercentage: number;     // Percentage on approval
+  customTerms?: string;           // Optional custom payment terms
+}
+
+// Warranty Terms Structure
+export interface WarrantyTerms {
+  shipmentDays: number;           // Warranty days for shipment
+  installationDays: number;       // Warranty days for installation
+}
+
 export interface Quote {
   id: string;
   quoteNumber: string;
+  customQuoteNumber?: string;     // NEW: Custom quote number override
   customerId: string;
   customerName: string;
   projectName?: string;
   enquiryId?: string;
+
+  // NEW: Quote Settings for PDF Generation
+  validity?: ValidityPeriod;      // Quote validity period dropdown
+  warrantyTerms?: WarrantyTerms;  // Warranty for shipment and installation
+  deliveryDays?: string;          // Delivery timeline (custom value)
+  paymentTerms?: PaymentTerms;    // Payment terms with percentages
+  currencyExchangeRate?: number;  // For international customers (non-India)
+  pricingType?: PricingType;      // Ex-Works or FOR pricing
+
   products: QuoteProduct[];
   subtotal: number;
+  packagePrice?: number; // Packaging charges
   discount: number;
   discountAmount: number;
   tax: number;

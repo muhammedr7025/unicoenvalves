@@ -13,6 +13,8 @@ import {
   Series,
   Quote,
   QuoteProduct,
+  ValidityPeriod,
+  PricingType,
 } from '@/types';
 import { calculateQuoteTotals } from '@/utils/priceCalculator';
 import ProductList from '@/components/quotes/ProductList';
@@ -43,6 +45,18 @@ export default function EditQuotePage() {
   const [projectName, setProjectName] = useState('');
   const [enquiryId, setEnquiryId] = useState('');
   const [status, setStatus] = useState<'draft' | 'sent' | 'approved' | 'rejected'>('draft');
+
+  // NEW: Additional quote settings
+  const [customQuoteNumber, setCustomQuoteNumber] = useState('');
+  const [validity, setValidity] = useState<ValidityPeriod>('30 days');
+  const [warrantyShipment, setWarrantyShipment] = useState(12);
+  const [warrantyInstallation, setWarrantyInstallation] = useState(12);
+  const [deliveryDays, setDeliveryDays] = useState('');
+  const [advancePercentage, setAdvancePercentage] = useState(30);
+  const [approvalPercentage, setApprovalPercentage] = useState(70);
+  const [customPaymentTerms, setCustomPaymentTerms] = useState('');
+  const [currencyExchangeRate, setCurrencyExchangeRate] = useState<number | null>(null);
+  const [pricingType, setPricingType] = useState<PricingType>('Ex-Works');
 
   useEffect(() => {
     fetchInitialData();
@@ -77,10 +91,17 @@ export default function EditQuotePage() {
         const loadedQuote = {
           id: quoteDoc.id,
           quoteNumber: data.quoteNumber,
+          customQuoteNumber: data.customQuoteNumber || '',
           customerId: data.customerId,
           customerName: data.customerName,
           projectName: data.projectName || '',
           enquiryId: data.enquiryId || '',
+          validity: data.validity || '30 days',
+          warrantyTerms: data.warrantyTerms || { shipmentDays: 12, installationDays: 12 },
+          deliveryDays: data.deliveryDays || '',
+          paymentTerms: data.paymentTerms || { advancePercentage: 30, approvalPercentage: 70, customTerms: '' },
+          currencyExchangeRate: data.currencyExchangeRate || null,
+          pricingType: data.pricingType || 'Ex-Works',
           products: data.products || [],
           subtotal: data.subtotal || 0,
           discount: data.discount || 0,
@@ -106,6 +127,18 @@ export default function EditQuotePage() {
         setProjectName(loadedQuote.projectName || '');
         setEnquiryId(loadedQuote.enquiryId || '');
         setStatus(loadedQuote.status);
+
+        // NEW: Load additional quote settings
+        setCustomQuoteNumber(loadedQuote.customQuoteNumber || '');
+        setValidity(loadedQuote.validity || '30 days');
+        setWarrantyShipment(loadedQuote.warrantyTerms?.shipmentDays || 12);
+        setWarrantyInstallation(loadedQuote.warrantyTerms?.installationDays || 12);
+        setDeliveryDays(loadedQuote.deliveryDays || '');
+        setAdvancePercentage(loadedQuote.paymentTerms?.advancePercentage || 30);
+        setApprovalPercentage(loadedQuote.paymentTerms?.approvalPercentage || 70);
+        setCustomPaymentTerms(loadedQuote.paymentTerms?.customTerms || '');
+        setCurrencyExchangeRate(loadedQuote.currencyExchangeRate || null);
+        setPricingType(loadedQuote.pricingType || 'Ex-Works');
       } else {
         alert('Quote not found');
         router.push('/employee');
@@ -165,6 +198,8 @@ export default function EditQuotePage() {
 
       const quoteRef = doc(db, 'quotes', quote.id);
       await updateDoc(quoteRef, {
+        quoteNumber: customQuoteNumber || quote.quoteNumber, // Use custom if provided
+        customQuoteNumber: customQuoteNumber || null,
         products: products.map(p => ({
           ...p,
           // Ensure undefined values are null for Firestore
@@ -205,6 +240,20 @@ export default function EditQuotePage() {
         projectName: projectName || '',
         enquiryId: enquiryId || '',
         notes: notes || '',
+        // NEW: Additional quote settings for PDF generation
+        validity: validity,
+        warrantyTerms: {
+          shipmentDays: warrantyShipment,
+          installationDays: warrantyInstallation,
+        },
+        deliveryDays: deliveryDays || null,
+        paymentTerms: {
+          advancePercentage: advancePercentage,
+          approvalPercentage: approvalPercentage,
+          customTerms: customPaymentTerms || null,
+        },
+        currencyExchangeRate: currencyExchangeRate || null,
+        pricingType: pricingType,
         updatedAt: Timestamp.now(),
       });
 
@@ -311,7 +360,22 @@ export default function EditQuotePage() {
       {!showProductForm && (
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
           <h2 className="text-xl font-bold mb-4">Quote Details</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+
+          {/* Basic Info Section */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+            {/* Custom Quote Number */}
+            <div>
+              <label className="block text-sm font-medium mb-2">📝 Custom Quote Number</label>
+              <input
+                type="text"
+                value={customQuoteNumber}
+                onChange={(e) => setCustomQuoteNumber(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg border-blue-300 focus:ring-blue-500 focus:border-blue-500"
+                placeholder={quote?.quoteNumber || 'Leave blank for auto-generate'}
+              />
+              <p className="text-xs text-gray-500 mt-1">Current: {quote?.quoteNumber}</p>
+            </div>
+
             <div>
               <label className="block text-sm font-medium mb-2">Project Name</label>
               <input
@@ -332,6 +396,152 @@ export default function EditQuotePage() {
                 placeholder="e.g., RFQ-2023-001"
               />
             </div>
+
+            {/* Validity Period Dropdown */}
+            <div>
+              <label className="block text-sm font-medium mb-2">📅 Validity Period</label>
+              <select
+                value={validity}
+                onChange={(e) => setValidity(e.target.value as ValidityPeriod)}
+                className="w-full px-3 py-2 border rounded-lg border-purple-300 focus:ring-purple-500 focus:border-purple-500"
+              >
+                <option value="15 days">15 Days</option>
+                <option value="30 days">30 Days</option>
+                <option value="45 days">45 Days</option>
+                <option value="50 days">50 Days</option>
+                <option value="60 days">60 Days</option>
+                <option value="90 days">90 Days</option>
+              </select>
+            </div>
+
+            {/* Pricing Type Dropdown */}
+            <div>
+              <label className="block text-sm font-medium mb-2">💰 Pricing Type</label>
+              <select
+                value={pricingType}
+                onChange={(e) => setPricingType(e.target.value as PricingType)}
+                className="w-full px-3 py-2 border rounded-lg border-green-300 focus:ring-green-500 focus:border-green-500"
+              >
+                <option value="Ex-Works">Ex-Works</option>
+                <option value="FOR">FOR (Freight on Road)</option>
+              </select>
+            </div>
+
+            {/* Delivery Days */}
+            <div>
+              <label className="block text-sm font-medium mb-2">🚚 Delivery Timeline</label>
+              <input
+                type="text"
+                value={deliveryDays}
+                onChange={(e) => setDeliveryDays(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg border-teal-300 focus:ring-teal-500 focus:border-teal-500"
+                placeholder="e.g., 4-6 weeks"
+              />
+            </div>
+          </div>
+
+          {/* Warranty Section */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 mb-6">
+            <h3 className="text-md font-bold text-blue-800 mb-3">🛡️ Warranty Terms (Months)</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-blue-700 mb-2">Shipment Warranty</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={warrantyShipment}
+                  onChange={(e) => setWarrantyShipment(parseInt(e.target.value) || 0)}
+                  className="w-full px-3 py-2 border rounded-lg border-blue-300 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="e.g., 12"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-blue-700 mb-2">Installation Warranty</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={warrantyInstallation}
+                  onChange={(e) => setWarrantyInstallation(parseInt(e.target.value) || 0)}
+                  className="w-full px-3 py-2 border rounded-lg border-blue-300 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="e.g., 12"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Payment Terms Section */}
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 mb-6">
+            <h3 className="text-md font-bold text-green-800 mb-3">💳 Payment Terms</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-green-700 mb-2">Advance Payment (%)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={advancePercentage}
+                  onChange={(e) => setAdvancePercentage(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-2 border rounded-lg border-green-300 focus:ring-green-500 focus:border-green-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-green-700 mb-2">On Approval (%)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={approvalPercentage}
+                  onChange={(e) => setApprovalPercentage(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-2 border rounded-lg border-green-300 focus:ring-green-500 focus:border-green-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-green-700 mb-2">Custom Terms (Optional)</label>
+                <input
+                  type="text"
+                  value={customPaymentTerms}
+                  onChange={(e) => setCustomPaymentTerms(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg border-green-300 focus:ring-green-500 focus:border-green-500"
+                  placeholder="e.g., Net 30"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-green-600 mt-2">
+              Total: {advancePercentage + approvalPercentage}%
+              {advancePercentage + approvalPercentage !== 100 && (
+                <span className="text-orange-600 ml-2">⚠️ Should equal 100%</span>
+              )}
+            </p>
+          </div>
+
+          {/* International Customer - Currency Exchange */}
+          {quote && quote.customerName && (
+            <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl p-4 mb-6">
+              <h3 className="text-md font-bold text-amber-800 mb-3">💱 Currency Exchange (if International)</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-amber-700 mb-2">Exchange Rate (1 USD = ₹)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={currencyExchangeRate || ''}
+                    onChange={(e) => setCurrencyExchangeRate(parseFloat(e.target.value) || null)}
+                    className="w-full px-3 py-2 border rounded-lg border-amber-300 focus:ring-amber-500 focus:border-amber-500"
+                    placeholder="e.g., 83.50"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <p className="text-sm text-amber-600">
+                    Leave empty if customer is from India
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Pricing & Tax Section */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
             <div>
               <label className="block text-sm font-medium mb-2">Discount (%)</label>
               <input
@@ -364,16 +574,6 @@ export default function EditQuotePage() {
                 className="w-full px-3 py-2 border rounded-lg border-orange-300 focus:ring-orange-500 focus:border-orange-500"
                 placeholder="Enter packaging cost"
               />
-              <p className="text-xs text-gray-500 mt-1">Added to subtotal before discount/tax</p>
-            </div>
-            <div className="col-span-2">
-              <label className="block text-sm font-medium mb-2">Notes</label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg h-24"
-                placeholder="Additional terms, delivery details, etc."
-              />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Status</label>
@@ -388,6 +588,17 @@ export default function EditQuotePage() {
                 <option value="rejected">Rejected</option>
               </select>
             </div>
+          </div>
+
+          {/* Notes */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium mb-2">Notes</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg h-24"
+              placeholder="Additional terms, delivery details, etc."
+            />
           </div>
 
           {/* Totals */}
