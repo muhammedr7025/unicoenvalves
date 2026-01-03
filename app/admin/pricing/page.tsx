@@ -237,28 +237,59 @@ export default function PricingPage() {
     if (!file) return;
 
     setUploading(true);
-    setUploadProgress('Reading Excel file...');
+    setUploadProgress('📁 Reading Excel file...');
 
     try {
       const data = await parseExcelFile(file);
-      setUploadProgress('Validating data...');
+
+      // Count total rows
+      const totalRows =
+        (data.materials?.length || 0) +
+        (data.series?.length || 0) +
+        (data.bodyWeights?.length || 0) +
+        (data.bonnetWeights?.length || 0) +
+        (data.plugWeights?.length || 0) +
+        (data.seatWeights?.length || 0) +
+        (data.stemFixedPrices?.length || 0) +
+        (data.cageWeights?.length || 0) +
+        (data.sealRingPrices?.length || 0) +
+        (data.actuatorModels?.length || 0) +
+        (data.handwheelPrices?.length || 0);
+
+      setUploadProgress(`📊 Found ${totalRows.toLocaleString()} rows across all sheets. Validating...`);
 
       if (data.materials.length === 0) throw new Error('No materials found in the Excel file');
       if (data.series.length === 0) throw new Error('No series found in the Excel file');
 
-      setUploadProgress('Merging data into database...');
+      setUploadProgress(`🔄 Importing ${totalRows.toLocaleString()} rows... This may take a moment for large datasets.`);
+
+      console.log('Starting large import:', {
+        materials: data.materials.length,
+        series: data.series.length,
+        bodyWeights: data.bodyWeights?.length || 0,
+        bonnetWeights: data.bonnetWeights?.length || 0,
+        plugWeights: data.plugWeights?.length || 0,
+        seatWeights: data.seatWeights?.length || 0,
+        stemFixedPrices: data.stemFixedPrices?.length || 0,
+        cageWeights: data.cageWeights?.length || 0,
+        sealRingPrices: data.sealRingPrices?.length || 0,
+        actuatorModels: data.actuatorModels?.length || 0,
+        handwheelPrices: data.handwheelPrices?.length || 0,
+        total: totalRows,
+      });
+
       await importPricingData(data);
 
-      setUploadProgress('✅ Data merged successfully!');
+      setUploadProgress(`✅ Successfully imported ${totalRows.toLocaleString()} rows!`);
       await fetchStats();
       await fetchCollectionData(selectedCollection);
 
       setTimeout(() => {
         setUploadProgress('');
         setUploading(false);
-      }, 2000);
+      }, 3000);
 
-      alert('Pricing data merged successfully! No duplicates were created.');
+      alert(`Pricing data imported successfully!\n\n📊 Total rows processed: ${totalRows.toLocaleString()}\n✅ No duplicates were created (smart merge).`);
     } catch (error: any) {
       console.error('Import error:', error);
       alert(`Import failed: ${error.message || 'Unknown error'}`);

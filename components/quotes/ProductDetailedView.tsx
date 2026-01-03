@@ -334,8 +334,11 @@ export default function ProductDetailedView({ product, index }: ProductDetailedV
                                 <span>
                                     {item.title}
                                     {item.isDefault && <span className="ml-2 text-xs bg-pink-200 px-2 py-1 rounded">Default</span>}
+                                    <span className="ml-2 text-xs text-gray-500">×{item.quantity}</span>
                                 </span>
-                                <span className="font-semibold text-green-700">₹{item.price.toLocaleString('en-IN')}</span>
+                                <span className="font-semibold text-green-700">
+                                    ₹{item.price.toLocaleString('en-IN')} × {item.quantity} = ₹{(item.price * item.quantity).toLocaleString('en-IN')}
+                                </span>
                             </div>
                         ))}
                     </div>

@@ -460,7 +460,7 @@ export async function importPricingData(data: any): Promise<void> {
   }
 }
 
-// Delete all pricing data
+// Delete all pricing data (with proper batch handling for large collections)
 export async function clearAllPricingData(): Promise<void> {
   try {
     console.log('Clearing all pricing data...');
@@ -480,17 +480,40 @@ export async function clearAllPricingData(): Promise<void> {
     ];
 
     for (const collectionName of collections) {
+      console.log(`Clearing ${collectionName}...`);
       const snapshot = await getDocs(collection(db, collectionName));
-      const batch = writeBatch(db);
 
-      snapshot.docs.forEach((doc) => {
-        batch.delete(doc.ref);
-      });
-
-      if (snapshot.docs.length > 0) {
-        await batch.commit();
-        console.log(`Cleared ${snapshot.docs.length} documents from ${collectionName}`);
+      if (snapshot.docs.length === 0) {
+        console.log(`${collectionName} is empty, skipping...`);
+        continue;
       }
+
+      // Process in batches of 450 (Firestore limit is 500)
+      const batchSize = 450;
+      let batch = writeBatch(db);
+      let count = 0;
+      let totalDeleted = 0;
+
+      for (const docSnapshot of snapshot.docs) {
+        batch.delete(docSnapshot.ref);
+        count++;
+        totalDeleted++;
+
+        if (count >= batchSize) {
+          await batch.commit();
+          console.log(`Deleted batch of ${count} documents from ${collectionName}`);
+          batch = writeBatch(db);
+          count = 0;
+        }
+      }
+
+      // Commit remaining
+      if (count > 0) {
+        await batch.commit();
+        console.log(`Deleted remaining ${count} documents from ${collectionName}`);
+      }
+
+      console.log(`✅ Cleared ${totalDeleted} documents from ${collectionName}`);
     }
 
     console.log('All pricing data cleared successfully!');

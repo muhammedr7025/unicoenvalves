@@ -7,6 +7,7 @@ import { getAllCustomers } from '@/lib/firebase/customerService';
 import { getMaterialsByGroup, getAllSeries } from '@/lib/firebase/pricingService';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
+import { saveProductsInBatches } from '@/lib/firebase/productService';
 import {
   Customer,
   Material,
@@ -161,40 +162,15 @@ export default function NewQuotePage() {
       const quoteNumber = `UC-EN-${fyCode}-${sequenceStr}`;
 
       const quotesRef = collection(db, 'quotes');
-      await addDoc(quotesRef, {
+
+      // Create quote document WITHOUT products (products go to subcollection)
+      const quoteDocRef = await addDoc(quotesRef, {
         quoteNumber: customQuoteNumber || quoteNumber, // Use custom if provided
         customQuoteNumber: customQuoteNumber || null,
         customerId: selectedCustomer.id,
         customerName: selectedCustomer.name,
-        products: products.map(p => ({
-          ...p,
-          // Ensure undefined values are null for Firestore
-          productTag: p.productTag || null,
-          cageMaterialId: p.cageMaterialId || null,
-          cageWeight: p.cageWeight || null,
-          cageMaterialPrice: p.cageMaterialPrice || null,
-          cageTotalCost: p.cageTotalCost || null,
-          sealType: p.sealType || null,
-          sealRingFixedPrice: p.sealRingFixedPrice || null,
-          sealRingTotalCost: p.sealRingTotalCost || null,
-          actuatorType: p.actuatorType || null,
-          actuatorSeries: p.actuatorSeries || null,
-          actuatorModel: p.actuatorModel || null,
-          actuatorStandard: p.actuatorStandard || null,
-          actuatorFixedPrice: p.actuatorFixedPrice || null,
-          handwheelType: p.handwheelType || null,
-          handwheelSeries: p.handwheelSeries || null,
-          handwheelModel: p.handwheelModel || null,
-          handwheelStandard: p.handwheelStandard || null,
-          handwheelFixedPrice: p.handwheelFixedPrice || null,
-          actuatorSubAssemblyTotal: p.actuatorSubAssemblyTotal || 0,
-          tubingAndFitting: p.tubingAndFitting || [],
-          tubingAndFittingTotal: p.tubingAndFittingTotal || 0,
-          testing: p.testing || [],
-          testingTotal: p.testingTotal || 0,
-          accessories: p.accessories || [],
-          accessoriesTotal: p.accessoriesTotal || 0,
-        })),
+        // Products stored in subcollection - only keep count here
+        productCount: products.length,
         subtotal: subtotalWithPackage,
         discount,
         discountAmount: discountAmountWithPackage,
@@ -226,6 +202,9 @@ export default function NewQuotePage() {
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
       });
+
+      // Save products to subcollection (supports 400+ products)
+      await saveProductsInBatches(quoteDocRef.id, products);
 
       alert('Quote created successfully!');
       router.push('/employee');

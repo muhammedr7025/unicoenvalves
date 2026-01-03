@@ -566,7 +566,7 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
             updatedProduct.testingTotal = testingItems.reduce((sum, item) => sum + item.price, 0);
 
             updatedProduct.accessories = accessoryItems;
-            updatedProduct.accessoriesTotal = accessoryItems.reduce((sum, item) => sum + item.price, 0);
+            updatedProduct.accessoriesTotal = accessoryItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
             // Totals
             // Manufacturing Cost = Body Sub-Assembly + Actuator Sub-Assembly + Tubing & Fitting + Testing

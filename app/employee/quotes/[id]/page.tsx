@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
-import { Quote } from '@/types';
+import { getProductsFromSubcollection } from '@/lib/firebase/productService';
+import { Quote, QuoteProduct } from '@/types';
 import * as XLSX from 'xlsx';
 import ProductDetailedView from '@/components/quotes/ProductDetailedView';
 import QuoteSummary from '@/components/quotes/QuoteSummary';
@@ -29,9 +30,24 @@ export default function QuoteDetailsPage() {
 
       if (quoteDoc.exists()) {
         const data = quoteDoc.data();
+
+        // Load products from subcollection first
+        let products: QuoteProduct[] = [];
+        try {
+          products = await getProductsFromSubcollection(quoteId);
+        } catch (e) {
+          console.log('No products subcollection found');
+        }
+
+        // Fallback to legacy embedded products if subcollection is empty
+        if (products.length === 0 && data.products && data.products.length > 0) {
+          products = data.products;
+        }
+
         setQuote({
           id: quoteDoc.id,
           ...data,
+          products, // Use products from subcollection or legacy
           createdAt: data.createdAt?.toDate(),
           updatedAt: data.updatedAt?.toDate(),
         } as Quote);

@@ -4,6 +4,10 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
+import {
+  getProductsFromSubcollection,
+  updateProductsInSubcollection
+} from '@/lib/firebase/productService';
 import { useAuth } from '@/lib/firebase/authContext';
 import { getAllCustomers } from '@/lib/firebase/customerService';
 import { getAllMaterials, getAllSeries } from '@/lib/firebase/pricingService';
@@ -88,6 +92,21 @@ export default function EditQuotePage() {
 
       if (quoteDoc.exists()) {
         const data = quoteDoc.data();
+
+        // Try to load products from subcollection first
+        let loadedProducts: QuoteProduct[] = [];
+        try {
+          loadedProducts = await getProductsFromSubcollection(quoteId);
+        } catch (e) {
+          console.log('No products subcollection, checking legacy products array');
+        }
+
+        // Fallback to legacy embedded products if subcollection is empty
+        if (loadedProducts.length === 0 && data.products && data.products.length > 0) {
+          console.log('Using legacy embedded products array');
+          loadedProducts = data.products;
+        }
+
         const loadedQuote = {
           id: quoteDoc.id,
           quoteNumber: data.quoteNumber,
@@ -102,7 +121,7 @@ export default function EditQuotePage() {
           paymentTerms: data.paymentTerms || { advancePercentage: 30, approvalPercentage: 70, customTerms: '' },
           currencyExchangeRate: data.currencyExchangeRate || null,
           pricingType: data.pricingType || 'Ex-Works',
-          products: data.products || [],
+          products: loadedProducts, // Use products from subcollection or legacy
           subtotal: data.subtotal || 0,
           discount: data.discount || 0,
           discountAmount: data.discountAmount || 0,
@@ -119,7 +138,7 @@ export default function EditQuotePage() {
         } as Quote;
 
         setQuote(loadedQuote);
-        setProducts(loadedQuote.products);
+        setProducts(loadedProducts);
         setDiscount(loadedQuote.discount);
         setTax(loadedQuote.tax);
         setPackagePrice((loadedQuote as any).packagePrice || 0);
@@ -197,38 +216,13 @@ export default function EditQuotePage() {
       const totalWithPackage = taxableWithPackage + taxAmountWithPackage;
 
       const quoteRef = doc(db, 'quotes', quote.id);
+
+      // Update quote document WITHOUT products (products in subcollection)
       await updateDoc(quoteRef, {
         quoteNumber: customQuoteNumber || quote.quoteNumber, // Use custom if provided
         customQuoteNumber: customQuoteNumber || null,
-        products: products.map(p => ({
-          ...p,
-          // Ensure undefined values are null for Firestore
-          productTag: p.productTag || null,
-          cageMaterialId: p.cageMaterialId || null,
-          cageWeight: p.cageWeight || null,
-          cageMaterialPrice: p.cageMaterialPrice || null,
-          cageTotalCost: p.cageTotalCost || null,
-          sealType: p.sealType || null,
-          sealRingFixedPrice: p.sealRingFixedPrice || null,
-          sealRingTotalCost: p.sealRingTotalCost || null,
-          actuatorType: p.actuatorType || null,
-          actuatorSeries: p.actuatorSeries || null,
-          actuatorModel: p.actuatorModel || null,
-          actuatorStandard: p.actuatorStandard || null,
-          actuatorFixedPrice: p.actuatorFixedPrice || null,
-          handwheelType: p.handwheelType || null,
-          handwheelSeries: p.handwheelSeries || null,
-          handwheelModel: p.handwheelModel || null,
-          handwheelStandard: p.handwheelStandard || null,
-          handwheelFixedPrice: p.handwheelFixedPrice || null,
-          actuatorSubAssemblyTotal: p.actuatorSubAssemblyTotal || 0,
-          tubingAndFitting: p.tubingAndFitting || [],
-          tubingAndFittingTotal: p.tubingAndFittingTotal || 0,
-          testing: p.testing || [],
-          testingTotal: p.testingTotal || 0,
-          accessories: p.accessories || [],
-          accessoriesTotal: p.accessoriesTotal || 0,
-        })),
+        // Products stored in subcollection - only keep count here
+        productCount: products.length,
         subtotal: subtotalWithPackage,
         discount,
         discountAmount: discountAmountWithPackage,
@@ -256,6 +250,9 @@ export default function EditQuotePage() {
         pricingType: pricingType,
         updatedAt: Timestamp.now(),
       });
+
+      // Update products in subcollection (supports 400+ products)
+      await updateProductsInSubcollection(quote.id, products);
 
       alert('Quote updated successfully!');
       router.push('/employee');

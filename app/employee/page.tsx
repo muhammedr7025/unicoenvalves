@@ -1,52 +1,82 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { useEffect, useState, useCallback } from 'react';
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  orderBy,
+  limit,
+  startAfter,
+  getCountFromServer,
+  QueryDocumentSnapshot,
+  DocumentData
+} from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { useAuth } from '@/lib/firebase/authContext';
 import { Quote } from '@/types';
 import { formatDate } from '@/utils/dateFormat';
 import Link from 'next/link';
 
+const PAGE_SIZE = 50; // Load 50 quotes at a time
+
 export default function EmployeeDashboard() {
   const { user } = useAuth();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [filter, setFilter] = useState<'all' | 'draft' | 'sent' | 'approved' | 'rejected'>('all');
+  const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
     if (user) {
-      fetchQuotes();
+      fetchInitialQuotes();
     }
   }, [user]);
 
-  const fetchQuotes = async () => {
+  // Fetch total count for stats
+  const fetchTotalCount = async () => {
     if (!user) return;
-    
+    try {
+      const quotesRef = collection(db, 'quotes');
+      const countQuery = query(quotesRef, where('createdBy', '==', user.id));
+      const snapshot = await getCountFromServer(countQuery);
+      setTotalCount(snapshot.data().count);
+    } catch (error) {
+      console.error('Error fetching count:', error);
+    }
+  };
+
+  const fetchInitialQuotes = async () => {
+    if (!user) return;
+
     setLoading(true);
     try {
-      console.log('Fetching quotes for user:', user.id);
-      
+      await fetchTotalCount();
+
       const quotesRef = collection(db, 'quotes');
       const q = query(
         quotesRef,
         where('createdBy', '==', user.id),
-        orderBy('createdAt', 'desc')
+        orderBy('createdAt', 'desc'),
+        limit(PAGE_SIZE)
       );
-      
+
       const snapshot = await getDocs(q);
-      console.log('Found quotes:', snapshot.docs.length);
-      
+      console.log('Loaded initial quotes:', snapshot.docs.length);
+
       const quotesData = snapshot.docs.map((doc) => {
         const data = doc.data();
-        console.log('Quote data:', data);
-        
         return {
           id: doc.id,
           quoteNumber: data.quoteNumber,
           customerId: data.customerId,
           customerName: data.customerName,
-          products: data.products || [],
+          products: [], // Don't load products in list view for performance
+          productCount: data.productCount || data.products?.length || 0,
           subtotal: data.subtotal || 0,
           discount: data.discount || 0,
           discountAmount: data.discountAmount || 0,
@@ -62,9 +92,10 @@ export default function EmployeeDashboard() {
           isArchived: data.isArchived || false,
         } as Quote;
       });
-      
-      console.log('Processed quotes:', quotesData);
+
       setQuotes(quotesData);
+      setLastDoc(snapshot.docs[snapshot.docs.length - 1] || null);
+      setHasMore(snapshot.docs.length === PAGE_SIZE);
     } catch (error) {
       console.error('Error fetching quotes:', error);
     } finally {
@@ -72,12 +103,65 @@ export default function EmployeeDashboard() {
     }
   };
 
-  const filteredQuotes = filter === 'all' 
-    ? quotes 
+  const loadMoreQuotes = async () => {
+    if (!user || !lastDoc || loadingMore) return;
+
+    setLoadingMore(true);
+    try {
+      const quotesRef = collection(db, 'quotes');
+      const q = query(
+        quotesRef,
+        where('createdBy', '==', user.id),
+        orderBy('createdAt', 'desc'),
+        startAfter(lastDoc),
+        limit(PAGE_SIZE)
+      );
+
+      const snapshot = await getDocs(q);
+      console.log('Loaded more quotes:', snapshot.docs.length);
+
+      const moreQuotes = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          quoteNumber: data.quoteNumber,
+          customerId: data.customerId,
+          customerName: data.customerName,
+          products: [],
+          productCount: data.productCount || data.products?.length || 0,
+          subtotal: data.subtotal || 0,
+          discount: data.discount || 0,
+          discountAmount: data.discountAmount || 0,
+          tax: data.tax || 0,
+          taxAmount: data.taxAmount || 0,
+          total: data.total || 0,
+          status: data.status || 'draft',
+          createdBy: data.createdBy,
+          createdByName: data.createdByName,
+          createdAt: data.createdAt?.toDate() || new Date(),
+          updatedAt: data.updatedAt?.toDate() || new Date(),
+          notes: data.notes || '',
+          isArchived: data.isArchived || false,
+        } as Quote;
+      });
+
+      setQuotes(prev => [...prev, ...moreQuotes]);
+      setLastDoc(snapshot.docs[snapshot.docs.length - 1] || null);
+      setHasMore(snapshot.docs.length === PAGE_SIZE);
+    } catch (error) {
+      console.error('Error loading more quotes:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const filteredQuotes = filter === 'all'
+    ? quotes
     : quotes.filter(q => q.status === filter);
 
   const stats = {
-    total: quotes.length,
+    total: totalCount, // Use server-side total count
+    loaded: quotes.length,
     draft: quotes.filter(q => q.status === 'draft').length,
     sent: quotes.filter(q => q.status === 'sent').length,
     approved: quotes.filter(q => q.status === 'approved').length,
@@ -132,7 +216,7 @@ export default function EmployeeDashboard() {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -144,7 +228,7 @@ export default function EmployeeDashboard() {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -156,7 +240,7 @@ export default function EmployeeDashboard() {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -176,11 +260,10 @@ export default function EmployeeDashboard() {
           <button
             key={status}
             onClick={() => setFilter(status)}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors capitalize ${
-              filter === status
-                ? 'bg-green-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
-            }`}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors capitalize ${filter === status
+              ? 'bg-green-600 text-white'
+              : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+              }`}
           >
             {status}
           </button>
@@ -195,14 +278,14 @@ export default function EmployeeDashboard() {
               <span className="text-3xl">📄</span>
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              {filter === 'all' 
-                ? 'No quotes yet' 
+              {filter === 'all'
+                ? 'No quotes yet'
                 : `No ${filter} quotes`
               }
             </h3>
             <p className="text-gray-600 mb-6">
-              {filter === 'all' 
-                ? 'Create your first quote to get started' 
+              {filter === 'all'
+                ? 'Create your first quote to get started'
                 : `You don't have any ${filter} quotes`
               }
             </p>
@@ -256,7 +339,9 @@ export default function EmployeeDashboard() {
                       <div className="text-sm text-gray-900">{quote.customerName}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-600">{quote.products.length} item(s)</div>
+                      <div className="text-sm text-gray-600">
+                        {(quote as any).productCount || quote.products?.length || 0} item(s)
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-semibold text-gray-900">
@@ -291,6 +376,37 @@ export default function EmployeeDashboard() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Load More Button */}
+        {hasMore && quotes.length > 0 && (
+          <div className="mt-6 text-center">
+            <button
+              onClick={loadMoreQuotes}
+              disabled={loadingMore}
+              className="bg-green-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
+            >
+              {loadingMore ? (
+                <span className="flex items-center justify-center">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Loading...
+                </span>
+              ) : (
+                `Load More (${quotes.length} of ${totalCount})`
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Pagination Info */}
+        {quotes.length > 0 && (
+          <div className="mt-4 text-center text-sm text-gray-500">
+            Showing {quotes.length} of {totalCount} quotes
+            {!hasMore && quotes.length === totalCount && ' (All loaded)'}
           </div>
         )}
       </div>
