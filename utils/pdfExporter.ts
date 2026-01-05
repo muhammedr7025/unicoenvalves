@@ -15,8 +15,9 @@ const COMPANY = {
 };
 
 // Helper function to format currency - no decimals for whole numbers
+// Using "Rs." because jsPDF default Helvetica font doesn't support ₹ symbol
 const formatINR = (amount: number): string => {
-    return `₹ ${Math.round(amount).toLocaleString('en-IN')}`;
+    return `Rs. ${Math.round(amount).toLocaleString('en-IN')}`;
 };
 
 // Helper function to format date
@@ -27,53 +28,109 @@ const formatDate = (date: Date): string => {
     return `${day}-${month}-${year}`;
 };
 
-// Function to add header to both types of PDFs
-const addHeader = (doc: jsPDF, pageWidth: number) => {
-    // Company name at top
-    doc.setFontSize(11);
+
+// Function to add header with logo on top right
+const addHeader = async (doc: jsPDF, pageWidth: number, logoBase64?: string) => {
+    // Add logo on top right if available
+    if (logoBase64) {
+        try {
+            // Logo dimensions - adjust as needed
+            const logoWidth = 80;
+            const logoHeight = 40;
+            const logoX = pageWidth - 40 - logoWidth; // 40pt from right edge
+            const logoY = 15;
+            doc.addImage(logoBase64, 'PNG', logoX, logoY, logoWidth, logoHeight);
+        } catch (error) {
+            console.error('Error adding logo to PDF:', error);
+        }
+    }
+
+    // Title - centered
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(0, 0, 139); // Dark blue
-    doc.text(COMPANY.name, pageWidth / 2, 30, { align: 'center' });
-
-    // Address details
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0, 0, 0);
-    doc.text(COMPANY.address, pageWidth / 2, 40, { align: 'center' });
-    doc.text(COMPANY.city, pageWidth / 2, 48, { align: 'center' });
-    doc.text(`${COMPANY.phone} | ${COMPANY.email} | ${COMPANY.website}`, pageWidth / 2, 56, { align: 'center' });
-    doc.text(`${COMPANY.gst} | ${COMPANY.cin}`, pageWidth / 2, 64, { align: 'center' });
+    doc.text('Price Summary for Control Valves & Accessories', pageWidth / 2, 35, { align: 'center' });
 
     // Horizontal line under header
     doc.setDrawColor(0, 0, 139);
-    doc.setLineWidth(1);
-    doc.line(40, 70, pageWidth - 40, 70);
+    doc.setLineWidth(0.5);
+    doc.line(40, 55, pageWidth - 40, 55);
 };
 
-// Function to add footer
+// Synchronous version for backward compatibility
+const addHeaderSync = (doc: jsPDF, pageWidth: number) => {
+    // Title - centered
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 139); // Dark blue
+    doc.text('Price Summary for Control Valves & Accessories', pageWidth / 2, 35, { align: 'center' });
+
+    // Horizontal line under header
+    doc.setDrawColor(0, 0, 139);
+    doc.setLineWidth(0.5);
+    doc.line(40, 55, pageWidth - 40, 55);
+};
+
+// Function to add footer with company address (like reference PDF)
 const addFooter = (doc: jsPDF, pageWidth: number, pageHeight: number) => {
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'italic');
-    doc.setTextColor(100, 100, 100);
-    const footerY = pageHeight - 25;
+    const footerY = pageHeight - 40;
 
-    doc.text('This is a computer generated quotation and does not require signature', pageWidth / 2, footerY, { align: 'center' });
-    doc.text(`${COMPANY.name} | ${COMPANY.website}`, pageWidth / 2, footerY + 8, { align: 'center' });
-
-    // Page number
+    // Company name and address in red/dark red
     doc.setFontSize(8);
-    doc.text(`Page ${doc.getCurrentPageInfo().pageNumber}`, pageWidth - 50, footerY + 8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(139, 0, 0); // Dark red
+    doc.text('Unicorn Valves Private Limited', pageWidth / 2, footerY, { align: 'center' });
+    
+    doc.setFont('helvetica', 'normal');
+    doc.text(
+        'SF No : 100/2B, Valukkuparai P.O., Marichettipathy Road, Nachipalayam,',
+        pageWidth / 2,
+        footerY + 10,
+        { align: 'center' }
+    );
+    doc.text(
+        'Madukkarai Taluk, Coimbatore – 641032, Tamil Nadu, India, Ph No. +91-422-2901322',
+        pageWidth / 2,
+        footerY + 18,
+        { align: 'center' }
+    );
+    
+    // Website
+    doc.setTextColor(0, 0, 139); // Blue for website
+    doc.text('www.unicorn-valves.com', pageWidth / 2, footerY + 26, { align: 'center' });
+};
+
+// Helper function to load logo as base64
+const loadLogoBase64 = async (): Promise<string | undefined> => {
+    try {
+        // In browser environment, fetch the logo
+        const response = await fetch('/unicorn-valves-logo.png');
+        const blob = await response.blob();
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = () => resolve(undefined);
+            reader.readAsDataURL(blob);
+        });
+    } catch (error) {
+        console.error('Error loading logo:', error);
+        return undefined;
+    }
 };
 
 // Generate Cover Letter PDF
-export function generateCoverLetterPDF(quote: Quote, customerDetails: any) {
+export async function generateCoverLetterPDF(quote: Quote, customerDetails: any) {
     const doc = new jsPDF('p', 'pt', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
 
-    addHeader(doc, pageWidth);
+    // Load logo
+    const logoBase64 = await loadLogoBase64();
 
-    let yPos = 90;
+    // Add header with logo
+    await addHeader(doc, pageWidth, logoBase64);
+
+    let yPos = 70;
 
     // Title
     doc.setFontSize(14);
@@ -237,27 +294,20 @@ export function generateCoverLetterPDF(quote: Quote, customerDetails: any) {
 }
 
 // Generate Price Summary PDF
-export function generatePriceSummaryPDF(quote: Quote, customerDetails: any) {
+export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any) {
     const doc = new jsPDF('p', 'pt', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
 
-    addHeader(doc, pageWidth);
+    // Load logo
+    const logoBase64 = await loadLogoBase64();
 
-    let yPos = 90;
+    // Add header with logo
+    await addHeader(doc, pageWidth, logoBase64);
 
-    // Title
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 139);
-    doc.text('PRICE SUMMARY', pageWidth / 2, yPos, { align: 'center' });
-    doc.setFontSize(11);
-    yPos += 18;
-    doc.text('For Control Valves & Accessories', pageWidth / 2, yPos, { align: 'center' });
+    let yPos = 70;
 
-    yPos += 30;
-
-    // Quote Information Box
+    // Quote Information Box (no separate title needed, header has it)
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(9);
 
@@ -335,11 +385,11 @@ export function generatePriceSummaryPDF(quote: Quote, customerDetails: any) {
         },
         columnStyles: {
             0: { halign: 'center', cellWidth: 35 },
-            1: { halign: 'left', cellWidth: 70 },
-            2: { halign: 'left', cellWidth: 200 },
-            3: { halign: 'right', cellWidth: 85 },
-            4: { halign: 'center', cellWidth: 30 },
-            5: { halign: 'right', cellWidth: 95 },
+            1: { halign: 'left', cellWidth: 60 },
+            2: { halign: 'left', cellWidth: 175 },
+            3: { halign: 'left', cellWidth: 105 },
+            4: { halign: 'left', cellWidth: 30 },
+            5: { halign: 'left', cellWidth: 100 },
         },
         margin: { left: 40, right: 40 },
     });
@@ -349,69 +399,77 @@ export function generatePriceSummaryPDF(quote: Quote, customerDetails: any) {
     // Calculate pricing - use stored packagePrice from quote
     const packingCharges = quote.packagePrice || 0;
 
-    // Summary Table - Using grid theme like reference PDF for better structure
-    const summaryData = [
-        ['Ex-Works Price (Coimbatore)', formatINR(quote.subtotal)],
+    // TOTAL row - centered header spanning full width
+    // Using explicit tableWidth: 515 to match products table exactly (35+70+200+85+30+95)
+    autoTable(doc, {
+        startY: yPos,
+        body: [['TOTAL']],
+        theme: 'grid',
+        tableWidth: 515, // Explicit width matching products table
+        styles: {
+            fontSize: 8,
+            cellPadding: 4,
+            lineColor: [200, 200, 200],
+            lineWidth: 0.5,
+            fontStyle: 'bold',
+            halign: 'center',
+            fillColor: [240, 240, 240],
+        },
+        margin: { left: 40, right: 40 },
+    });
+
+    yPos = (doc as any).lastAutoTable.finalY;
+
+    // Summary rows - TRUE 2-column layout
+    // Col 0: 420pt (matches first 5 product cols: 35+70+200+85+30)
+    // Col 1: 95pt (matches Total Price column)
+    // Total: 515pt
+    const summaryRows = [
+        ['Ex-Works Price Coimbatore', formatINR(quote.subtotal)],
         ['Packing Charges', formatINR(packingCharges)],
-        ['IGST @ 18%', formatINR(quote.taxAmount)],
+        ['IGST(18 %)', formatINR(quote.taxAmount)],
     ];
 
     autoTable(doc, {
         startY: yPos,
-        body: summaryData,
+        body: summaryRows,
         theme: 'grid',
+        tableWidth: 515, // Explicit width
         styles: {
-            fontSize: 9,
-            cellPadding: 6,
+            fontSize: 8,
+            cellPadding: 4,
             lineColor: [200, 200, 200],
             lineWidth: 0.5,
+            overflow: 'ellipsize',
         },
         columnStyles: {
-            0: {
-                fontStyle: 'bold',
-                cellWidth: 360,
-                halign: 'right',
-                fillColor: [250, 250, 250]
-            },
-            1: {
-                halign: 'right',
-                cellWidth: 100,
-                fontStyle: 'bold',
-                fillColor: [255, 255, 255]
-            },
+            0: { cellWidth: 405, halign: 'left' },
+            1: { cellWidth: 110, halign: 'left', fontStyle: 'bold' },
         },
-        margin: { left: 75 },
+        margin: { left: 40, right: 40 },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 3;
+    yPos = (doc as any).lastAutoTable.finalY;
 
-    // Grand Total - Highlighted row
+    // Grand Total row - highlighted
     autoTable(doc, {
         startY: yPos,
-        body: [['Total Ex-works Price (Excluding Freight/Insurance)', formatINR(quote.total)]],
+        body: [['Total Ex-works Price(Excluding Freight/Insurance)', formatINR(quote.total)]],
         theme: 'grid',
+        tableWidth: 515, // Explicit width
         styles: {
-            fontSize: 10,
-            cellPadding: 7,
+            fontSize: 8,
+            cellPadding: 4,
             fontStyle: 'bold',
             lineColor: [200, 200, 200],
             lineWidth: 0.5,
+            overflow: 'ellipsize',
         },
         columnStyles: {
-            0: {
-                cellWidth: 360,
-                halign: 'right',
-                fillColor: [240, 240, 240],
-                fontStyle: 'bold'
-            },
-            1: {
-                halign: 'right',
-                cellWidth: 100,
-                fillColor: [240, 240, 240],
-                fontStyle: 'bold'
-            },
+            0: { cellWidth: 405, halign: 'left', fillColor: [240, 240, 240] },
+            1: { cellWidth: 110, halign: 'left', fillColor: [240, 240, 240] },
         },
-        margin: { left: 75 },
+        margin: { left: 40, right: 40 },
     });
 
     yPos = (doc as any).lastAutoTable.finalY + 30;
@@ -419,8 +477,8 @@ export function generatePriceSummaryPDF(quote: Quote, customerDetails: any) {
     // Check if we need a new page
     if (yPos > pageHeight - 250) {
         doc.addPage();
-        addHeader(doc, pageWidth);
-        yPos = 90;
+        await addHeader(doc, pageWidth, logoBase64);
+        yPos = 70;
     }
 
     // Commercial Terms & Conditions
@@ -463,8 +521,8 @@ export function generatePriceSummaryPDF(quote: Quote, customerDetails: any) {
     // Check if signature fits on this page
     if (yPos > pageHeight - 150) {
         doc.addPage();
-        addHeader(doc, pageWidth);
-        yPos = 90;
+        await addHeader(doc, pageWidth, logoBase64);
+        yPos = 70;
     }
 
     // Signature Section
@@ -494,15 +552,18 @@ export function generatePriceSummaryPDF(quote: Quote, customerDetails: any) {
 }
 
 // Generate Combined PDF (Cover Letter + Price Summary)
-export function generateCombinedPDF(quote: Quote, customerDetails: any) {
+export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
     const doc = new jsPDF('p', 'pt', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
 
-    // ==================== PAGE 1: COVER LETTER ====================
-    addHeader(doc, pageWidth);
+    // Load logo once for all pages
+    const logoBase64 = await loadLogoBase64();
 
-    let yPos = 90;
+    // ==================== PAGE 1: COVER LETTER ====================
+    await addHeader(doc, pageWidth, logoBase64);
+
+    let yPos = 70;
 
     // Title
     doc.setFontSize(14);
@@ -664,22 +725,11 @@ export function generateCombinedPDF(quote: Quote, customerDetails: any) {
 
     // ==================== PAGE 2: PRICE SUMMARY ====================
     doc.addPage();
-    addHeader(doc, pageWidth);
+    await addHeader(doc, pageWidth, logoBase64);
 
-    yPos = 90;
+    yPos = 70;
 
-    // Title
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 139);
-    doc.text('PRICE SUMMARY', pageWidth / 2, yPos, { align: 'center' });
-    doc.setFontSize(11);
-    yPos += 18;
-    doc.text('For Control Valves & Accessories', pageWidth / 2, yPos, { align: 'center' });
-
-    yPos += 30;
-
-    // Quote Information Box
+    // Quote Information Box (title is in header)
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(9);
 
@@ -757,11 +807,11 @@ export function generateCombinedPDF(quote: Quote, customerDetails: any) {
         },
         columnStyles: {
             0: { halign: 'center', cellWidth: 35 },
-            1: { halign: 'left', cellWidth: 70 },
-            2: { halign: 'left', cellWidth: 200 },
-            3: { halign: 'right', cellWidth: 85 },
+            1: { halign: 'left', cellWidth: 60 },
+            2: { halign: 'left', cellWidth: 175 },
+            3: { halign: 'right', cellWidth: 105 },
             4: { halign: 'center', cellWidth: 30 },
-            5: { halign: 'right', cellWidth: 95 },
+            5: { halign: 'right', cellWidth: 110 },
         },
         margin: { left: 40, right: 40 },
     });
@@ -771,69 +821,77 @@ export function generateCombinedPDF(quote: Quote, customerDetails: any) {
     // Calculate pricing - use stored packagePrice from quote
     const packingCharges = quote.packagePrice || 0;
 
-    // Summary Table - Using grid theme like reference PDF for better structure
-    const summaryData = [
-        ['Ex-Works Price (Coimbatore)', formatINR(quote.subtotal)],
+    // TOTAL row - centered header spanning full width
+    // Using explicit tableWidth: 515 to match products table exactly (35+70+200+85+30+95)
+    autoTable(doc, {
+        startY: yPos,
+        body: [['TOTAL']],
+        theme: 'grid',
+        tableWidth: 515, // Explicit width matching products table
+        styles: {
+            fontSize: 8,
+            cellPadding: 4,
+            lineColor: [200, 200, 200],
+            lineWidth: 0.5,
+            fontStyle: 'bold',
+            halign: 'center',
+            fillColor: [240, 240, 240],
+        },
+        margin: { left: 40, right: 40 },
+    });
+
+    yPos = (doc as any).lastAutoTable.finalY;
+
+    // Summary rows - TRUE 2-column layout
+    // Col 0: 420pt (matches first 5 product cols: 35+70+200+85+30)
+    // Col 1: 95pt (matches Total Price column)
+    // Total: 515pt
+    const summaryRows2 = [
+        ['Ex-Works Price Coimbatore', formatINR(quote.subtotal)],
         ['Packing Charges', formatINR(packingCharges)],
-        ['IGST @ 18%', formatINR(quote.taxAmount)],
+        ['IGST(18 %)', formatINR(quote.taxAmount)],
     ];
 
     autoTable(doc, {
         startY: yPos,
-        body: summaryData,
+        body: summaryRows2,
         theme: 'grid',
+        tableWidth: 515, // Explicit width
         styles: {
-            fontSize: 9,
-            cellPadding: 6,
+            fontSize: 8,
+            cellPadding: 4,
             lineColor: [200, 200, 200],
             lineWidth: 0.5,
+            overflow: 'ellipsize',
         },
         columnStyles: {
-            0: {
-                fontStyle: 'bold',
-                cellWidth: 360,
-                halign: 'right',
-                fillColor: [250, 250, 250]
-            },
-            1: {
-                halign: 'right',
-                cellWidth: 100,
-                fontStyle: 'bold',
-                fillColor: [255, 255, 255]
-            },
+            0: { cellWidth: 405, halign: 'left' },
+            1: { cellWidth: 110, halign: 'right', fontStyle: 'bold' },
         },
-        margin: { left: 75 },
+        margin: { left: 40, right: 40 },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 3;
+    yPos = (doc as any).lastAutoTable.finalY;
 
-    // Grand Total - Highlighted row
+    // Grand Total row - highlighted
     autoTable(doc, {
         startY: yPos,
-        body: [['Total Ex-works Price (Excluding Freight/Insurance)', formatINR(quote.total)]],
+        body: [['Total Ex-works Price(Excluding Freight/Insurance)', formatINR(quote.total)]],
         theme: 'grid',
+        tableWidth: 515, // Explicit width
         styles: {
-            fontSize: 10,
-            cellPadding: 7,
+            fontSize: 8,
+            cellPadding: 4,
             fontStyle: 'bold',
             lineColor: [200, 200, 200],
             lineWidth: 0.5,
+            overflow: 'ellipsize',
         },
         columnStyles: {
-            0: {
-                cellWidth: 360,
-                halign: 'right',
-                fillColor: [240, 240, 240],
-                fontStyle: 'bold'
-            },
-            1: {
-                halign: 'right',
-                cellWidth: 100,
-                fillColor: [240, 240, 240],
-                fontStyle: 'bold'
-            },
+            0: { cellWidth: 405, halign: 'left', fillColor: [240, 240, 240] },
+            1: { cellWidth: 110, halign: 'right', fillColor: [240, 240, 240] },
         },
-        margin: { left: 75 },
+        margin: { left: 40, right: 40 },
     });
 
     yPos = (doc as any).lastAutoTable.finalY + 30;
@@ -841,8 +899,8 @@ export function generateCombinedPDF(quote: Quote, customerDetails: any) {
     // Check if we need a new page
     if (yPos > pageHeight - 250) {
         doc.addPage();
-        addHeader(doc, pageWidth);
-        yPos = 90;
+        await addHeader(doc, pageWidth, logoBase64);
+        yPos = 70;
     }
 
     // Commercial Terms & Conditions
@@ -885,8 +943,8 @@ export function generateCombinedPDF(quote: Quote, customerDetails: any) {
     // Check if signature fits on this page
     if (yPos > pageHeight - 150) {
         doc.addPage();
-        addHeader(doc, pageWidth);
-        yPos = 90;
+        await addHeader(doc, pageWidth, logoBase64);
+        yPos = 70;
     }
 
     // Signature Section
@@ -919,20 +977,20 @@ export function generateCombinedPDF(quote: Quote, customerDetails: any) {
 export type PDFExportType = 'cover' | 'pricing' | 'both';
 
 // Main export function
-export function exportQuotePDF(
+export async function exportQuotePDF(
     quote: Quote,
     customerDetails: any,
     exportType: PDFExportType
 ) {
     switch (exportType) {
         case 'cover':
-            generateCoverLetterPDF(quote, customerDetails);
+            await generateCoverLetterPDF(quote, customerDetails);
             break;
         case 'pricing':
-            generatePriceSummaryPDF(quote, customerDetails);
+            await generatePriceSummaryPDF(quote, customerDetails);
             break;
         case 'both':
-            generateCombinedPDF(quote, customerDetails);
+            await generateCombinedPDF(quote, customerDetails);
             break;
     }
 }
