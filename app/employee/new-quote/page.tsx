@@ -484,7 +484,7 @@ export default function NewQuotePage() {
               <h3 className="text-md font-bold text-blue-800 mb-3">🛡️ Warranty Terms (Months)</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-blue-700 mb-2">Shipment Warranty</label>
+                  <label className="block text-sm font-medium text-blue-700 mb-2">From Despatch</label>
                   <input
                     type="number"
                     min="0"
@@ -495,7 +495,7 @@ export default function NewQuotePage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-blue-700 mb-2">Installation Warranty</label>
+                  <label className="block text-sm font-medium text-blue-700 mb-2">From Installation</label>
                   <input
                     type="number"
                     min="0"
