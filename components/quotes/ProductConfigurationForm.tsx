@@ -371,9 +371,7 @@ export default function ProductConfigurationForm({
                     className="w-full px-4 py-3 border-2 border-red-300 rounded-lg text-lg focus:ring-2 focus:ring-red-500"
                     required
                 />
-                <p className="text-xs text-red-700 mt-2 font-medium">
-                    ⚠️ Required: Add a custom identifier to easily distinguish this product in the quote
-                </p>
+
             </div>
 
             {/* Basic Selection */}
@@ -428,9 +426,7 @@ export default function ProductConfigurationForm({
                             </option>
                         ))}
                     </select>
-                    <p className="text-xs text-orange-700 mt-2 font-medium">
-                        ⚠️ Required: Same trim type applies to Plug, Seat, Stem, and Cage components
-                    </p>
+
                 </div>
             )}
 
@@ -1311,107 +1307,7 @@ export default function ProductConfigurationForm({
                         {/* Final Totals */}
                         <div className="bg-gradient-to-r from-green-100 to-emerald-100 rounded-lg p-6 border-2 border-green-300">
                             <div className="space-y-3">
-                                {/* Manufacturing Cost Breakdown */}
-                                <div className="bg-white rounded-lg p-4 mb-3 border border-gray-200">
-                                    <div className="text-sm font-semibold text-gray-700 mb-2">Manufacturing Cost Breakdown:</div>
-                                    <div className="space-y-1 text-sm">
-                                        {(() => {
-                                            const totalMaterialCost = (
-                                                ((currentProduct.bodyWeight || 0) * (currentProduct.bodyMaterialPrice || 0)) +
-                                                ((currentProduct.bonnetWeight || 0) * (currentProduct.bonnetMaterialPrice || 0)) +
-                                                ((currentProduct.plugWeight || 0) * (currentProduct.plugMaterialPrice || 0)) +
-                                                ((currentProduct.seatWeight || 0) * (currentProduct.seatMaterialPrice || 0)) +
-                                                (currentProduct.stemFixedPrice || 0) +
-                                                ((currentProduct.cageWeight || 0) * (currentProduct.cageMaterialPrice || 0)) +
-                                                (currentProduct.sealRingFixedPrice || 0)
-                                            );
-                                            const totalMachineCost = (
-                                                (currentProduct.bodyMachineCost || 0) +
-                                                (currentProduct.bonnetMachineCost || 0) +
-                                                (currentProduct.plugMachineCost || 0) +
-                                                (currentProduct.seatMachineCost || 0) +
-                                                (currentProduct.stemMachineCost || 0) +
-                                                (currentProduct.cageMachineCost || 0) +
-                                                (currentProduct.sealRingMachineCost || 0)
-                                            );
-                                            return (
-                                                <>
-                                                    <div className="flex justify-between text-blue-700">
-                                                        <span>• Material Costs (Body Sub-Assembly)</span>
-                                                        <span className="font-semibold">₹{totalMaterialCost.toLocaleString('en-IN')}</span>
-                                                    </div>
-                                                    {totalMachineCost > 0 && (
-                                                        <div className="flex justify-between text-purple-700">
-                                                            <span>• Machine Costs (Body Sub-Assembly)</span>
-                                                            <span className="font-semibold">₹{totalMachineCost.toLocaleString('en-IN')}</span>
-                                                        </div>
-                                                    )}
-                                                    <div className="flex justify-between text-gray-700">
-                                                        <span>• Actuator + Miscellaneous + Testing</span>
-                                                        <span className="font-semibold">₹{(
-                                                            (currentProduct.actuatorSubAssemblyTotal || 0) +
-                                                            (currentProduct.tubingAndFittingTotal || 0) +
-                                                            (currentProduct.testingTotal || 0)
-                                                        ).toLocaleString('en-IN')}</span>
-                                                    </div>
-                                                </>
-                                            );
-                                        })()}
-                                    </div>
-                                </div>
-
-                                <div className="flex justify-between text-lg">
-                                    <div>
-                                        <div>Manufacturing Cost:</div>
-                                        <div className="text-xs text-gray-600 mt-1">
-                                            (Body Sub-Assembly + Actuator + Miscellaneous + Testing)
-                                        </div>
-                                    </div>
-                                    <span className="font-semibold">₹{(currentProduct.manufacturingCost || 0).toLocaleString('en-IN')}</span>
-                                </div>
-                                <div className="flex justify-between text-sm text-green-700">
-                                    <span>+  Profit ({currentProduct.manufacturingProfitPercentage}%):</span>
-                                    <span>₹{(currentProduct.manufacturingProfitAmount || 0).toLocaleString('en-IN')}</span>
-                                </div>
-
-                                <div className="flex justify-between font-semibold border-b pb-2">
-                                    <span>Manufacturing with Profit:</span>
-                                    <span>₹{(currentProduct.manufacturingCostWithProfit || 0).toLocaleString('en-IN')}</span>
-                                </div>
-
-                                <div className="flex justify-between text-lg">
-                                    <div>
-                                        <div>Bought-out Items:</div>
-                                        <div className="text-xs text-gray-600 mt-1">
-                                            (Accessories only)
-                                        </div>
-                                    </div>
-                                    <span className="font-semibold">₹{(currentProduct.boughtoutItemCost || 0).toLocaleString('en-IN')}</span>
-                                </div>
-                                <div className="flex justify-between text-sm text-green-700">
-                                    <span>+ Profit ({currentProduct.boughtoutProfitPercentage}%):</span>
-                                    <span>₹{(currentProduct.boughtoutProfitAmount || 0).toLocaleString('en-IN')}</span>
-                                </div>
-
-                                <div className="flex justify-between font-semibold border-b pb-2">
-                                    <span>Bought-out with Profit:</span>
-                                    <span>₹{(currentProduct.boughtoutCostWithProfit || 0).toLocaleString('en-IN')}</span>
-                                </div>
-
-                                <div className="flex justify-between text-2xl font-bold text-green-900 pt-3 border-t-4 border-green-500">
-                                    <span>UNIT COST:</span>
-                                    <span>₹{(currentProduct.unitCost || 0).toLocaleString('en-IN')}</span>
-                                </div>
-
-                                {/* Negotiation Margin */}
-                                {(currentProduct.negotiationMarginPercentage || 0) > 0 && (
-                                    <div className="flex justify-between text-sm text-purple-700 mt-2">
-                                        <span>+ Negotiation Margin ({currentProduct.negotiationMarginPercentage}%):</span>
-                                        <span>₹{(currentProduct.negotiationMarginAmount || 0).toLocaleString('en-IN')}</span>
-                                    </div>
-                                )}
-
-                                <div className="flex justify-between text-xl font-bold text-emerald-900 bg-emerald-200 px-4 py-3 rounded-lg mt-4">
+                                <div className="flex justify-between text-xl font-bold text-emerald-900 bg-emerald-200 px-4 py-3 rounded-lg">
                                     <span>FINAL PRICE (Qty: {currentProduct.quantity || 1}):</span>
                                     <span>₹{(currentProduct.lineTotal || 0).toLocaleString('en-IN')}</span>
                                 </div>
