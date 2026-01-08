@@ -224,7 +224,7 @@ export default function QuoteDetailsPage() {
                 quote.status === 'rejected' ? 'bg-red-100 text-red-800' :
                   quote.status === 'sent' ? 'bg-blue-100 text-blue-800' :
                     'bg-gray-100 text-gray-800'}`}>
-              {quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
+              {quote.status === 'sent' ? 'Submitted' : quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
             </span>
           </div>
           <div>
@@ -253,11 +253,11 @@ export default function QuoteDetailsPage() {
               <h3 className="text-sm font-medium text-blue-700 mb-1">🛡️ Warranty (Months)</h3>
               <div className="flex space-x-4">
                 <div>
-                  <span className="text-xs text-gray-500">Shipment:</span>
+                  <span className="text-xs text-gray-500">From Despatch:</span>
                   <span className="ml-1 font-semibold text-blue-800">{quote.warrantyTerms?.shipmentDays || 12}</span>
                 </div>
                 <div>
-                  <span className="text-xs text-gray-500">Installation:</span>
+                  <span className="text-xs text-gray-500">From Installation:</span>
                   <span className="ml-1 font-semibold text-blue-800">{quote.warrantyTerms?.installationDays || 12}</span>
                 </div>
               </div>

@@ -66,7 +66,7 @@ export default function AdminViewQuotePage() {
   const handleStatusChange = async (newStatus: 'draft' | 'sent' | 'approved' | 'rejected') => {
     if (!quote) return;
 
-    if (!confirm(`Are you sure you want to change status to "${newStatus}"?`)) {
+    if (!confirm(`Are you sure you want to change status to "${newStatus === 'sent' ? 'Submitted' : newStatus}"?`)) {
       return;
     }
 
@@ -144,7 +144,7 @@ export default function AdminViewQuotePage() {
         <h3 className="text-lg font-semibold mb-4">Quote Status</h3>
         <div className="flex items-center space-x-4">
           <span className={`px-4 py-2 rounded-lg font-semibold capitalize border-2 ${getStatusColor(quote.status)}`}>
-            Current: {quote.status}
+            Current: {quote.status === 'sent' ? 'Submitted' : quote.status}
           </span>
 
           <div className="flex space-x-2">
@@ -163,7 +163,7 @@ export default function AdminViewQuotePage() {
                 disabled={updating}
                 className="px-4 py-2 border-2 border-blue-300 rounded-lg hover:bg-blue-50 disabled:opacity-50 text-sm"
               >
-                Set to Sent
+                Set to Submitted
               </button>
             )}
             {quote.status !== 'approved' && (

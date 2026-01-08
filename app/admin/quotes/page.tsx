@@ -212,7 +212,7 @@ export default function AdminQuotesPage() {
 
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-gray-600">Sent</p>
+            <p className="text-sm text-gray-600">Submitted</p>
             <span className="text-2xl">📧</span>
           </div>
           <p className="text-3xl font-bold text-blue-600">{stats.sent}</p>
@@ -280,7 +280,7 @@ export default function AdminQuotesPage() {
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
             >
-              {status} ({status === 'all' ? stats.total : stats[status]})
+              {status === 'sent' ? 'Submitted' : status} ({status === 'all' ? stats.total : stats[status]})
             </button>
           ))}
         </div>
@@ -363,7 +363,7 @@ export default function AdminQuotesPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full capitalize ${getStatusColor(quote.status)}`}>
-                        {quote.status}
+                        {quote.status === 'sent' ? 'Submitted' : quote.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">

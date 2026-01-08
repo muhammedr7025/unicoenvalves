@@ -232,7 +232,7 @@ export default function EmployeeDashboard() {
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 mb-1">Sent</p>
+              <p className="text-sm text-gray-600 mb-1">Submitted</p>
               <p className="text-3xl font-bold text-blue-600">{stats.sent}</p>
             </div>
             <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -265,7 +265,7 @@ export default function EmployeeDashboard() {
               : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
               }`}
           >
-            {status}
+            {status === 'sent' ? 'Submitted' : status}
           </button>
         ))}
       </div>
@@ -350,7 +350,7 @@ export default function EmployeeDashboard() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full capitalize ${getStatusColor(quote.status)}`}>
-                        {quote.status}
+                        {quote.status === 'sent' ? 'Submitted' : quote.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">

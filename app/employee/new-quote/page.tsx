@@ -604,7 +604,7 @@ export default function NewQuotePage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">📦 Package Price (₹)</label>
+                <label className="block text-sm font-medium mb-2">📦 Packing Price (₹)</label>
                 <input
                   type="number"
                   min="0"

@@ -442,7 +442,7 @@ export default function EditQuotePage() {
             <h3 className="text-md font-bold text-blue-800 mb-3">🛡️ Warranty Terms (Months)</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-blue-700 mb-2">Shipment Warranty</label>
+                <label className="block text-sm font-medium text-blue-700 mb-2">From Despatch</label>
                 <input
                   type="number"
                   min="0"
@@ -453,7 +453,7 @@ export default function EditQuotePage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-blue-700 mb-2">Installation Warranty</label>
+                <label className="block text-sm font-medium text-blue-700 mb-2">From Installation</label>
                 <input
                   type="number"
                   min="0"
@@ -562,7 +562,7 @@ export default function EditQuotePage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">📦 Package Price (₹)</label>
+              <label className="block text-sm font-medium mb-2">📦 Packing Price (₹)</label>
               <input
                 type="number"
                 min="0"
@@ -580,7 +580,7 @@ export default function EditQuotePage() {
                 className="w-full px-3 py-2 border rounded-lg"
               >
                 <option value="draft">Draft</option>
-                <option value="sent">Sent</option>
+                <option value="sent">Submitted</option>
                 <option value="approved">Approved</option>
                 <option value="rejected">Rejected</option>
               </select>

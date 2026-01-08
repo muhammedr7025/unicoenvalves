@@ -26,7 +26,7 @@ export default function QuoteSummary({
                 </div>
                 {packagePrice > 0 && (
                     <div className="flex justify-between text-orange-600">
-                        <span>📦 Package Price:</span>
+                        <span>📦 Packing Price:</span>
                         <span className="font-semibold">+₹{packagePrice.toLocaleString('en-IN')}</span>
                     </div>
                 )}
