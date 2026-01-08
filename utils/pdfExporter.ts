@@ -47,21 +47,21 @@ const formatPaymentTerms = (paymentTerms?: PaymentTerms): string => {
     }
 
     const { advancePercentage, approvalPercentage, customTerms } = paymentTerms;
-    
+
     // Custom terms override everything (if provided and not empty)
     if (customTerms && customTerms.trim() !== '') {
         return customTerms.trim();
     }
-    
-    
+
+
     const advance = advancePercentage || 0;
     const approval = approvalPercentage || 0;
-    
+
     // Both are zero
     if (advance === 0 && approval === 0) {
         return '100% payment before dispatch';
     }
-    
+
     // Only advance is specified (approval is 0)
     if (advance > 0 && approval === 0) {
         const balance = 100 - advance;
@@ -70,7 +70,7 @@ const formatPaymentTerms = (paymentTerms?: PaymentTerms): string => {
         }
         return `${advance}% advance with purchase order`;
     }
-    
+
     // Only approval is specified (advance is 0)
     if (approval > 0 && advance === 0) {
         const balance = 100 - approval;
@@ -79,7 +79,7 @@ const formatPaymentTerms = (paymentTerms?: PaymentTerms): string => {
         }
         return `${approval}% against approved drawings`;
     }
-    
+
     // Both have values
     const balance = 100 - advance - approval;
     let terms = `${advance}% advance with purchase order\n${approval}% against approved drawings`;
@@ -146,7 +146,7 @@ const addFooter = (doc: jsPDF, pageWidth: number, pageHeight: number) => {
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(139, 0, 0); // Dark red
     doc.text('Unicorn Valves Private Limited', pageWidth / 2, footerY, { align: 'center' });
-    
+
     doc.setFont('helvetica', 'normal');
     doc.text(
         'SF No : 100/2B, Valukkuparai P.O., Marichettipathy Road, Nachipalayam,',
@@ -160,7 +160,7 @@ const addFooter = (doc: jsPDF, pageWidth: number, pageHeight: number) => {
         footerY + 18,
         { align: 'center' }
     );
-    
+
     // Website
     doc.setTextColor(0, 0, 139); // Blue for website
     doc.text('www.unicorn-valves.com', pageWidth / 2, footerY + 26, { align: 'center' });
@@ -203,28 +203,28 @@ const loadTermsConditionsPDF = async (): Promise<ArrayBuffer | undefined> => {
 const mergePDFWithTermsConditions = async (jsPdfDoc: jsPDF): Promise<Uint8Array> => {
     // Convert jsPDF to ArrayBuffer
     const jsPdfArrayBuffer = jsPdfDoc.output('arraybuffer');
-    
+
     // Load the Terms & Conditions PDF
     const tcPdfArrayBuffer = await loadTermsConditionsPDF();
-    
+
     if (!tcPdfArrayBuffer) {
         // If T&C PDF fails to load, return the original PDF
         console.warn('Terms & Conditions PDF not found, returning original PDF');
         return new Uint8Array(jsPdfArrayBuffer);
     }
-    
+
     // Create PDFDocument instances
     const mainPdf = await PDFDocument.load(jsPdfArrayBuffer);
     const tcPdf = await PDFDocument.load(tcPdfArrayBuffer);
-    
+
     // Copy all pages from T&C PDF to main PDF
     const tcPageCount = tcPdf.getPageCount();
     const copiedPages = await mainPdf.copyPages(tcPdf, Array.from({ length: tcPageCount }, (_, i) => i));
-    
+
     copiedPages.forEach((page) => {
         mainPdf.addPage(page);
     });
-    
+
     // Return merged PDF bytes
     return await mainPdf.save();
 };
@@ -237,23 +237,23 @@ const createCombinedPDFWithTermsConditions = async (
     // Convert jsPDFs to ArrayBuffers
     const coverLetterArrayBuffer = coverLetterPdf.output('arraybuffer');
     const priceSummaryArrayBuffer = priceSummaryPdf.output('arraybuffer');
-    
+
     // Load the Terms & Conditions PDF
     const tcPdfArrayBuffer = await loadTermsConditionsPDF();
-    
+
     // Create final merged PDF
     const finalPdf = await PDFDocument.create();
-    
+
     // Load cover letter PDF and add all its pages
     const coverPdf = await PDFDocument.load(coverLetterArrayBuffer);
     const coverPages = await finalPdf.copyPages(coverPdf, coverPdf.getPageIndices());
     coverPages.forEach((page) => finalPdf.addPage(page));
-    
+
     // Load price summary PDF and add all its pages
     const pricePdf = await PDFDocument.load(priceSummaryArrayBuffer);
     const pricePages = await finalPdf.copyPages(pricePdf, pricePdf.getPageIndices());
     pricePages.forEach((page) => finalPdf.addPage(page));
-    
+
     // Add Terms & Conditions PDF pages at the end (if available)
     if (tcPdfArrayBuffer) {
         const tcPdf = await PDFDocument.load(tcPdfArrayBuffer);
@@ -262,7 +262,7 @@ const createCombinedPDFWithTermsConditions = async (
     } else {
         console.warn('Terms & Conditions PDF not found for combined document');
     }
-    
+
     return await finalPdf.save();
 };
 
@@ -478,16 +478,26 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
 
     // Products Table
     const productsTableData = quote.products.map((product, index) => {
-        // Build description
-        const descParts = [];
-        descParts.push(`${product.productType} Series ${product.seriesNumber}`);
-        if (product.productTag) descParts.push(`Tag: ${product.productTag}`);
-        descParts.push(`Size: ${product.size}, Rating: ${product.rating}`);
+        // Build description - values only, comma separated
+        const descParts: string[] = [];
+        descParts.push(`${product.seriesNumber}`);
+        if (product.size) descParts.push(`${product.size}`);
+        if (product.rating) descParts.push(`${product.rating}`);
+        if (product.bodyEndConnectType) descParts.push(`${product.bodyEndConnectType}`);
+        if (product.bodyBonnetMaterialName) descParts.push(`${product.bodyBonnetMaterialName}`);
+        if (product.actuatorSeries && product.actuatorModel) {
+            descParts.push(`${product.actuatorSeries}/${product.actuatorModel}`);
+        }
+        // Add accessories short forms
+        if (product.accessories && product.accessories.length > 0) {
+            const accessoryNames = product.accessories.map(a => a.title).join(', ');
+            descParts.push(accessoryNames);
+        }
 
         return [
             (index + 1).toString(),
             product.productTag || `Item ${index + 1}`,
-            descParts.join('\n'),
+            descParts.join(', '),
             formatINR(product.unitCost),
             product.quantity.toString(),
             formatINR(product.lineTotal),
@@ -558,19 +568,19 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
     // Total: 515pt
     const isFOR = quote.pricingType === 'F.O.R.';
     const freightCharges = quote.freightPrice || 0;
-    
+
     // Build summary rows based on pricing type
     const summaryRows: string[][] = [];
-    
+
     // Show price label based on pricing type
     const priceLabel = isFOR ? 'F.O.R. Price Coimbatore' : 'Ex-Works Price Coimbatore';
     summaryRows.push([priceLabel, formatINR(quote.subtotal)]);
-    
+
     // For F.O.R., add freight charges as a separate row
     if (isFOR && freightCharges > 0) {
         summaryRows.push(['Freight Charges', formatINR(freightCharges)]);
     }
-    
+
     summaryRows.push(['Packing Charges', formatINR(packingCharges)]);
     summaryRows.push([`IGST(${quote.tax || 18} %)`, formatINR(quote.taxAmount)]);
 
@@ -599,12 +609,12 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
 
     // Grand Total row - highlighted
     // For F.O.R., freight is included but insurance is excluded; for Ex-Works, both are excluded
-    const grandTotalLabel = isFOR 
-        ? 'Total F.O.R. Price (Excluding Insurance)' 
+    const grandTotalLabel = isFOR
+        ? 'Total F.O.R. Price (Excluding Insurance)'
         : 'Total Ex-works Price(Excluding Freight/Insurance)';
     const grandTotalValue = isFOR ? quote.total + freightCharges : quote.total;
 
-    
+
     autoTable(doc, {
         startY: yPos,
         body: [[grandTotalLabel, formatINR(grandTotalValue)]],
@@ -652,12 +662,12 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
         ['Warranty', `UVPL Standard Warranty - ${quote.warrantyTerms?.shipmentDays || 18} months from shipping or ${quote.warrantyTerms?.installationDays || 12} months from installation, whichever is earlier (on material & workmanship)`],
         ['Payment Terms', formatPaymentTerms(quote.paymentTerms)],
     ];
-    
+
     // Only show Freight row if NOT F.O.R. (since freight is included in F.O.R.)
     if (!isFOR) {
         termsData.push(['Freight', 'To be borne by buyer']);
     }
-    
+
     termsData.push(['Insurance', 'To be arranged by buyer']);
     termsData.push(['Manufacturer', 'Unicorn Valves Private Limited']);
 
@@ -718,12 +728,12 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
 export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
     // Load logo once for all pages
     const logoBase64 = await loadLogoBase64();
-    
+
     // ==================== Create Cover Letter PDF ====================
     const coverLetterDoc = new jsPDF('p', 'pt', 'a4');
     const pageWidth = coverLetterDoc.internal.pageSize.getWidth();
     const pageHeight = coverLetterDoc.internal.pageSize.getHeight();
-    
+
     // Add header with logo only (no title for cover letter)
     await addHeader(coverLetterDoc, pageWidth, logoBase64, false);
 
@@ -857,7 +867,7 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
     const priceSummaryDoc = new jsPDF('p', 'pt', 'a4');
     const pricePageWidth = priceSummaryDoc.internal.pageSize.getWidth();
     const pricePageHeight = priceSummaryDoc.internal.pageSize.getHeight();
-    
+
     await addHeader(priceSummaryDoc, pricePageWidth, logoBase64);
 
     yPos = 70;
@@ -901,16 +911,26 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
 
     // Products Table
     const productsTableData = quote.products.map((product, index) => {
-        // Build description
-        const descParts = [];
-        descParts.push(`${product.productType} Series ${product.seriesNumber}`);
-        if (product.productTag) descParts.push(`Tag: ${product.productTag}`);
-        descParts.push(`Size: ${product.size}, Rating: ${product.rating}`);
+        // Build description - values only, comma separated
+        const descParts: string[] = [];
+        descParts.push(`${product.seriesNumber}`);
+        if (product.size) descParts.push(`${product.size}`);
+        if (product.rating) descParts.push(`${product.rating}`);
+        if (product.bodyEndConnectType) descParts.push(`${product.bodyEndConnectType}`);
+        if (product.bodyBonnetMaterialName) descParts.push(`${product.bodyBonnetMaterialName}`);
+        if (product.actuatorSeries && product.actuatorModel) {
+            descParts.push(`${product.actuatorSeries}/${product.actuatorModel}`);
+        }
+        // Add accessories short forms
+        if (product.accessories && product.accessories.length > 0) {
+            const accessoryNames = product.accessories.map(a => a.title).join(', ');
+            descParts.push(accessoryNames);
+        }
 
         return [
             (index + 1).toString(),
             product.productTag || `Item ${index + 1}`,
-            descParts.join('\n'),
+            descParts.join(', '),
             formatINR(product.unitCost),
             product.quantity.toString(),
             formatINR(product.lineTotal),
@@ -977,18 +997,18 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
     // Summary rows - F.O.R. vs Ex-Works pricing
     const isFORCombined = quote.pricingType === 'F.O.R.';
     const freightChargesCombined = quote.freightPrice || 0;
-    
+
     const summaryRowsCombined: string[][] = [];
-    
+
     // Show price label based on pricing type
     const priceLabelCombined = isFORCombined ? 'F.O.R. Price' : 'Ex-Works Price Coimbatore';
     summaryRowsCombined.push([priceLabelCombined, formatINR(quote.subtotal)]);
-    
+
     // For F.O.R., add freight charges as a separate row
     if (isFORCombined && freightChargesCombined > 0) {
         summaryRowsCombined.push(['Freight Charges', formatINR(freightChargesCombined)]);
     }
-    
+
     summaryRowsCombined.push(['Packing Charges', formatINR(packingCharges)]);
     summaryRowsCombined.push([`IGST(${quote.tax || 18} %)`, formatINR(quote.taxAmount)]);
 
@@ -1016,11 +1036,11 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
     yPos = (priceSummaryDoc as any).lastAutoTable.finalY;
 
     // Grand Total row - highlighted
-    const grandTotalLabelCombined = isFORCombined 
-        ? 'Total F.O.R. Price (Excluding Insurance)' 
+    const grandTotalLabelCombined = isFORCombined
+        ? 'Total F.O.R. Price (Excluding Insurance)'
         : 'Total Ex-works Price(Excluding Freight/Insurance)';
     const grandTotalValueCombined = isFORCombined ? quote.total + freightChargesCombined : quote.total;
-    
+
     autoTable(priceSummaryDoc, {
         startY: yPos,
         body: [[grandTotalLabelCombined, formatINR(grandTotalValueCombined)]],
@@ -1067,12 +1087,12 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
         ['Warranty', `UVPL Standard Warranty - ${quote.warrantyTerms?.shipmentDays || 18} months from shipping or ${quote.warrantyTerms?.installationDays || 12} months from installation, whichever is earlier (on material & workmanship)`],
         ['Payment Terms', formatPaymentTerms(quote.paymentTerms)],
     ];
-    
+
     // Only show Freight row if NOT F.O.R. (since freight is included in F.O.R.)
     if (!isFORCombined) {
         termsDataCombined.push(['Freight', 'To be borne by buyer']);
     }
-    
+
     termsDataCombined.push(['Insurance', 'To be arranged by buyer']);
     termsDataCombined.push(['Manufacturer', 'Unicorn Valves Private Limited']);
 
