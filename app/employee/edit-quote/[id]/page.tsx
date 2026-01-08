@@ -211,13 +211,14 @@ export default function EditQuotePage() {
     setSaving(true);
 
     try {
-      // Calculate totals with package price
+      // Calculate totals - discount applies only to product subtotal (not package)
       const baseTotals = calculateQuoteTotals(products, discount, tax);
-      const subtotalWithPackage = baseTotals.subtotal + packagePrice;
-      const discountAmountWithPackage = (subtotalWithPackage * discount) / 100;
-      const taxableWithPackage = subtotalWithPackage - discountAmountWithPackage;
-      const taxAmountWithPackage = (taxableWithPackage * tax) / 100;
-      const totalWithPackage = taxableWithPackage + taxAmountWithPackage;
+      const productSubtotal = baseTotals.subtotal;
+      const discountAmount = (productSubtotal * discount) / 100;
+      const discountedProductTotal = productSubtotal - discountAmount;
+      const subtotalWithPackage = discountedProductTotal + packagePrice;
+      const taxAmountWithPackage = (subtotalWithPackage * tax) / 100;
+      const totalWithPackage = subtotalWithPackage + taxAmountWithPackage;
 
       const quoteRef = doc(db, 'quotes', quote.id);
 
@@ -229,7 +230,7 @@ export default function EditQuotePage() {
         productCount: products.length,
         subtotal: subtotalWithPackage,
         discount,
-        discountAmount: discountAmountWithPackage,
+        discountAmount: discountAmount,
         tax,
         taxAmount: taxAmountWithPackage,
         total: totalWithPackage,
@@ -275,11 +276,13 @@ export default function EditQuotePage() {
     ? calculateQuoteTotals(products, discount, tax)
     : { subtotal: 0, discountAmount: 0, taxableAmount: 0, taxAmount: 0, total: 0 };
 
-  const displaySubtotal = baseTotals.subtotal + packagePrice;
-  const displayDiscountAmount = (displaySubtotal * discount) / 100;
-  const displayTaxable = displaySubtotal - displayDiscountAmount;
-  const displayTaxAmount = (displayTaxable * tax) / 100;
-  const displayTotal = displayTaxable + displayTaxAmount;
+  // Discount applies only to product subtotal (not package price)
+  const productSubtotalForDisplay = baseTotals.subtotal;
+  const displayDiscountAmount = (productSubtotalForDisplay * discount) / 100;
+  const discountedProductTotal = productSubtotalForDisplay - displayDiscountAmount;
+  const displaySubtotal = discountedProductTotal + packagePrice;
+  const displayTaxAmount = (displaySubtotal * tax) / 100;
+  const displayTotal = displaySubtotal + displayTaxAmount;
 
   if (loading) {
     return (
