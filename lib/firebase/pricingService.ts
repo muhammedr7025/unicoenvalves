@@ -230,7 +230,7 @@ const getStemPriceKey = (s: any) => `${s.seriesId}_${s.size}_${s.rating}_${s.mat
 const getCageWeightKey = (c: any) => `${c.seriesId}_${c.size}_${c.rating}`;
 const getSealRingPriceKey = (s: any) => `${s.seriesId}_${s.sealType}_${s.size}_${s.rating}`;
 const getActuatorModelKey = (a: any) => `${a.type}_${a.series}_${a.model}_${a.standard}`;
-const getHandwheelPriceKey = (h: any) => h.actuatorModel;
+const getHandwheelPriceKey = (h: any) => `${h.type}_${h.series}_${h.model}_${h.standard}`;
 
 // Generic merge function
 async function mergeCollection(
