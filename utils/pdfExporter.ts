@@ -510,13 +510,14 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
         body: productsTableData,
         theme: 'grid',
         headStyles: {
-            fillColor: [0, 0, 139],
-            textColor: 255,
+            fillColor: [255, 255, 255],
+            textColor: [0, 0, 0],
             fontStyle: 'bold',
             fontSize: 9,
             halign: 'center',
             valign: 'middle',
         },
+
         styles: {
             fontSize: 8.5,
             cellPadding: 5,
@@ -944,13 +945,14 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
         body: productsTableData,
         theme: 'grid',
         headStyles: {
-            fillColor: [0, 0, 139],
-            textColor: 255,
+            fillColor: [255, 255, 255],
+            textColor: [0, 0, 0],
             fontStyle: 'bold',
             fontSize: 9,
             halign: 'center',
             valign: 'middle',
         },
+
         styles: {
             fontSize: 8.5,
             cellPadding: 5,
