@@ -1225,17 +1225,7 @@ export default function ProductConfigurationForm({
                                 </div>
                         </div>
 
-                        {/* Actuator Sub-Assembly Breakdown */}
-                        {(currentProduct.actuatorSubAssemblyTotal || 0) > 0 && (
-                            <div className="bg-white rounded-lg p-4 mb-4">
-                                
-
-                                {/* Actuator Specifications */}
-                                
-
-                               
-                            </div>
-                        )}
+         
 
                         {/* Miscellaneous Breakdown */}
                         {(currentProduct.tubingAndFittingTotal || 0) > 0 && (
