@@ -374,27 +374,6 @@ export default function ProductConfigurationForm({
                 </p>
             </div>
 
-            {/* Trim Type Selection - Required for Machine Pricing */}
-            <div className="mb-6 bg-orange-50 border-2 border-orange-300 rounded-lg p-4">
-                <label className="block text-sm font-medium mb-2">Trim Type *</label>
-                <select
-                    value={currentProduct.trimType || ''}
-                    onChange={(e) => setCurrentProduct({ ...currentProduct, trimType: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-orange-300 rounded-lg text-lg focus:ring-2 focus:ring-orange-500"
-                    required
-                >
-                    <option value="">Select Trim Type</option>
-                    {availableTrimTypes.map((type) => (
-                        <option key={type} value={type}>
-                            {type}
-                        </option>
-                    ))}
-                </select>
-                <p className="text-xs text-orange-700 mt-2 font-medium">
-                    ⚠️ Required: Trim type is used for machine hour calculations (affects Plug, Seat, Stem, Cage, Seal Ring)
-                </p>
-            </div>
-
             {/* Basic Selection */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div>
@@ -429,6 +408,29 @@ export default function ProductConfigurationForm({
                     />
                 </div>
             </div>
+
+            {/* Trim Type Selection - After Series/Size/Rating, Required for Machine Pricing */}
+            {currentProduct.size && currentProduct.rating && (
+                <div className="mb-6 bg-orange-50 border-2 border-orange-300 rounded-lg p-4">
+                    <label className="block text-sm font-medium mb-2">Trim Type * (Used for Plug, Seat, Stem, Cage pricing)</label>
+                    <select
+                        value={currentProduct.trimType || ''}
+                        onChange={(e) => setCurrentProduct({ ...currentProduct, trimType: e.target.value })}
+                        className="w-full px-4 py-3 border-2 border-orange-300 rounded-lg text-lg focus:ring-2 focus:ring-orange-500"
+                        required
+                    >
+                        <option value="">Select Trim Type</option>
+                        {availableTrimTypes.map((type) => (
+                            <option key={type} value={type}>
+                                {type}
+                            </option>
+                        ))}
+                    </select>
+                    <p className="text-xs text-orange-700 mt-2 font-medium">
+                        ⚠️ Required: Same trim type applies to Plug, Seat, Stem, and Cage components
+                    </p>
+                </div>
+            )}
 
             {/* BODY SUB-ASSEMBLY */}
             {currentProduct.size && currentProduct.rating && (
