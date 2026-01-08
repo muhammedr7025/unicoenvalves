@@ -374,27 +374,6 @@ export default function ProductConfigurationForm({
                 </p>
             </div>
 
-            {/* Trim Type Selection - Required for Machine Pricing */}
-            <div className="mb-6 bg-orange-50 border-2 border-orange-300 rounded-lg p-4">
-                <label className="block text-sm font-medium mb-2">Trim Type *</label>
-                <select
-                    value={currentProduct.trimType || ''}
-                    onChange={(e) => setCurrentProduct({ ...currentProduct, trimType: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-orange-300 rounded-lg text-lg focus:ring-2 focus:ring-orange-500"
-                    required
-                >
-                    <option value="">Select Trim Type</option>
-                    {availableTrimTypes.map((type) => (
-                        <option key={type} value={type}>
-                            {type}
-                        </option>
-                    ))}
-                </select>
-                <p className="text-xs text-orange-700 mt-2 font-medium">
-                    ⚠️ Required: Trim type is used for machine hour calculations (affects Plug, Seat, Stem, Cage, Seal Ring)
-                </p>
-            </div>
-
             {/* Basic Selection */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div>
@@ -429,6 +408,29 @@ export default function ProductConfigurationForm({
                     />
                 </div>
             </div>
+
+            {/* Trim Type Selection - After Series/Size/Rating, Required for Machine Pricing */}
+            {currentProduct.size && currentProduct.rating && (
+                <div className="mb-6 bg-orange-50 border-2 border-orange-300 rounded-lg p-4">
+                    <label className="block text-sm font-medium mb-2">Trim Type * (Used for Plug, Seat, Stem, Cage pricing)</label>
+                    <select
+                        value={currentProduct.trimType || ''}
+                        onChange={(e) => setCurrentProduct({ ...currentProduct, trimType: e.target.value })}
+                        className="w-full px-4 py-3 border-2 border-orange-300 rounded-lg text-lg focus:ring-2 focus:ring-orange-500"
+                        required
+                    >
+                        <option value="">Select Trim Type</option>
+                        {availableTrimTypes.map((type) => (
+                            <option key={type} value={type}>
+                                {type}
+                            </option>
+                        ))}
+                    </select>
+                    <p className="text-xs text-orange-700 mt-2 font-medium">
+                        ⚠️ Required: Same trim type applies to Plug, Seat, Stem, and Cage components
+                    </p>
+                </div>
+            )}
 
             {/* BODY SUB-ASSEMBLY */}
             {currentProduct.size && currentProduct.rating && (
@@ -764,11 +766,11 @@ export default function ProductConfigurationForm({
                 )
             }
 
-            {/* TUBING & FITTING MODULE */}
+            {/* MISCELLANEOUS MODULE */}
             {
                 currentProduct.size && currentProduct.rating && (
                     <div className="border-2 border-orange-200 rounded-lg p-6 mb-6 bg-orange-50">
-                        <h3 className="text-xl font-bold mb-4 text-orange-900">🔧 Tubing & Fitting</h3>
+                        <h3 className="text-xl font-bold mb-4 text-orange-900">📦 Miscellaneous</h3>
 
                         <div className="bg-white rounded-lg p-4 mb-4">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -778,7 +780,7 @@ export default function ProductConfigurationForm({
                                         type="text"
                                         value={newTubingTitle}
                                         onChange={(e) => setNewTubingTitle(e.target.value)}
-                                        placeholder="e.g., Stainless Steel Tubing 1/4 inch"
+                                        placeholder="e.g., Cables, Fittings, Brackets, etc."
                                         className="w-full px-3 py-2 border rounded-lg"
                                     />
                                 </div>
@@ -819,7 +821,7 @@ export default function ProductConfigurationForm({
                                 ))}
                                 <div className="bg-orange-100 p-3 rounded-lg">
                                     <p className="font-bold text-orange-900">
-                                        Tubing & Fitting Total: ₹{tubingAndFittingItems.reduce((sum, item) => sum + item.price, 0).toLocaleString('en-IN')}
+                                        Miscellaneous Total: ₹{tubingAndFittingItems.reduce((sum, item) => sum + item.price, 0).toLocaleString('en-IN')}
                                     </p>
                                 </div>
                             </div>
@@ -1281,10 +1283,10 @@ export default function ProductConfigurationForm({
                             </div>
                         )}
 
-                        {/* Tubing & Fitting Breakdown */}
+                        {/* Miscellaneous Breakdown */}
                         {(currentProduct.tubingAndFittingTotal || 0) > 0 && (
                             <div className="bg-white rounded-lg p-4 mb-4">
-                                <h3 className="font-bold text-lg mb-3 text-orange-900">🔧 Tubing & Fitting</h3>
+                                <h3 className="font-bold text-lg mb-3 text-orange-900">📦 Miscellaneous</h3>
                                 <div className="space-y-2 text-sm">
                                     {currentProduct.tubingAndFitting?.map((item, idx) => (
                                         <div key={idx} className="flex justify-between">
@@ -1381,7 +1383,7 @@ export default function ProductConfigurationForm({
                                                         </div>
                                                     )}
                                                     <div className="flex justify-between text-gray-700">
-                                                        <span>• Actuator + Tubing  + Testing</span>
+                                                        <span>• Actuator + Miscellaneous + Testing</span>
                                                         <span className="font-semibold">₹{(
                                                             (currentProduct.actuatorSubAssemblyTotal || 0) +
                                                             (currentProduct.tubingAndFittingTotal || 0) +
@@ -1398,7 +1400,7 @@ export default function ProductConfigurationForm({
                                     <div>
                                         <div>Manufacturing Cost:</div>
                                         <div className="text-xs text-gray-600 mt-1">
-                                            (Body Sub-Assembly + Actuator + Tubing & Fitting + Testing)
+                                            (Body Sub-Assembly + Actuator + Miscellaneous + Testing)
                                         </div>
                                     </div>
                                     <span className="font-semibold">₹{(currentProduct.manufacturingCost || 0).toLocaleString('en-IN')}</span>
