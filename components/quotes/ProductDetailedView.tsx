@@ -143,95 +143,77 @@ export default function ProductDetailedView({ product, index }: ProductDetailedV
 
             {/* Machine Costs Section */}
             {(product.bodyMachineCost || product.bonnetMachineCost || product.plugMachineCost ||
-                product.seatMachineCost || product.stemMachineCost || product.cageMachineCost ||
-                product.sealRingMachineCost) && (
+                product.seatMachineCost || product.stemMachineCost || product.cageMachineCost) && (
                     <div className="bg-indigo-50 p-4 rounded-lg mb-4 border-2 border-indigo-200">
                         <h5 className="font-semibold text-indigo-900 mb-3 flex items-center">
                             <span className="text-lg mr-2">⚙️</span>
-                            Machine Costs Breakdown
+                            Fixed Machining Costs
                         </h5>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
-                            {product.bodyWorkHours && product.bodyMachineCost && (
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 text-sm">
+                            {product.bodyMachineCost && product.bodyMachineCost > 0 && (
                                 <div className="bg-white p-3 rounded border border-indigo-200">
-                                    <p className="text-gray-600 font-medium mb-1">Body Machining</p>
-                                    <p className="text-xs text-gray-500">Machine: {product.bodyMachineTypeName}</p>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        {product.bodyWorkHours} hrs × ₹{product.bodyMachineRate}/hr
+                                    <p className="text-gray-600 font-medium mb-1">Body</p>
+                                    <p className="text-xs text-gray-500">
+                                        {product.bodyEndConnectType}
                                     </p>
-                                    <p className="text-indigo-700 font-semibold mt-1">₹{product.bodyMachineCost.toFixed(2)}</p>
+                                    <p className="text-indigo-700 font-semibold mt-1">₹{product.bodyMachineCost.toLocaleString('en-IN')}</p>
                                 </div>
                             )}
-                            {product.bonnetWorkHours && product.bonnetMachineCost && (
+                            {product.bonnetMachineCost && product.bonnetMachineCost > 0 && (
                                 <div className="bg-white p-3 rounded border border-indigo-200">
-                                    <p className="text-gray-600 font-medium mb-1">Bonnet Machining</p>
-                                    <p className="text-xs text-gray-500">Machine: {product.bonnetMachineTypeName}</p>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        {product.bonnetWorkHours} hrs × ₹{product.bonnetMachineRate}/hr
+                                    <p className="text-gray-600 font-medium mb-1">Bonnet</p>
+                                    <p className="text-xs text-gray-500">
+                                        {product.bonnetType}
                                     </p>
-                                    <p className="text-indigo-700 font-semibold mt-1">₹{product.bonnetMachineCost.toFixed(2)}</p>
+                                    <p className="text-indigo-700 font-semibold mt-1">₹{product.bonnetMachineCost.toLocaleString('en-IN')}</p>
                                 </div>
                             )}
-                            {product.plugWorkHours && product.plugMachineCost && (
+                            {product.plugMachineCost && product.plugMachineCost > 0 && (
                                 <div className="bg-white p-3 rounded border border-indigo-200">
-                                    <p className="text-gray-600 font-medium mb-1">Plug Machining</p>
-                                    <p className="text-xs text-gray-500">Machine: {product.plugMachineTypeName}</p>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        {product.plugWorkHours} hrs × ₹{product.plugMachineRate}/hr
+                                    <p className="text-gray-600 font-medium mb-1">Plug</p>
+                                    <p className="text-xs text-gray-500">
+                                        {product.trimType}
                                     </p>
-                                    <p className="text-indigo-700 font-semibold mt-1">₹{product.plugMachineCost.toFixed(2)}</p>
+                                    <p className="text-indigo-700 font-semibold mt-1">₹{product.plugMachineCost.toLocaleString('en-IN')}</p>
                                 </div>
                             )}
-                            {product.seatWorkHours && product.seatMachineCost && (
+                            {product.seatMachineCost && product.seatMachineCost > 0 && (
                                 <div className="bg-white p-3 rounded border border-indigo-200">
-                                    <p className="text-gray-600 font-medium mb-1">Seat Machining</p>
-                                    <p className="text-xs text-gray-500">Machine: {product.seatMachineTypeName}</p>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        {product.seatWorkHours} hrs × ₹{product.seatMachineRate}/hr
+                                    <p className="text-gray-600 font-medium mb-1">Seat</p>
+                                    <p className="text-xs text-gray-500">
+                                        {product.trimType}
                                     </p>
-                                    <p className="text-indigo-700 font-semibold mt-1">₹{product.seatMachineCost.toFixed(2)}</p>
+                                    <p className="text-indigo-700 font-semibold mt-1">₹{product.seatMachineCost.toLocaleString('en-IN')}</p>
                                 </div>
                             )}
-                            {product.stemWorkHours && product.stemMachineCost && (
+                            {product.stemMachineCost && product.stemMachineCost > 0 && (
                                 <div className="bg-white p-3 rounded border border-indigo-200">
-                                    <p className="text-gray-600 font-medium mb-1">Stem Machining</p>
-                                    <p className="text-xs text-gray-500">Machine: {product.stemMachineTypeName}</p>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        {product.stemWorkHours} hrs × ₹{product.stemMachineRate}/hr
+                                    <p className="text-gray-600 font-medium mb-1">Stem</p>
+                                    <p className="text-xs text-gray-500">
+                                        {product.trimType}
                                     </p>
-                                    <p className="text-indigo-700 font-semibold mt-1">₹{product.stemMachineCost.toFixed(2)}</p>
+                                    <p className="text-indigo-700 font-semibold mt-1">₹{product.stemMachineCost.toLocaleString('en-IN')}</p>
                                 </div>
                             )}
-                            {product.cageWorkHours && product.cageMachineCost && (
+                            {product.cageMachineCost && product.cageMachineCost > 0 && (
                                 <div className="bg-white p-3 rounded border border-indigo-200">
-                                    <p className="text-gray-600 font-medium mb-1">Cage Machining</p>
-                                    <p className="text-xs text-gray-500">Machine: {product.cageMachineTypeName}</p>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        {product.cageWorkHours} hrs × ₹{product.cageMachineRate}/hr
+                                    <p className="text-gray-600 font-medium mb-1">Cage</p>
+                                    <p className="text-xs text-gray-500">
+                                        {product.trimType}
                                     </p>
-                                    <p className="text-indigo-700 font-semibold mt-1">₹{product.cageMachineCost.toFixed(2)}</p>
-                                </div>
-                            )}
-                            {product.sealRingWorkHours && product.sealRingMachineCost && (
-                                <div className="bg-white p-3 rounded border border-indigo-200">
-                                    <p className="text-gray-600 font-medium mb-1">Seal Ring Machining</p>
-                                    <p className="text-xs text-gray-500">Machine: {product.sealRingMachineTypeName}</p>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        {product.sealRingWorkHours} hrs × ₹{product.sealRingMachineRate}/hr
-                                    </p>
-                                    <p className="text-indigo-700 font-semibold mt-1">₹{product.sealRingMachineCost.toFixed(2)}</p>
+                                    <p className="text-indigo-700 font-semibold mt-1">₹{product.cageMachineCost.toLocaleString('en-IN')}</p>
                                 </div>
                             )}
                         </div>
                         <div className="mt-3 pt-3 border-t border-indigo-200">
                             <p className="font-bold text-indigo-900">
-                                Total Machine Costs: ₹{(
+                                Total Machining Costs: ₹{(
                                     (product.bodyMachineCost || 0) +
                                     (product.bonnetMachineCost || 0) +
                                     (product.plugMachineCost || 0) +
                                     (product.seatMachineCost || 0) +
                                     (product.stemMachineCost || 0) +
-                                    (product.cageMachineCost || 0) +
-                                    (product.sealRingMachineCost || 0)
+                                    (product.cageMachineCost || 0)
                                 ).toLocaleString('en-IN')}
                             </p>
                         </div>

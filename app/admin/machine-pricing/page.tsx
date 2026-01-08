@@ -2,50 +2,36 @@
 
 import { useState, useEffect, useRef } from 'react';
 import {
-    getMachineTypes,
-    getWorkHours,
-    addMachineType,
-    updateMachineType,
-    deleteMachineType,
-    addWorkHourData,
-    updateWorkHourData,
-    deleteWorkHourData,
-    bulkImportMachineTypes,
-    bulkImportWorkHours,
-} from '@/lib/firebase/machinePricingService';
-import { MachineType, WorkHourData, ComponentType } from '@/types';
+    getAllMachiningPrices,
+    addMachiningPrice,
+    updateMachiningPrice,
+    deleteMachiningPrice,
+    bulkImportMachiningPrices,
+} from '@/lib/firebase/machiningPriceService';
+import { MachiningPrice, MachiningComponentType } from '@/types';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
-import {
-    generateMachinePricingTemplate,
-    exportMachinePricingData,
-    parseMachinePricingExcel,
-} from '@/utils/machinePricingExcel';
+import * as XLSX from 'xlsx';
 
 export default function MachinePricingPage() {
-    const [activeTab, setActiveTab] = useState<'machines' | 'workhours'>('machines');
+    const [activeTab, setActiveTab] = useState<MachiningComponentType | 'All'>('All');
 
-    // Machine Types State
-    const [machineTypes, setMachineTypes] = useState<MachineType[]>([]);
-    const [editingMachine, setEditingMachine] = useState<MachineType | null>(null);
-    const [newMachineName, setNewMachineName] = useState('');
-    const [newMachineRate, setNewMachineRate] = useState(0);
-
-    // Work Hours State
-    const [workHours, setWorkHours] = useState<WorkHourData[]>([]);
-    const [filteredWorkHours, setFilteredWorkHours] = useState<WorkHourData[]>([]);
-    const [filterComponent, setFilterComponent] = useState<ComponentType | 'All'>('All');
-    const [editingWorkHour, setEditingWorkHour] = useState<WorkHourData | null>(null);
+    // Machining Prices State
+    const [machiningPrices, setMachiningPrices] = useState<MachiningPrice[]>([]);
+    const [filteredPrices, setFilteredPrices] = useState<MachiningPrice[]>([]);
+    const [editingPrice, setEditingPrice] = useState<MachiningPrice | null>(null);
     const [series, setSeries] = useState<any[]>([]);
+    const [materials, setMaterials] = useState<any[]>([]);
 
-    // New Work Hour Form State
-    const [newWorkHour, setNewWorkHour] = useState({
+    // New Price Form State
+    const [newPrice, setNewPrice] = useState({
+        component: 'Body' as MachiningComponentType,
         seriesId: '',
         size: '',
         rating: '',
-        trimType: '',
-        component: 'Body' as ComponentType,
-        workHours: 0,
+        typeKey: '', // endConnectType/bonnetType/trimType
+        materialName: '',
+        fixedPrice: 0,
     });
 
     const [loading, setLoading] = useState(false);
@@ -54,110 +40,47 @@ export default function MachinePricingPage() {
     // File upload ref
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Import/Export handlers
-    const handleDownloadTemplate = () => {
-        generateMachinePricingTemplate();
-        setMessage('Template downloaded successfully!');
+    // Component options (Seal Ring excluded - no machining)
+    const componentOptions: MachiningComponentType[] = ['Body', 'Bonnet', 'Plug', 'Seat', 'Stem', 'Cage'];
+
+    // Type key labels
+    const getTypeKeyLabel = (component: MachiningComponentType) => {
+        if (component === 'Body') return 'End Connect Type';
+        if (component === 'Bonnet') return 'Bonnet Type';
+        return 'Trim Type';
     };
 
-    const handleExportData = () => {
-        const seriesMap = new Map(series.map((s) => [s.id, { seriesNumber: s.seriesNumber, name: s.name }]));
-        exportMachinePricingData(machineTypes, workHours, seriesMap);
-        setMessage('Data exported successfully!');
-    };
-
-    const handleImportClick = () => {
-        fileInputRef.current?.click();
-    };
-
-    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-
-        setLoading(true);
-        setMessage('Importing data...');
-
-        try {
-            const seriesMap = new Map(series.map((s) => [s.seriesNumber, { id: s.id, seriesNumber: s.seriesNumber }]));
-            const { machineTypes: importedMachines, workHours: importedWorkHours, errors } =
-                await parseMachinePricingExcel(file, seriesMap);
-
-            console.log('📊 Import Summary:');
-            console.log(`- Machine Types to import: ${importedMachines.length}`);
-            console.log(`- Work Hours to import: ${importedWorkHours.length}`);
-            console.log(`- Parsing errors: ${errors.length}`);
-
-            if (errors.length > 0) {
-                console.error('❌ Parsing errors:', errors);
-            }
-
-            // Import machine types first
-            let machineResult = { success: 0, failed: 0, errors: [] as string[] };
-            if (importedMachines.length > 0) {
-                machineResult = await bulkImportMachineTypes(importedMachines);
-                console.log(`✅ Machine Types: ${machineResult.success} imported, ${machineResult.failed} failed`);
-                await loadMachineTypes(); // Reload to get IDs
-            }
-
-            // Import work hours directly (no machine type mapping needed)
-            let workHourResult = { success: 0, failed: 0, errors: [] as string[] };
-            if (importedWorkHours.length > 0) {
-                workHourResult = await bulkImportWorkHours(importedWorkHours);
-                console.log(`✅ Work Hours: ${workHourResult.success} imported, ${workHourResult.failed} failed`);
-                await loadWorkHours();
-            }
-
-            // Combine all errors
-            const allErrors = [...errors, ...machineResult.errors, ...workHourResult.errors];
-
-            // Show detailed message
-            if (allErrors.length > 0) {
-                const errorMessage = allErrors.join('\n');
-                setMessage(`Import completed with errors. See details below.`);
-                alert(`❌ Import Errors:\n\n${errorMessage}`);
-                console.error('All import errors:', allErrors);
-            } else {
-                setMessage(
-                    `✅ Import successful! Added ${machineResult.success} machine types and ${workHourResult.success} work hour entries.`
-                );
-            }
-        } catch (error: any) {
-            const errorMsg = `Error importing data: ${error.message || 'Unknown error'}`;
-            setMessage(errorMsg);
-            console.error('Import error:', error);
-            alert(errorMsg);
+    // Type options based on component
+    const getTypeOptions = (component: MachiningComponentType) => {
+        if (component === 'Body') {
+            return ['Flanged', 'Butt Weld', 'Socket Weld', 'Threaded'];
         }
-
-        setLoading(false);
-        // Reset file input
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
+        if (component === 'Bonnet') {
+            return ['Type1', 'Type2', 'Type3'];
         }
+        // For Plug, Seat, Stem, Cage - trimType
+        return ['Metal Seated', 'Soft Seated', 'Hard Faced', 'PTFE Seated', 'Ceramic Seated'];
     };
 
     // Load data
     useEffect(() => {
-        loadMachineTypes();
-        loadWorkHours();
+        loadMachiningPrices();
         loadSeries();
+        loadMaterials();
     }, []);
 
+    // Filter by component
     useEffect(() => {
-        if (filterComponent === 'All') {
-            setFilteredWorkHours(workHours);
+        if (activeTab === 'All') {
+            setFilteredPrices(machiningPrices);
         } else {
-            setFilteredWorkHours(workHours.filter(wh => wh.component === filterComponent));
+            setFilteredPrices(machiningPrices.filter(p => p.component === activeTab));
         }
-    }, [filterComponent, workHours]);
+    }, [activeTab, machiningPrices]);
 
-    const loadMachineTypes = async () => {
-        const data = await getMachineTypes();
-        setMachineTypes(data);
-    };
-
-    const loadWorkHours = async () => {
-        const data = await getWorkHours();
-        setWorkHours(data);
+    const loadMachiningPrices = async () => {
+        const data = await getAllMachiningPrices();
+        setMachiningPrices(data);
     };
 
     const loadSeries = async () => {
@@ -166,247 +89,272 @@ export default function MachinePricingPage() {
         setSeries(seriesData);
     };
 
-    const handleAddMachine = async () => {
-        if (!newMachineName || newMachineRate <= 0) {
-            setMessage('Please enter valid machine name and rate');
-            return;
-        }
-
-        setLoading(true);
-        try {
-            await addMachineType({
-                name: newMachineName,
-                hourlyRate: newMachineRate,
-                isActive: true,
-            });
-            setMessage('Machine type added successfully!');
-            setNewMachineName('');
-            setNewMachineRate(0);
-            loadMachineTypes();
-        } catch (error) {
-            setMessage('Error adding machine type');
-        }
-        setLoading(false);
+    const loadMaterials = async () => {
+        const snapshot = await getDocs(collection(db, 'materials'));
+        const materialsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setMaterials(materialsData.filter((m: any) => m.isActive));
     };
 
-    const handleUpdateMachine = async () => {
-        if (!editingMachine) return;
-
-        setLoading(true);
-        try {
-            await updateMachineType(editingMachine.id, {
-                name: editingMachine.name,
-                hourlyRate: editingMachine.hourlyRate,
-            });
-            setMessage('Machine type updated successfully!');
-            setEditingMachine(null);
-            loadMachineTypes();
-        } catch (error) {
-            setMessage('Error updating machine type');
-        }
-        setLoading(false);
-    };
-
-    const handleDeleteMachine = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this machine type?')) return;
-
-        setLoading(true);
-        try {
-            await deleteMachineType(id);
-            setMessage('Machine type deleted successfully!');
-            loadMachineTypes();
-        } catch (error) {
-            setMessage('Error deleting machine type');
-        }
-        setLoading(false);
-    };
-
-    const handleAddWorkHour = async () => {
-        if (!newWorkHour.seriesId || !newWorkHour.size || !newWorkHour.rating ||
-            newWorkHour.workHours <= 0) {
+    // Add new machining price
+    const handleAddPrice = async () => {
+        if (!newPrice.seriesId || !newPrice.size || !newPrice.rating ||
+            !newPrice.typeKey || !newPrice.materialName || newPrice.fixedPrice <= 0) {
             setMessage('Please fill all required fields');
             return;
         }
 
-
-        // Validate trimType for components that need it
-        const needsTrimType = ['Plug', 'Seat', 'Stem', 'Cage', 'SealRing'].includes(newWorkHour.component);
-        if (needsTrimType && !newWorkHour.trimType) {
-            setMessage('Trim type is required for this component');
-            return;
-        }
-
         setLoading(true);
         try {
-            await addWorkHourData({
-                ...newWorkHour,
+            await addMachiningPrice({
+                ...newPrice,
                 isActive: true,
             });
-            setNewWorkHour({
+            setMessage('Machining price added successfully!');
+            setNewPrice({
+                component: 'Body',
                 seriesId: '',
                 size: '',
                 rating: '',
-                trimType: '',
-                component: 'Body',
-                workHours: 0,
+                typeKey: '',
+                materialName: '',
+                fixedPrice: 0,
             });
-            loadWorkHours();
+            loadMachiningPrices();
         } catch (error) {
-            setMessage('Error adding work hour data');
+            setMessage('Error adding machining price');
         }
         setLoading(false);
     };
 
-    const handleUpdateWorkHour = async () => {
-        if (!editingWorkHour) return;
+    // Update machining price
+    const handleUpdatePrice = async () => {
+        if (!editingPrice) return;
 
         setLoading(true);
         try {
-            await updateWorkHourData(editingWorkHour.id, {
-                seriesId: editingWorkHour.seriesId,
-                size: editingWorkHour.size,
-                rating: editingWorkHour.rating,
-                trimType: editingWorkHour.trimType,
-                component: editingWorkHour.component,
-                workHours: editingWorkHour.workHours,
-                isActive: editingWorkHour.isActive,
+            await updateMachiningPrice(editingPrice.id, {
+                fixedPrice: editingPrice.fixedPrice,
             });
-            setMessage('Work hour data updated successfully!');
-            setEditingWorkHour(null);
-            loadWorkHours();
+            setMessage('Machining price updated successfully!');
+            setEditingPrice(null);
+            loadMachiningPrices();
         } catch (error) {
-            setMessage('Error updating work hour data');
+            setMessage('Error updating machining price');
         }
         setLoading(false);
     };
 
-    const handleDeleteWorkHour = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this work hour entry?')) return;
+    // Delete machining price
+    const handleDeletePrice = async (id: string) => {
+        if (!confirm('Are you sure you want to delete this machining price?')) return;
 
         setLoading(true);
         try {
-            await deleteWorkHourData(id);
-            setMessage('Work hour data deleted successfully!');
-            loadWorkHours();
+            await deleteMachiningPrice(id);
+            setMessage('Machining price deleted successfully!');
+            loadMachiningPrices();
         } catch (error) {
-            setMessage('Error deleting work hour data');
+            setMessage('Error deleting machining price');
         }
         setLoading(false);
     };
 
-    const componentOptions: ComponentType[] = ['Body', 'Bonnet', 'Plug', 'Seat', 'Stem', 'Cage', 'SealRing'];
-    const trimTypeOptions = ['Metal Seated', 'Soft Seated', 'Hard Faced', 'PTFE Seated', 'Ceramic Seated'];
+    // Download template
+    const handleDownloadTemplate = () => {
+        const templateData = [
+            {
+                Component: 'Body',
+                SeriesNumber: '100',
+                Size: '2"',
+                Rating: '150#',
+                TypeKey: 'Flanged',
+                MaterialName: 'SS316',
+                FixedPrice: 5000,
+            },
+            {
+                Component: 'Bonnet',
+                SeriesNumber: '100',
+                Size: '2"',
+                Rating: '150#',
+                TypeKey: 'Type1',
+                MaterialName: 'SS316',
+                FixedPrice: 3000,
+            },
+            {
+                Component: 'Plug',
+                SeriesNumber: '100',
+                Size: '2"',
+                Rating: '150#',
+                TypeKey: 'Metal Seated',
+                MaterialName: 'SS316',
+                FixedPrice: 2000,
+            },
+        ];
 
-    // Clear all data (both machine types and work hours)
+        const ws = XLSX.utils.json_to_sheet(templateData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Machining Prices');
+        XLSX.writeFile(wb, 'machining_prices_template.xlsx');
+        setMessage('Template downloaded!');
+    };
+
+    // Export current data
+    const handleExportData = () => {
+        const exportData = machiningPrices.map(p => {
+            const seriesData = series.find(s => s.id === p.seriesId);
+            return {
+                Component: p.component,
+                SeriesNumber: seriesData?.seriesNumber || p.seriesId,
+                Size: p.size,
+                Rating: p.rating,
+                TypeKey: p.typeKey,
+                MaterialName: p.materialName,
+                FixedPrice: p.fixedPrice,
+            };
+        });
+
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Machining Prices');
+        XLSX.writeFile(wb, 'machining_prices_export.xlsx');
+        setMessage('Data exported!');
+    };
+
+    // Import from file
+    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        setLoading(true);
+        setMessage('Importing data...');
+
+        try {
+            const data = await file.arrayBuffer();
+            const workbook = XLSX.read(data);
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(sheet) as any[];
+
+            // Map series numbers to IDs
+            const seriesMap = new Map(series.map(s => [s.seriesNumber, s.id]));
+
+            const pricesToImport = rows.map(row => ({
+                component: row.Component as MachiningComponentType,
+                seriesId: seriesMap.get(row.SeriesNumber) || row.SeriesNumber,
+                size: row.Size,
+                rating: row.Rating,
+                typeKey: row.TypeKey,
+                materialName: row.MaterialName,
+                fixedPrice: parseFloat(row.FixedPrice),
+                isActive: true,
+            }));
+
+            const result = await bulkImportMachiningPrices(pricesToImport);
+            setMessage(`Imported ${result.success} prices. ${result.failed} failed.`);
+
+            if (result.errors.length > 0) {
+                console.error('Import errors:', result.errors);
+            }
+
+            loadMachiningPrices();
+        } catch (error: any) {
+            setMessage(`Import error: ${error.message}`);
+        }
+
+        setLoading(false);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
+
+    // Clear all data
     const handleClearAllData = async () => {
-        const confirmed = confirm(
-            '⚠️ WARNING: This will delete ALL machine types and work hours data!\n\nAre you absolutely sure you want to continue?'
-        );
-        if (!confirmed) return;
-
-        const doubleConfirm = confirm(
-            'This action cannot be undone easily. Click OK to proceed with deletion.'
-        );
-        if (!doubleConfirm) return;
+        if (!confirm('Delete ALL machining prices? This cannot be undone.')) return;
+        if (!confirm('Are you absolutely sure?')) return;
 
         setLoading(true);
-        setMessage('Deleting all data...');
-
         try {
-            let deletedMachines = 0;
-            let deletedWorkHours = 0;
-
-            // Delete all machine types
-            for (const machine of machineTypes) {
-                await deleteMachineType(machine.id);
-                deletedMachines++;
+            for (const price of machiningPrices) {
+                await deleteMachiningPrice(price.id);
             }
-
-            // Delete all work hours
-            for (const wh of workHours) {
-                await deleteWorkHourData(wh.id);
-                deletedWorkHours++;
-            }
-
-            setMessage(
-                `✅ All data cleared! Deleted ${deletedMachines} machine types and ${deletedWorkHours} work hour entries.`
-            );
-
-            // Reload to show empty lists
-            await loadMachineTypes();
-            await loadWorkHours();
+            setMessage(`Deleted ${machiningPrices.length} prices`);
+            loadMachiningPrices();
         } catch (error) {
-            setMessage('❌ Error clearing data. Some items may not have been deleted.');
-            console.error('Clear all error:', error);
+            setMessage('Error clearing data');
         }
-
         setLoading(false);
     };
 
     return (
         <div className="min-h-screen bg-gray-50 p-8">
             <div className="max-w-7xl mx-auto">
-                <h1 className="text-4xl font-bold mb-8 text-gray-800">⚙️ Machine Pricing Management</h1>
+                <h1 className="text-4xl font-bold mb-8 text-gray-800">💰 Fixed Machining Prices</h1>
 
                 {message && (
                     <div className="mb-6 p-4 bg-blue-100 border border-blue-300 rounded-lg">
                         {message}
+                        <button onClick={() => setMessage('')} className="ml-4 text-blue-800 hover:underline">
+                            ✕
+                        </button>
                     </div>
                 )}
 
-                {/* Tabs */}
-                <div className="flex space-x-4 mb-6">
+                {/* Component Tabs */}
+                <div className="flex flex-wrap gap-2 mb-6">
                     <button
-                        onClick={() => setActiveTab('machines')}
-                        className={`px-6 py-3 rounded-lg font-semibold transition ${activeTab === 'machines'
+                        onClick={() => setActiveTab('All')}
+                        className={`px-4 py-2 rounded-lg font-semibold transition ${activeTab === 'All'
                             ? 'bg-purple-600 text-white'
                             : 'bg-white text-gray-700 hover:bg-gray-100'
                             }`}
                     >
-                        🔧 Machine Types
+                        All ({machiningPrices.length})
                     </button>
-                    <button
-                        onClick={() => setActiveTab('workhours')}
-                        className={`px-6 py-3 rounded-lg font-semibold transition ${activeTab === 'workhours'
-                            ? 'bg-purple-600 text-white'
-                            : 'bg-white text-gray-700 hover:bg-gray-100'
-                            }`}
-                    >
-                        ⏱️ Work Hours Data
-                    </button>
+                    {componentOptions.map(comp => (
+                        <button
+                            key={comp}
+                            onClick={() => setActiveTab(comp)}
+                            className={`px-4 py-2 rounded-lg font-semibold transition ${activeTab === comp
+                                ? 'bg-purple-600 text-white'
+                                : 'bg-white text-gray-700 hover:bg-gray-100'
+                                }`}
+                        >
+                            {comp} ({machiningPrices.filter(p => p.component === comp).length})
+                        </button>
+                    ))}
                 </div>
 
                 {/* Import/Export Actions */}
                 <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg shadow-lg p-6 mb-6">
-                    <h2 className="text-xl font-bold mb-4 text-gray-800">📊 Import / Export Data</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <h2 className="text-xl font-bold mb-4 text-gray-800">📊 Import / Export</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <button
                             onClick={handleDownloadTemplate}
-                            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition flex items-center justify-center space-x-2"
+                            className="bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700"
                         >
-                            <span>📥</span>
-                            <span>Download Template</span>
+                            📥 Download Template
                         </button>
                         <button
                             onClick={handleExportData}
-                            className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition flex items-center justify-center space-x-2"
-                            disabled={machineTypes.length === 0 && workHours.length === 0}
+                            className="bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700"
+                            disabled={machiningPrices.length === 0}
                         >
-                            <span>📤</span>
-                            <span>Export Current Data</span>
+                            📤 Export Data
                         </button>
                         <button
-                            onClick={handleImportClick}
+                            onClick={() => fileInputRef.current?.click()}
                             disabled={loading}
-                            className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition flex items-center justify-center space-x-2 disabled:bg-gray-400"
+                            className="bg-purple-600 text-white px-4 py-3 rounded-lg hover:bg-purple-700 disabled:bg-gray-400"
                         >
-                            <span>📁</span>
-                            <span>{loading ? 'Importing...' : 'Bulk Import'}</span>
+                            📁 {loading ? 'Importing...' : 'Bulk Import'}
+                        </button>
+                        <button
+                            onClick={handleClearAllData}
+                            disabled={loading || machiningPrices.length === 0}
+                            className="bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 disabled:bg-gray-400"
+                        >
+                            🗑️ Clear All
                         </button>
                     </div>
-                    <p className="text-sm text-gray-600 mt-4">
-                        💡 <strong>Tip:</strong> Download the template, fill it with your data, then use Bulk Import to add all entries at once. Data will be merged with existing entries.
-                    </p>
                     <input
                         ref={fileInputRef}
                         type="file"
@@ -416,326 +364,211 @@ export default function MachinePricingPage() {
                     />
                 </div>
 
-                {/* Danger Zone - Clear All Data */}
-                <div className="bg-red-50 border-2 border-red-300 rounded-lg shadow-lg p-6 mb-6">
-                    <h2 className="text-xl font-bold mb-2 text-red-800">⚠️ Danger Zone</h2>
-                    <p className="text-sm text-red-700 mb-4">
-                        Permanently delete all machine pricing data. This action marks all records as inactive.
-                    </p>
-                    <button
-                        onClick={handleClearAllData}
-                        disabled={loading || (machineTypes.length === 0 && workHours.length === 0)}
-                        className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold"
-                    >
-                        🗑️ Clear All Data ({machineTypes.length} machines, {workHours.length} work hours)
-                    </button>
-                </div>
-
-                {/* Machine Types Tab */}
-                {activeTab === 'machines' && (
-                    <div className="space-y-6">
-                        {/* Add New Machine */}
-                        <div className="bg-white rounded-lg shadow-lg p-6">
-                            <h2 className="text-2xl font-bold mb-4">Add New Machine Type</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium mb-2">Machine Name</label>
-                                    <input
-                                        type="text"
-                                        value={newMachineName}
-                                        onChange={(e) => setNewMachineName(e.target.value)}
-                                        placeholder="e.g., CNC Lathe"
-                                        className="w-full px-4 py-2 border rounded-lg"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-2">Hourly Rate (₹/hr)</label>
-                                    <input
-                                        type="number"
-                                        value={newMachineRate}
-                                        onChange={(e) => setNewMachineRate(parseFloat(e.target.value))}
-                                        placeholder="e.g., 500"
-                                        className="w-full px-4 py-2 border rounded-lg"
-                                    />
-                                </div>
-                                <div className="flex items-end">
-                                    <button
-                                        onClick={handleAddMachine}
-                                        disabled={loading}
-                                        className="w-full bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-400"
-                                    >
-                                        {loading ? 'Adding...' : 'Add Machine'}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Machine Types List */}
-                        <div className="bg-white rounded-lg shadow-lg p-6">
-                            <h2 className="text-2xl font-bold mb-4">Machine Types ({machineTypes.length})</h2>
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
-                                    <thead className="bg-gray-100">
-                                        <tr>
-                                            <th className="px-4 py-2 text-left">Machine Name</th>
-                                            <th className="px-4 py-2 text-left">Hourly Rate</th>
-                                            <th className="px-4 py-2 text-left">Status</th>
-                                            <th className="px-4 py-2 text-left">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {machineTypes.map((machine) => (
-                                            <tr key={machine.id} className="border-b">
-                                                <td className="px-4 py-2">
-                                                    {editingMachine?.id === machine.id ? (
-                                                        <input
-                                                            type="text"
-                                                            value={editingMachine.name}
-                                                            onChange={(e) =>
-                                                                setEditingMachine({ ...editingMachine, name: e.target.value })
-                                                            }
-                                                            className="w-full px-2 py-1 border rounded"
-                                                        />
-                                                    ) : (
-                                                        machine.name
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-2">
-                                                    {editingMachine?.id === machine.id ? (
-                                                        <input
-                                                            type="number"
-                                                            value={editingMachine.hourlyRate}
-                                                            onChange={(e) =>
-                                                                setEditingMachine({
-                                                                    ...editingMachine,
-                                                                    hourlyRate: parseFloat(e.target.value),
-                                                                })
-                                                            }
-                                                            className="w-full px-2 py-1 border rounded"
-                                                        />
-                                                    ) : (
-                                                        `₹${machine.hourlyRate}/hr`
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-2">
-                                                    <span
-                                                        className={`px-2 py-1 rounded text-xs ${machine.isActive
-                                                            ? 'bg-green-200 text-green-800'
-                                                            : 'bg-red-200 text-red-800'
-                                                            }`}
-                                                    >
-                                                        {machine.isActive ? 'Active' : 'Inactive'}
-                                                    </span>
-                                                </td>
-                                                <td className="px-4 py-2">
-                                                    {editingMachine?.id === machine.id ? (
-                                                        <div className="flex space-x-2">
-                                                            <button
-                                                                onClick={handleUpdateMachine}
-                                                                className="bg-blue-600 text-white px-3 py-1 rounded text-sm"
-                                                            >
-                                                                Save
-                                                            </button>
-                                                            <button
-                                                                onClick={() => setEditingMachine(null)}
-                                                                className="bg-gray-600 text-white px-3 py-1 rounded text-sm"
-                                                            >
-                                                                Cancel
-                                                            </button>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex space-x-2">
-                                                            <button
-                                                                onClick={() => setEditingMachine(machine)}
-                                                                className="bg-yellow-600 text-white px-3 py-1 rounded text-sm"
-                                                            >
-                                                                Edit
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleDeleteMachine(machine.id)}
-                                                                className="bg-red-600 text-white px-3 py-1 rounded text-sm"
-                                                            >
-                                                                Delete
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Work Hours Tab */}
-                {activeTab === 'workhours' && (
-                    <div className="space-y-6">
-                        {/* Add New Work Hour */}
-                        <div className="bg-white rounded-lg shadow-lg p-6">
-                            <h2 className="text-2xl font-bold mb-4">Add New Work Hour Data</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                                <div>
-                                    <label className="block text-sm font-medium mb-2">Component *</label>
-                                    <select
-                                        value={newWorkHour.component}
-                                        onChange={(e) =>
-                                            setNewWorkHour({ ...newWorkHour, component: e.target.value as ComponentType })
-                                        }
-                                        className="w-full px-4 py-2 border rounded-lg"
-                                    >
-                                        {componentOptions.map((comp) => (
-                                            <option key={comp} value={comp}>
-                                                {comp}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-2">Series *</label>
-                                    <select
-                                        value={newWorkHour.seriesId}
-                                        onChange={(e) => setNewWorkHour({ ...newWorkHour, seriesId: e.target.value })}
-                                        className="w-full px-4 py-2 border rounded-lg"
-                                    >
-                                        <option value="">Select Series</option>
-                                        {series.map((s) => (
-                                            <option key={s.id} value={s.id}>
-                                                {s.seriesNumber} - {s.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-2">Size *</label>
-                                    <input
-                                        type="text"
-                                        value={newWorkHour.size}
-                                        onChange={(e) => setNewWorkHour({ ...newWorkHour, size: e.target.value })}
-                                        placeholder='e.g., 1"'
-                                        className="w-full px-4 py-2 border rounded-lg"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-2">Rating *</label>
-                                    <input
-                                        type="text"
-                                        value={newWorkHour.rating}
-                                        onChange={(e) => setNewWorkHour({ ...newWorkHour, rating: e.target.value })}
-                                        placeholder="e.g., 150#"
-                                        className="w-full px-4 py-2 border rounded-lg"
-                                    />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                {['Plug', 'Seat', 'Stem', 'Cage', 'SealRing'].includes(newWorkHour.component) && (
-                                    <div>
-                                        <label className="block text-sm font-medium mb-2">Trim Type *</label>
-                                        <select
-                                            value={newWorkHour.trimType}
-                                            onChange={(e) => setNewWorkHour({ ...newWorkHour, trimType: e.target.value })}
-                                            className="w-full px-4 py-2 border rounded-lg"
-                                        >
-                                            <option value="">Select Trim Type</option>
-                                            {trimTypeOptions.map((type) => (
-                                                <option key={type} value={type}>
-                                                    {type}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                )}
-                                <div>
-                                    <label className="block text-sm font-medium mb-2">Work Hours *</label>
-                                    <input
-                                        type="number"
-                                        step="0.1"
-                                        value={newWorkHour.workHours}
-                                        onChange={(e) =>
-                                            setNewWorkHour({ ...newWorkHour, workHours: parseFloat(e.target.value) })
-                                        }
-                                        placeholder="e.g., 2.5"
-                                        className="w-full px-4 py-2 border rounded-lg"
-                                    />
-                                </div>
-
-                                <div className="flex items-end">
-                                    <button
-                                        onClick={handleAddWorkHour}
-                                        disabled={loading}
-                                        className="w-full bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-400"
-                                    >
-                                        {loading ? 'Adding...' : 'Add Work Hour'}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Filter */}
-                        <div className="bg-white rounded-lg shadow-lg p-4">
-                            <label className="block text-sm font-medium mb-2">Filter by Component:</label>
+                {/* Add New Price */}
+                <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+                    <h2 className="text-2xl font-bold mb-4">➕ Add New Machining Price</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                        <div>
+                            <label className="block text-sm font-medium mb-2">Component *</label>
                             <select
-                                value={filterComponent}
-                                onChange={(e) => setFilterComponent(e.target.value as ComponentType | 'All')}
-                                className="px-4 py-2 border rounded-lg"
+                                value={newPrice.component}
+                                onChange={(e) => setNewPrice({
+                                    ...newPrice,
+                                    component: e.target.value as MachiningComponentType,
+                                    typeKey: '' // Reset type when component changes
+                                })}
+                                className="w-full px-4 py-2 border rounded-lg"
                             >
-                                <option value="All">All Components</option>
                                 {componentOptions.map((comp) => (
-                                    <option key={comp} value={comp}>
-                                        {comp}
+                                    <option key={comp} value={comp}>{comp}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-2">Series *</label>
+                            <select
+                                value={newPrice.seriesId}
+                                onChange={(e) => setNewPrice({ ...newPrice, seriesId: e.target.value })}
+                                className="w-full px-4 py-2 border rounded-lg"
+                            >
+                                <option value="">Select Series</option>
+                                {series.map((s) => (
+                                    <option key={s.id} value={s.id}>
+                                        {s.seriesNumber} - {s.name}
                                     </option>
                                 ))}
                             </select>
                         </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-2">Size *</label>
+                            <input
+                                type="text"
+                                value={newPrice.size}
+                                onChange={(e) => setNewPrice({ ...newPrice, size: e.target.value })}
+                                placeholder='e.g., 2"'
+                                className="w-full px-4 py-2 border rounded-lg"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-2">Rating *</label>
+                            <input
+                                type="text"
+                                value={newPrice.rating}
+                                onChange={(e) => setNewPrice({ ...newPrice, rating: e.target.value })}
+                                placeholder="e.g., 150#"
+                                className="w-full px-4 py-2 border rounded-lg"
+                            />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium mb-2">
+                                {getTypeKeyLabel(newPrice.component)} *
+                            </label>
+                            <select
+                                value={newPrice.typeKey}
+                                onChange={(e) => setNewPrice({ ...newPrice, typeKey: e.target.value })}
+                                className="w-full px-4 py-2 border rounded-lg"
+                            >
+                                <option value="">Select Type</option>
+                                {getTypeOptions(newPrice.component).map((type) => (
+                                    <option key={type} value={type}>{type}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-2">Material Name *</label>
+                            <select
+                                value={newPrice.materialName}
+                                onChange={(e) => setNewPrice({ ...newPrice, materialName: e.target.value })}
+                                className="w-full px-4 py-2 border rounded-lg"
+                            >
+                                <option value="">Select Material</option>
+                                {materials.map((m: any) => (
+                                    <option key={m.id} value={m.name}>{m.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-2">Fixed Price (₹) *</label>
+                            <input
+                                type="number"
+                                value={newPrice.fixedPrice}
+                                onChange={(e) => setNewPrice({ ...newPrice, fixedPrice: parseFloat(e.target.value) || 0 })}
+                                placeholder="e.g., 5000"
+                                className="w-full px-4 py-2 border rounded-lg"
+                            />
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleAddPrice}
+                        disabled={loading}
+                        className="mt-4 bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-400"
+                    >
+                        {loading ? 'Adding...' : 'Add Machining Price'}
+                    </button>
+                </div>
 
-                        {/* Work Hours List */}
-                        <div className="bg-white rounded-lg shadow-lg p-6">
-                            <h2 className="text-2xl font-bold mb-4">
-                                Work Hours Data ({filteredWorkHours.length})
-                            </h2>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead className="bg-gray-100">
-                                        <tr>
-                                            <th className="px-2 py-2 text-left">Component</th>
-                                            <th className="px-2 py-2 text-left">Series</th>
-                                            <th className="px-2 py-2 text-left">Size</th>
-                                            <th className="px-2 py-2 text-left">Rating</th>
-                                            <th className="px-2 py-2 text-left">Trim Type</th>
-                                            <th className="px-2 py-2 text-left">Hours</th>
-                                            <th className="px-2 py-2 text-left">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {filteredWorkHours.map((wh) => {
-                                            const seriesData = series.find((s) => s.id === wh.seriesId);
-                                            return (
-                                                <tr key={wh.id} className="border-b">
-                                                    <td className="px-2 py-2">{wh.component}</td>
-                                                    <td className="px-2 py-2">{seriesData?.seriesNumber || wh.seriesId}</td>
-                                                    <td className="px-2 py-2">{wh.size}</td>
-                                                    <td className="px-2 py-2">{wh.rating}</td>
-                                                    <td className="px-2 py-2">{wh.trimType || '-'}</td>
-                                                    <td className="px-2 py-2">{wh.workHours}hr</td>
-
-                                                    <td className="px-2 py-2">
+                {/* Prices Table */}
+                <div className="bg-white rounded-lg shadow-lg p-6">
+                    <h2 className="text-2xl font-bold mb-4">
+                        Machining Prices ({filteredPrices.length})
+                    </h2>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead className="bg-gray-100">
+                                <tr>
+                                    <th className="px-3 py-2 text-left">Component</th>
+                                    <th className="px-3 py-2 text-left">Series</th>
+                                    <th className="px-3 py-2 text-left">Size</th>
+                                    <th className="px-3 py-2 text-left">Rating</th>
+                                    <th className="px-3 py-2 text-left">Type</th>
+                                    <th className="px-3 py-2 text-left">Material</th>
+                                    <th className="px-3 py-2 text-left">Price</th>
+                                    <th className="px-3 py-2 text-left">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredPrices.map((price) => {
+                                    const seriesData = series.find((s) => s.id === price.seriesId);
+                                    return (
+                                        <tr key={price.id} className="border-b hover:bg-gray-50">
+                                            <td className="px-3 py-2">
+                                                <span className={`px-2 py-1 rounded text-xs ${price.component === 'Body' ? 'bg-blue-100 text-blue-800' :
+                                                        price.component === 'Bonnet' ? 'bg-blue-100 text-blue-800' :
+                                                            price.component === 'Plug' ? 'bg-purple-100 text-purple-800' :
+                                                                price.component === 'Seat' ? 'bg-pink-100 text-pink-800' :
+                                                                    price.component === 'Stem' ? 'bg-orange-100 text-orange-800' :
+                                                                        'bg-green-100 text-green-800'
+                                                    }`}>
+                                                    {price.component}
+                                                </span>
+                                            </td>
+                                            <td className="px-3 py-2">{seriesData?.seriesNumber || price.seriesId}</td>
+                                            <td className="px-3 py-2">{price.size}</td>
+                                            <td className="px-3 py-2">{price.rating}</td>
+                                            <td className="px-3 py-2">{price.typeKey}</td>
+                                            <td className="px-3 py-2">{price.materialName}</td>
+                                            <td className="px-3 py-2 font-semibold">
+                                                {editingPrice?.id === price.id ? (
+                                                    <input
+                                                        type="number"
+                                                        value={editingPrice.fixedPrice}
+                                                        onChange={(e) => setEditingPrice({
+                                                            ...editingPrice,
+                                                            fixedPrice: parseFloat(e.target.value) || 0
+                                                        })}
+                                                        className="w-24 px-2 py-1 border rounded"
+                                                    />
+                                                ) : (
+                                                    `₹${price.fixedPrice.toLocaleString()}`
+                                                )}
+                                            </td>
+                                            <td className="px-3 py-2">
+                                                {editingPrice?.id === price.id ? (
+                                                    <div className="flex space-x-2">
                                                         <button
-                                                            onClick={() => handleDeleteWorkHour(wh.id)}
+                                                            onClick={handleUpdatePrice}
+                                                            className="bg-blue-600 text-white px-2 py-1 rounded text-xs"
+                                                        >
+                                                            Save
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setEditingPrice(null)}
+                                                            className="bg-gray-600 text-white px-2 py-1 rounded text-xs"
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex space-x-2">
+                                                        <button
+                                                            onClick={() => setEditingPrice(price)}
+                                                            className="bg-yellow-600 text-white px-2 py-1 rounded text-xs"
+                                                        >
+                                                            Edit
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeletePrice(price.id)}
                                                             className="bg-red-600 text-white px-2 py-1 rounded text-xs"
                                                         >
                                                             Delete
                                                         </button>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
+                                                    </div>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                        {filteredPrices.length === 0 && (
+                            <div className="text-center py-8 text-gray-500">
+                                No machining prices found. Add some using the form above or import from Excel.
                             </div>
-                        </div>
+                        )}
                     </div>
-                )}
+                </div>
             </div>
         </div>
     );

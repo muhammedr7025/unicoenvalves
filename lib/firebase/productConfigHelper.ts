@@ -590,14 +590,13 @@ export async function getAvailableHandwheelModels(
     return [];
   }
 }
-
 // ============================================
-// MACHINE PRICING HELPERS
+// MACHINING PRICE HELPERS (Fixed Price Lookups)
 // ============================================
 
 /**
  * Get available trim types
- * Used for Plug, Seat, Stem, Cage, Seal Ring machine hour lookups
+ * Used for Plug, Seat, Stem, Cage machining price lookups
  */
 export async function getAvailableTrimTypes(): Promise<string[]> {
   // Hardcoded list for Phase 1
@@ -611,106 +610,129 @@ export async function getAvailableTrimTypes(): Promise<string[]> {
   ];
 }
 
-/**
- * Get work hour data for a component
- * NOTE: Machine type is now selected separately in quote form - this only returns hours!
- */
-interface WorkHourResult {
-  workHours: number;
-}
+// ============================================
+// FIXED MACHINING PRICE LOOKUPS
+// These replace the old workHours × machineRate calculation
+// ============================================
 
 /**
- * Helper to fetch work hour data from machinePricingService
- * Machine type is selected separately by employee in the quote form
+ * Get machining cost for Body
+ * Lookup: seriesId + size + rating + endConnectType + materialName
  */
-async function getWorkHourDataHelper(
+export async function getMachiningCostForBody(
   seriesId: string,
   size: string,
   rating: string,
-  component: 'Body' | 'Bonnet' | 'Plug' | 'Seat' | 'Stem' | 'Cage' | 'SealRing',
-  trimType?: string
-): Promise<WorkHourResult | null> {
+  endConnectType: string,
+  materialName: string
+): Promise<number | null> {
   try {
-    // Import the function dynamically to avoid circular dependencies
-    const { getWorkHourData } = await import('./machinePricingService');
-
-    const workHourData = await getWorkHourData(seriesId, size, rating, component, trimType);
-    if (!workHourData) return null;
-
-    // Only return work hours - machine is selected separately in quote form
-    return {
-      workHours: workHourData.workHours,
-    };
+    const { getMachiningPriceForBody } = await import('./machiningPriceService');
+    return getMachiningPriceForBody(seriesId, size, rating, endConnectType, materialName);
   } catch (error) {
-    console.error(`Error fetching work hour data for ${component}:`, error);
+    console.error('Error fetching Body machining cost:', error);
     return null;
   }
 }
 
-// Body work hours (no trim type needed)
-export async function getWorkHourForBody(
-  seriesId: string,
-  size: string,
-  rating: string
-): Promise<WorkHourResult | null> {
-  return getWorkHourDataHelper(seriesId, size, rating, 'Body');
-}
-
-// Bonnet work hours (no trim type needed)
-export async function getWorkHourForBonnet(
-  seriesId: string,
-  size: string,
-  rating: string
-): Promise<WorkHourResult | null> {
-  return getWorkHourDataHelper(seriesId, size, rating, 'Bonnet');
-}
-
-// Plug work hours (requires trim type)
-export async function getWorkHourForPlug(
+/**
+ * Get machining cost for Bonnet
+ * Lookup: seriesId + size + rating + bonnetType + materialName
+ */
+export async function getMachiningCostForBonnet(
   seriesId: string,
   size: string,
   rating: string,
-  trimType: string
-): Promise<WorkHourResult | null> {
-  return getWorkHourDataHelper(seriesId, size, rating, 'Plug', trimType);
+  bonnetType: string,
+  materialName: string
+): Promise<number | null> {
+  try {
+    const { getMachiningPriceForBonnet } = await import('./machiningPriceService');
+    return getMachiningPriceForBonnet(seriesId, size, rating, bonnetType, materialName);
+  } catch (error) {
+    console.error('Error fetching Bonnet machining cost:', error);
+    return null;
+  }
 }
 
-// Seat work hours (requires trim type)
-export async function getWorkHourForSeat(
+/**
+ * Get machining cost for Plug
+ * Lookup: seriesId + size + rating + trimType + materialName
+ */
+export async function getMachiningCostForPlug(
   seriesId: string,
   size: string,
   rating: string,
-  trimType: string
-): Promise<WorkHourResult | null> {
-  return getWorkHourDataHelper(seriesId, size, rating, 'Seat', trimType);
+  trimType: string,
+  materialName: string
+): Promise<number | null> {
+  try {
+    const { getMachiningPriceForPlug } = await import('./machiningPriceService');
+    return getMachiningPriceForPlug(seriesId, size, rating, trimType, materialName);
+  } catch (error) {
+    console.error('Error fetching Plug machining cost:', error);
+    return null;
+  }
 }
 
-// Stem work hours (requires trim type)
-export async function getWorkHourForStem(
+/**
+ * Get machining cost for Seat
+ * Lookup: seriesId + size + rating + trimType + materialName
+ */
+export async function getMachiningCostForSeat(
   seriesId: string,
   size: string,
   rating: string,
-  trimType: string
-): Promise<WorkHourResult | null> {
-  return getWorkHourDataHelper(seriesId, size, rating, 'Stem', trimType);
+  trimType: string,
+  materialName: string
+): Promise<number | null> {
+  try {
+    const { getMachiningPriceForSeat } = await import('./machiningPriceService');
+    return getMachiningPriceForSeat(seriesId, size, rating, trimType, materialName);
+  } catch (error) {
+    console.error('Error fetching Seat machining cost:', error);
+    return null;
+  }
 }
 
-// Cage work hours (requires trim type)
-export async function getWorkHourForCage(
+/**
+ * Get machining cost for Stem
+ * Lookup: seriesId + size + rating + trimType + materialName
+ */
+export async function getMachiningCostForStem(
   seriesId: string,
   size: string,
   rating: string,
-  trimType: string
-): Promise<WorkHourResult | null> {
-  return getWorkHourDataHelper(seriesId, size, rating, 'Cage', trimType);
+  trimType: string,
+  materialName: string
+): Promise<number | null> {
+  try {
+    const { getMachiningPriceForStem } = await import('./machiningPriceService');
+    return getMachiningPriceForStem(seriesId, size, rating, trimType, materialName);
+  } catch (error) {
+    console.error('Error fetching Stem machining cost:', error);
+    return null;
+  }
 }
 
-// Seal Ring work hours (requires trim type)
-export async function getWorkHourForSealRing(
+/**
+ * Get machining cost for Cage
+ * Lookup: seriesId + size + rating + trimType + materialName
+ */
+export async function getMachiningCostForCage(
   seriesId: string,
   size: string,
   rating: string,
-  trimType: string
-): Promise<WorkHourResult | null> {
-  return getWorkHourDataHelper(seriesId, size, rating, 'SealRing', trimType);
+  trimType: string,
+  materialName: string
+): Promise<number | null> {
+  try {
+    const { getMachiningPriceForCage } = await import('./machiningPriceService');
+    return getMachiningPriceForCage(seriesId, size, rating, trimType, materialName);
+  } catch (error) {
+    console.error('Error fetching Cage machining cost:', error);
+    return null;
+  }
 }
+
+// Note: Seal Ring has NO machining cost - only fixed price
