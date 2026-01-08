@@ -152,7 +152,6 @@ export async function generateCoverLetterPDF(quote: Quote, customerDetails: any)
 
     // Customer Details (To Section)
     doc.setFont('helvetica', 'bold');
-    doc.text('To:', 50, yPos);
     yPos += 15;
     doc.setFont('helvetica', 'normal');
     doc.text(customerDetails.name || quote.customerName, 50, yPos);
@@ -178,31 +177,7 @@ export async function generateCoverLetterPDF(quote: Quote, customerDetails: any)
 
     yPos += 30;
 
-    // Subject line
-    doc.setFont('helvetica', 'bold');
-    doc.text('Subject: Quotation for Control Valves & Accessories', 50, yPos);
 
-    yPos += 25;
-
-    // Reference Information
-    doc.setFont('helvetica', 'normal');
-
-    const refData = [
-        ['Ref:', quote.enquiryId || 'N/A'],
-        ['Quote No:', quote.quoteNumber],
-        ['Project:', quote.projectName || 'N/A'],
-        ['Date:', formatDate(quote.createdAt)]
-    ];
-
-    refData.forEach(([label, value]) => {
-        doc.setFont('helvetica', 'bold');
-        doc.text(label, 50, yPos);
-        doc.setFont('helvetica', 'normal');
-        doc.text(value, 120, yPos);
-        yPos += 15;
-    });
-
-    yPos += 15;
 
     // Body paragraph
     const bodyText = `We thank you for the above referred RFQ/Enquiry, and are pleased to submit our techno-commercial offer for your kind consideration.`;
@@ -496,7 +471,7 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
         ['Warranty', 'UVPL Standard Warranty - 18 months from shipping or 12 months from installation, whichever is earlier (on material & workmanship)'],
         ['Payment Terms', '20% advance with purchase order\n30% against approved drawings\nBalance before dispatch'],
         ['Freight', 'To be borne by buyer'],
-        ['Insurance', 'To be arranged by buyer if required'],
+        ['Insurance', 'To be arranged by buyer'],
         ['Manufacturer', 'Unicorn Valves Private Limited'],
     ];
 
@@ -585,7 +560,6 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
 
     // Customer Details (To Section)
     doc.setFont('helvetica', 'bold');
-    doc.text('To:', 50, yPos);
     yPos += 15;
     doc.setFont('helvetica', 'normal');
     doc.text(customerDetails.name || quote.customerName, 50, yPos);
@@ -611,31 +585,7 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
 
     yPos += 30;
 
-    // Subject line
-    doc.setFont('helvetica', 'bold');
-    doc.text('Subject: Quotation for Control Valves & Accessories', 50, yPos);
 
-    yPos += 25;
-
-    // Reference Information
-    doc.setFont('helvetica', 'normal');
-
-    const refData = [
-        ['Ref:', quote.enquiryId || 'N/A'],
-        ['Quote No:', quote.quoteNumber],
-        ['Project:', quote.projectName || 'N/A'],
-        ['Date:', formatDate(quote.createdAt)]
-    ];
-
-    refData.forEach(([label, value]) => {
-        doc.setFont('helvetica', 'bold');
-        doc.text(label, 50, yPos);
-        doc.setFont('helvetica', 'normal');
-        doc.text(value, 120, yPos);
-        yPos += 15;
-    });
-
-    yPos += 15;
 
     // Body paragraph
     const bodyText = `We thank you for the above referred RFQ/Enquiry, and are pleased to submit our techno-commercial offer for your kind consideration.`;
@@ -918,7 +868,7 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
         ['Warranty', 'UVPL Standard Warranty - 18 months from shipping or 12 months from installation, whichever is earlier (on material & workmanship)'],
         ['Payment Terms', '20% advance with purchase order\n30% against approved drawings\nBalance before dispatch'],
         ['Freight', 'To be borne by buyer'],
-        ['Insurance', 'To be arranged by buyer if required'],
+        ['Insurance', 'To be arranged by buyer'],
         ['Manufacturer', 'Unicorn Valves Private Limited'],
     ];
 
