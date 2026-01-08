@@ -89,34 +89,34 @@ export default function ProductDetailedView({ product, index }: ProductDetailedV
                         <div className="border-t border-blue-200 mt-3 pt-3">
                             <div className="text-xs text-gray-500 mb-2 font-medium">Materials:</div>
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
-                                {product.bodyMaterialPrice && (
+                                {product.bodyBonnetMaterialName && (
                                     <div>
                                         <span className="text-gray-500">Body/Bonnet:</span>
-                                        <span className="font-medium ml-1">₹{product.bodyMaterialPrice}/kg</span>
+                                        <span className="font-medium ml-1">{product.bodyBonnetMaterialName}</span>
                                     </div>
                                 )}
-                                {product.plugMaterialPrice && (
+                                {product.plugMaterialName && (
                                     <div>
                                         <span className="text-gray-500">Plug:</span>
-                                        <span className="font-medium ml-1">₹{product.plugMaterialPrice}/kg</span>
+                                        <span className="font-medium ml-1">{product.plugMaterialName}</span>
                                     </div>
                                 )}
-                                {product.seatMaterialPrice && (
+                                {product.seatMaterialName && (
                                     <div>
                                         <span className="text-gray-500">Seat:</span>
-                                        <span className="font-medium ml-1">₹{product.seatMaterialPrice}/kg</span>
+                                        <span className="font-medium ml-1">{product.seatMaterialName}</span>
                                     </div>
                                 )}
-                                {product.stemFixedPrice && (
+                                {product.stemMaterialName && (
                                     <div>
                                         <span className="text-gray-500">Stem:</span>
-                                        <span className="font-medium ml-1">₹{product.stemFixedPrice} (fixed)</span>
+                                        <span className="font-medium ml-1">{product.stemMaterialName}</span>
                                     </div>
                                 )}
-                                {product.cageMaterialPrice && (
+                                {product.cageMaterialName && (
                                     <div>
                                         <span className="text-gray-500">Cage:</span>
-                                        <span className="font-medium ml-1">₹{product.cageMaterialPrice}/kg</span>
+                                        <span className="font-medium ml-1">{product.cageMaterialName}</span>
                                     </div>
                                 )}
                             </div>

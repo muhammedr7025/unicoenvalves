@@ -202,6 +202,7 @@ export interface QuoteProduct {
   // Body Sub-Assembly - UPDATED with separate material groups
   bodyEndConnectType: EndConnectType;
   bodyBonnetMaterialId: string; // NEW: Shared material for body & bonnet
+  bodyBonnetMaterialName?: string; // Material name for display
   bodyWeight: number;
   bodyMaterialPrice: number;
   bodyTotalCost: number;
@@ -225,6 +226,7 @@ export interface QuoteProduct {
 
   // Removed plugType
   plugMaterialId: string; // NEW: Separate material for plug
+  plugMaterialName?: string; // Material name for display
   plugWeight: number;
   plugMaterialPrice: number;
   plugTotalCost: number;
@@ -237,6 +239,7 @@ export interface QuoteProduct {
 
   // Removed seatType
   seatMaterialId: string; // NEW: Separate material for seat
+  seatMaterialName?: string; // Material name for display
   seatWeight: number;
   seatMaterialPrice: number;
   seatTotalCost: number;
@@ -248,6 +251,7 @@ export interface QuoteProduct {
   seatMachineCost?: number;
 
   stemMaterialId: string; // NEW: Separate material for stem
+  stemMaterialName?: string; // Material name for display
   stemFixedPrice: number; // NEW: Fixed price lookup
   stemTotalCost: number;
   // Machine costs for Stem
@@ -260,6 +264,7 @@ export interface QuoteProduct {
   // Cage - UPDATED to weight-based calculation
   hasCage: boolean;
   cageMaterialId?: string; // NEW: Separate material for cage
+  cageMaterialName?: string; // Material name for display
   cageWeight?: number; // NEW
   cageMaterialPrice?: number; // NEW
   cageTotalCost?: number;

@@ -271,6 +271,7 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
                     // Material cost
                     updatedProduct.bodyWeight = weight;
                     updatedProduct.bodyMaterialPrice = material.pricePerKg;
+                    updatedProduct.bodyBonnetMaterialName = material.name;
                     const materialCost = weight * material.pricePerKg;
 
                     // Machining cost - FIXED PRICE lookup (series + size + rating + endConnectType + material)
@@ -345,6 +346,7 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
                     // Material cost
                     updatedProduct.plugWeight = plugData.weight;
                     updatedProduct.plugMaterialPrice = material.pricePerKg;
+                    updatedProduct.plugMaterialName = material.name;
                     const materialCost = plugData.weight * material.pricePerKg;
 
                     // Machining cost - FIXED PRICE lookup (series + size + rating + trimType + material)
@@ -382,6 +384,7 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
                     // Material cost
                     updatedProduct.seatWeight = seatData.weight;
                     updatedProduct.seatMaterialPrice = material.pricePerKg;
+                    updatedProduct.seatMaterialName = material.name;
                     const materialCost = seatData.weight * material.pricePerKg;
 
                     // Machining cost - FIXED PRICE lookup (series + size + rating + trimType + material)
@@ -418,6 +421,7 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
                     } else {
                         // Material cost (fixed price)
                         updatedProduct.stemFixedPrice = fixedPrice;
+                        updatedProduct.stemMaterialName = material.name;
                         const materialCost = fixedPrice;
 
                         // Machining cost - FIXED PRICE lookup (series + size + rating + trimType + material)
@@ -456,6 +460,7 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
                     // Material cost
                     updatedProduct.cageWeight = weight;
                     updatedProduct.cageMaterialPrice = material.pricePerKg;
+                    updatedProduct.cageMaterialName = material.name;
                     const materialCost = weight * material.pricePerKg;
 
                     // Machining cost - FIXED PRICE lookup (series + size + rating + trimType + material)
