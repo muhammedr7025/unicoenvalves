@@ -573,7 +573,8 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
     const summaryRows: string[][] = [];
 
     // Show price label based on pricing type
-    const priceLabel = isFOR ? 'F.O.R. Price Coimbatore' : 'Ex-Works Price Coimbatore';
+    const priceLabel = isFOR ? 'F.O.R. Price' : 'Ex-Works Price Coimbatore';
+
     summaryRows.push([priceLabel, formatINR(quote.subtotal)]);
 
     // For F.O.R., add freight charges as a separate row

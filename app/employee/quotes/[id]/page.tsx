@@ -413,6 +413,7 @@ export default function QuoteDetailsPage() {
         <div className="border-t-4 border-gray-300 pt-6 mt-6">
           <QuoteSummary
             subtotal={quote.subtotal}
+            productsSubtotal={quote.products.reduce((sum, p) => sum + (p.lineTotal || 0), 0)}
             packagePrice={quote.packagePrice}
             discount={quote.discount}
             discountAmount={quote.discountAmount}
@@ -420,6 +421,7 @@ export default function QuoteDetailsPage() {
             taxAmount={quote.taxAmount}
             total={quote.total}
           />
+
         </div>
       </div>
     </div>

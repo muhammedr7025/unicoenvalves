@@ -216,12 +216,14 @@ export default function AdminViewQuotePage() {
         <div className="border-t-4 border-gray-300 pt-6 mt-6">
           <QuoteSummary
             subtotal={quote.subtotal}
+            productsSubtotal={quote.products.reduce((sum, p) => sum + (p.lineTotal || 0), 0)}
             discount={quote.discount}
             discountAmount={quote.discountAmount}
             tax={quote.tax}
             taxAmount={quote.taxAmount}
             total={quote.total}
           />
+
         </div>
 
         {/* Notes */}

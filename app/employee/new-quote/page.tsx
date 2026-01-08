@@ -691,13 +691,18 @@ export default function NewQuotePage() {
             <div className="border-t-4 border-gray-300 pt-6 mt-6">
               <QuoteSummary
                 subtotal={displaySubtotal}
+                productsSubtotal={baseTotals.subtotal}
                 discount={discount}
                 discountAmount={displayDiscountAmount}
                 tax={tax}
                 taxAmount={displayTaxAmount}
                 total={displayTotal}
                 packagePrice={packagePrice}
+                freightPrice={freightPrice}
+                pricingType={pricingType}
               />
+
+
             </div>
           </div>
 

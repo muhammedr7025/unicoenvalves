@@ -130,6 +130,8 @@ export default function EditQuotePage() {
           tax: data.tax || 0,
           taxAmount: data.taxAmount || 0,
           total: data.total || 0,
+          packagePrice: data.packagePrice || 0,
+          freightPrice: data.freightPrice || 0,
           status: data.status || 'draft',
           createdBy: data.createdBy,
           createdByName: data.createdByName,
@@ -139,11 +141,12 @@ export default function EditQuotePage() {
           isArchived: data.isArchived || false,
         } as Quote;
 
+
         setQuote(loadedQuote);
         setProducts(loadedProducts);
         setDiscount(loadedQuote.discount);
         setTax(loadedQuote.tax);
-        setPackagePrice((loadedQuote as any).packagePrice || 0);
+        setPackagePrice(loadedQuote.packagePrice || 0);
         setNotes(loadedQuote.notes || '');
         setProjectName(loadedQuote.projectName || '');
         setEnquiryId(loadedQuote.enquiryId || '');
@@ -271,18 +274,22 @@ export default function EditQuotePage() {
     }
   };
 
-  // Calculate totals including package price for display
+  // Calculate totals including package price and freight (for F.O.R.) for display
   const baseTotals = products.length > 0
     ? calculateQuoteTotals(products, discount, tax)
     : { subtotal: 0, discountAmount: 0, taxableAmount: 0, taxAmount: 0, total: 0 };
 
-  // Discount applies only to product subtotal (not package price)
+  // Discount applies only to product subtotal (not package price or freight)
+  // Freight is included in total only for F.O.R. pricing
   const productSubtotalForDisplay = baseTotals.subtotal;
   const displayDiscountAmount = (productSubtotalForDisplay * discount) / 100;
   const discountedProductTotal = productSubtotalForDisplay - displayDiscountAmount;
-  const displaySubtotal = discountedProductTotal + packagePrice;
+  const freightToInclude = pricingType === 'F.O.R.' ? freightPrice : 0;
+  const displaySubtotal = discountedProductTotal + packagePrice + freightToInclude;
   const displayTaxAmount = (displaySubtotal * tax) / 100;
   const displayTotal = displaySubtotal + displayTaxAmount;
+
+
 
   if (loading) {
     return (
@@ -647,13 +654,18 @@ export default function EditQuotePage() {
           <div className="border-t-4 border-gray-300 pt-6">
             <QuoteSummary
               subtotal={displaySubtotal}
+              productsSubtotal={baseTotals.subtotal}
               discount={discount}
               discountAmount={displayDiscountAmount}
               tax={tax}
               taxAmount={displayTaxAmount}
               total={displayTotal}
               packagePrice={packagePrice}
+              freightPrice={freightPrice}
+              pricingType={pricingType}
             />
+
+
           </div>
         </div>
       )}
