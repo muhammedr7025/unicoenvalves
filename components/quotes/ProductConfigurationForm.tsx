@@ -652,7 +652,7 @@ export default function ProductConfigurationForm({
                                 </div>
 
                                 <div className="bg-white rounded-lg p-4 border border-gray-200">
-                                    <label className="block text-sm font-medium mb-2">Configuration *</label>
+                                    <label className="block text-sm font-medium mb-2">Material *</label>
                                     <SearchableSelect
                                         value={currentProduct.actuatorStandard || ''}
                                         onChange={(value) => setCurrentProduct({ ...currentProduct, actuatorStandard: value as 'standard' | 'special' })}
@@ -699,7 +699,7 @@ export default function ProductConfigurationForm({
                                             </div>
 
                                             <div>
-                                                <label className="block text-sm font-medium mb-2">Handwheel Series *</label>
+                                                <label className="block text-sm font-medium mb-2">Actuator Series *</label>
                                                 <SearchableSelect
                                                     value={currentProduct.handwheelSeries || ''}
                                                     onChange={(value) => handleHandwheelSeriesChange(value)}
@@ -710,7 +710,7 @@ export default function ProductConfigurationForm({
                                             </div>
 
                                             <div>
-                                                <label className="block text-sm font-medium mb-2">Handwheel Model *</label>
+                                                <label className="block text-sm font-medium mb-2">Actuator Model *</label>
                                                 <SearchableSelect
                                                     value={currentProduct.handwheelModel || ''}
                                                     onChange={(value) => setCurrentProduct({ ...currentProduct, handwheelModel: value })}
@@ -721,7 +721,7 @@ export default function ProductConfigurationForm({
                                             </div>
 
                                             <div>
-                                                <label className="block text-sm font-medium mb-2">Configuration *</label>
+                                                <label className="block text-sm font-medium mb-2">Material *</label>
                                                 <SearchableSelect
                                                     value={currentProduct.handwheelStandard || ''}
                                                     onChange={(value) => setCurrentProduct({ ...currentProduct, handwheelStandard: value as 'standard' | 'special' })}
