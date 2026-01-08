@@ -119,6 +119,12 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
     
+    // Machining Prices collection (NEW - fixed machining costs)
+    match /machiningPrices/{priceId} {
+      allow read: if isAdminOrEmployee();
+      allow create, update, delete: if isAdmin();
+    }
+    
     // ========================================
     // OLD collections (keep for backward compatibility, can be removed later)
     // ========================================

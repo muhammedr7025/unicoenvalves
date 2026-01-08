@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
     Material,
-    MachineType,
     Series,
     QuoteProduct,
     TubingAndFittingItem,
@@ -10,7 +9,6 @@ import {
     DEFAULT_ACCESSORIES,
 } from '@/types';
 import { useProductConfig } from '@/hooks/useProductConfig';
-import { getMachineTypes } from '@/lib/firebase/machinePricingService';
 import SearchableSelect from '@/components/ui/SearchableSelect';
 
 
@@ -69,17 +67,6 @@ export default function ProductConfigurationForm({
         handleHandwheelSeriesChange,
         calculateProductPrice,
     } = useProductConfig({ initialProduct, series, materials });
-
-    // Load available machines for selection
-    const [availableMachines, setAvailableMachines] = useState<MachineType[]>([]);
-
-    useEffect(() => {
-        async function loadMachines() {
-            const machines = await getMachineTypes();
-            setAvailableMachines(machines);
-        }
-        loadMachines();
-    }, []);
 
     // Temporary states for adding items
     const [newTubingTitle, setNewTubingTitle] = useState('');
@@ -146,15 +133,6 @@ export default function ProductConfigurationForm({
             sublabel: `₹${m.pricePerKg}/kg`
         }))
         , [cageMaterials]);
-
-    // Machine options
-    const machineOptions = useMemo(() =>
-        availableMachines.map(m => ({
-            value: m.id,
-            label: m.name,
-            sublabel: `₹${m.hourlyRate}/hr`
-        }))
-        , [availableMachines]);
 
     // Size options
     const sizeOptions = useMemo(() =>
@@ -252,84 +230,6 @@ export default function ProductConfigurationForm({
         }))
         , [availableHandwheelModels]);
 
-
-    // Machine selection change handlers
-    const handleBodyMachineChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const machineId = e.target.value;
-        const machine = availableMachines.find(m => m.id === machineId);
-        setCurrentProduct(prev => ({
-            ...prev,
-            bodyMachineTypeId: machineId,
-            bodyMachineTypeName: machine?.name,
-            bodyMachineRate: machine?.hourlyRate,
-        }));
-    };
-
-    const handleBonnetMachineChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const machineId = e.target.value;
-        const machine = availableMachines.find(m => m.id === machineId);
-        setCurrentProduct(prev => ({
-            ...prev,
-            bonnetMachineTypeId: machineId,
-            bonnetMachineTypeName: machine?.name,
-            bonnetMachineRate: machine?.hourlyRate,
-        }));
-    };
-
-    const handlePlugMachineChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const machineId = e.target.value;
-        const machine = availableMachines.find(m => m.id === machineId);
-        setCurrentProduct(prev => ({
-            ...prev,
-            plugMachineTypeId: machineId,
-            plugMachineTypeName: machine?.name,
-            plugMachineRate: machine?.hourlyRate,
-        }));
-    };
-
-    const handleSeatMachineChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const machineId = e.target.value;
-        const machine = availableMachines.find(m => m.id === machineId);
-        setCurrentProduct(prev => ({
-            ...prev,
-            seatMachineTypeId: machineId,
-            seatMachineTypeName: machine?.name,
-            seatMachineRate: machine?.hourlyRate,
-        }));
-    };
-
-    const handleStemMachineChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const machineId = e.target.value;
-        const machine = availableMachines.find(m => m.id === machineId);
-        setCurrentProduct(prev => ({
-            ...prev,
-            stemMachineTypeId: machineId,
-            stemMachineTypeName: machine?.name,
-            stemMachineRate: machine?.hourlyRate,
-        }));
-    };
-
-    const handleCageMachineChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const machineId = e.target.value;
-        const machine = availableMachines.find(m => m.id === machineId);
-        setCurrentProduct(prev => ({
-            ...prev,
-            cageMachineTypeId: machineId,
-            cageMachineTypeName: machine?.name,
-            cageMachineRate: machine?.hourlyRate,
-        }));
-    };
-
-    const handleSealRingMachineChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const machineId = e.target.value;
-        const machine = availableMachines.find(m => m.id === machineId);
-        setCurrentProduct(prev => ({
-            ...prev,
-            sealRingMachineTypeId: machineId,
-            sealRingMachineTypeName: machine?.name,
-            sealRingMachineRate: machine?.hourlyRate,
-        }));
-    };
 
     // Tubing & Fitting functions
     const addTubingAndFittingItem = () => {
@@ -564,40 +464,6 @@ export default function ProductConfigurationForm({
                                         * This material is shared for both Body and Bonnet
                                     </p>
                                 </div>
-                                <div>
-                                    <label className="block text-sm mb-1">Body Machine *</label>
-                                    <SearchableSelect
-                                        value={currentProduct.bodyMachineTypeId || ''}
-                                        onChange={(value) => {
-                                            const machine = availableMachines.find(m => m.id === value);
-                                            setCurrentProduct(prev => ({
-                                                ...prev,
-                                                bodyMachineTypeId: value,
-                                                bodyMachineTypeName: machine?.name,
-                                                bodyMachineRate: machine?.hourlyRate,
-                                            }));
-                                        }}
-                                        options={machineOptions}
-                                        placeholder="Search machine..."
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm mb-1">Bonnet Machine *</label>
-                                    <SearchableSelect
-                                        value={currentProduct.bonnetMachineTypeId || ''}
-                                        onChange={(value) => {
-                                            const machine = availableMachines.find(m => m.id === value);
-                                            setCurrentProduct(prev => ({
-                                                ...prev,
-                                                bonnetMachineTypeId: value,
-                                                bonnetMachineTypeName: machine?.name,
-                                                bonnetMachineRate: machine?.hourlyRate,
-                                            }));
-                                        }}
-                                        options={machineOptions}
-                                        placeholder="Search machine..."
-                                    />
-                                </div>
                             </div>
                         </div>
 
@@ -642,23 +508,6 @@ export default function ProductConfigurationForm({
                                         placeholder="Search material..."
                                     />
                                 </div>
-                                <div>
-                                    <label className="block text-sm mb-1">Plug Machine *</label>
-                                    <SearchableSelect
-                                        value={currentProduct.plugMachineTypeId || ''}
-                                        onChange={(value) => {
-                                            const machine = availableMachines.find(m => m.id === value);
-                                            setCurrentProduct(prev => ({
-                                                ...prev,
-                                                plugMachineTypeId: value,
-                                                plugMachineTypeName: machine?.name,
-                                                plugMachineRate: machine?.hourlyRate,
-                                            }));
-                                        }}
-                                        options={machineOptions}
-                                        placeholder="Search machine..."
-                                    />
-                                </div>
                             </div>
                         </div>
 
@@ -677,23 +526,6 @@ export default function ProductConfigurationForm({
                                         onChange={(value) => setCurrentProduct({ ...currentProduct, seatMaterialId: value })}
                                         options={seatMaterialOptions}
                                         placeholder="Search material..."
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm mb-1">Seat Machine *</label>
-                                    <SearchableSelect
-                                        value={currentProduct.seatMachineTypeId || ''}
-                                        onChange={(value) => {
-                                            const machine = availableMachines.find(m => m.id === value);
-                                            setCurrentProduct(prev => ({
-                                                ...prev,
-                                                seatMachineTypeId: value,
-                                                seatMachineTypeName: machine?.name,
-                                                seatMachineRate: machine?.hourlyRate,
-                                            }));
-                                        }}
-                                        options={machineOptions}
-                                        placeholder="Search machine..."
                                     />
                                 </div>
                             </div>
@@ -717,23 +549,6 @@ export default function ProductConfigurationForm({
                                     <p className="text-xs text-gray-500 mt-1">
                                         * Stem price = Fixed price based on series, size, rating, and material
                                     </p>
-                                </div>
-                                <div>
-                                    <label className="block text-sm mb-1">Stem Machine *</label>
-                                    <SearchableSelect
-                                        value={currentProduct.stemMachineTypeId || ''}
-                                        onChange={(value) => {
-                                            const machine = availableMachines.find(m => m.id === value);
-                                            setCurrentProduct(prev => ({
-                                                ...prev,
-                                                stemMachineTypeId: value,
-                                                stemMachineTypeName: machine?.name,
-                                                stemMachineRate: machine?.hourlyRate,
-                                            }));
-                                        }}
-                                        options={machineOptions}
-                                        placeholder="Search machine..."
-                                    />
                                 </div>
                             </div>
                         </div>
@@ -763,23 +578,6 @@ export default function ProductConfigurationForm({
                                             * Cage price = Weight × Material price
                                         </p>
                                     </div>
-                                    <div>
-                                        <label className="block text-sm mb-1">Cage Machine *</label>
-                                        <SearchableSelect
-                                            value={currentProduct.cageMachineTypeId || ''}
-                                            onChange={(value) => {
-                                                const machine = availableMachines.find(m => m.id === value);
-                                                setCurrentProduct(prev => ({
-                                                    ...prev,
-                                                    cageMachineTypeId: value,
-                                                    cageMachineTypeName: machine?.name,
-                                                    cageMachineRate: machine?.hourlyRate,
-                                                }));
-                                            }}
-                                            options={machineOptions}
-                                            placeholder="Search machine..."
-                                        />
-                                    </div>
                                 </div>
                             </div>
                         )}
@@ -806,23 +604,6 @@ export default function ProductConfigurationForm({
                                         <p className="text-xs text-gray-500 mt-1">
                                             Fixed price based on seal type, size, and rating
                                         </p>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm mb-1">Seal Ring Machine *</label>
-                                        <SearchableSelect
-                                            value={currentProduct.sealRingMachineTypeId || ''}
-                                            onChange={(value) => {
-                                                const machine = availableMachines.find(m => m.id === value);
-                                                setCurrentProduct(prev => ({
-                                                    ...prev,
-                                                    sealRingMachineTypeId: value,
-                                                    sealRingMachineTypeName: machine?.name,
-                                                    sealRingMachineRate: machine?.hourlyRate,
-                                                }));
-                                            }}
-                                            options={machineOptions}
-                                            placeholder="Search machine..."
-                                        />
                                     </div>
                                 </div>
                             </div>

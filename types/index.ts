@@ -128,6 +128,9 @@ export interface MachineType {
 
 export type ComponentType = 'Body' | 'Bonnet' | 'Plug' | 'Seat' | 'Stem' | 'Cage' | 'SealRing';
 
+// Components that have machining cost (Seal Ring excluded)
+export type MachiningComponentType = 'Body' | 'Bonnet' | 'Plug' | 'Seat' | 'Stem' | 'Cage';
+
 export interface WorkHourData {
   id: string;
   seriesId: string;
@@ -136,6 +139,20 @@ export interface WorkHourData {
   trimType?: string;         // Only for Plug, Seat, Cage, Seal Ring, Stem (not for Body, Bonnet)
   component: ComponentType;
   workHours: number;         // Just hours - machine selected during quote creation
+  isActive: boolean;
+}
+
+// NEW: Fixed Machining Price (replaces dynamic workHours × machineRate calculation)
+export interface MachiningPrice {
+  id: string;
+  component: MachiningComponentType;
+  seriesId: string;
+  size: string;
+  rating: string;
+  // Body uses endConnectType, Bonnet uses bonnetType, others use trimType
+  typeKey: string;
+  materialName: string;      // Material name for lookup (matches material.name)
+  fixedPrice: number;        // The fixed machining cost
   isActive: boolean;
 }
 

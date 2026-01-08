@@ -29,15 +29,14 @@ import {
     getAvailableHandwheelSeries,
     getAvailableHandwheelModels,
     getMaterialById,
-    // Machine pricing imports
+    // Fixed machining price lookups (replaced work hours)
     getAvailableTrimTypes,
-    getWorkHourForBody,
-    getWorkHourForBonnet,
-    getWorkHourForPlug,
-    getWorkHourForSeat,
-    getWorkHourForStem,
-    getWorkHourForCage,
-    getWorkHourForSealRing,
+    getMachiningCostForBody,
+    getMachiningCostForBonnet,
+    getMachiningCostForPlug,
+    getMachiningCostForSeat,
+    getMachiningCostForStem,
+    getMachiningCostForCage,
 } from '@/lib/firebase/productConfigHelper';
 
 interface UseProductConfigProps {
@@ -256,7 +255,7 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
             let updatedProduct = { ...p };
 
             // 1. Body Sub-Assembly
-            console.log('📦 Calculating Body weight and machine cost...');
+            console.log('📦 Calculating Body cost...');
             if (p.bodyEndConnectType && p.bodyBonnetMaterialId) {
                 const weight = await getBodyWeight(p.seriesId!, p.size!, p.rating!, p.bodyEndConnectType!);
                 const material = materials.find(m => m.id === p.bodyBonnetMaterialId);
@@ -273,22 +272,16 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
                     updatedProduct.bodyMaterialPrice = material.pricePerKg;
                     const materialCost = weight * material.pricePerKg;
 
-                    // Machine cost - use SELECTED machine (not from work hours)
-                    const workHourData = await getWorkHourForBody(p.seriesId!, p.size!, p.rating!);
-                    let machineCost = 0;
-                    if (workHourData) {
-                        updatedProduct.bodyWorkHours = workHourData.workHours;
-                        // Use selected machine rate from dropdown (already set by handler)
-                        const selectedMachineRate = p.bodyMachineRate || 0;
-                        machineCost = workHourData.workHours * selectedMachineRate;
-                        updatedProduct.bodyMachineCost = machineCost;
-                        if (selectedMachineRate > 0) {
-                            console.log(`✅ Body machine cost: ${machineCost} (${workHourData.workHours} hr × ₹${selectedMachineRate}/hr - ${p.bodyMachineTypeName || 'No machine selected'})`);
-                        } else {
-                            console.warn('⚠️ Body machine not selected - machine cost will be 0');
-                        }
+                    // Machining cost - FIXED PRICE lookup (series + size + rating + endConnectType + material)
+                    const machiningPrice = await getMachiningCostForBody(
+                        p.seriesId!, p.size!, p.rating!, p.bodyEndConnectType!, material.name
+                    );
+                    const machineCost = machiningPrice || 0;
+                    updatedProduct.bodyMachineCost = machineCost;
+                    if (machiningPrice) {
+                        console.log(`✅ Body machining cost: ₹${machineCost} (fixed price)`);
                     } else {
-                        console.warn('⚠️ Body work hour data not found - machine cost will be 0');
+                        console.warn('⚠️ Body machining price not found - cost will be 0');
                     }
 
                     // Total = Material + Machine
@@ -298,7 +291,7 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
             }
 
             // 2. Bonnet
-            console.log('📦 Calculating Bonnet weight and machine cost...');
+            console.log('📦 Calculating Bonnet cost...');
             if (p.bonnetType && p.bodyBonnetMaterialId) {
                 const weight = await getBonnetWeight(p.seriesId!, p.size!, p.rating!, p.bonnetType!);
                 const material = materials.find(m => m.id === p.bodyBonnetMaterialId);
@@ -315,17 +308,16 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
                     updatedProduct.bonnetMaterialPrice = material.pricePerKg;
                     const materialCost = weight * material.pricePerKg;
 
-                    // Machine cost - use SELECTED machine
-                    const workHourData = await getWorkHourForBonnet(p.seriesId!, p.size!, p.rating!);
-                    let machineCost = 0;
-                    if (workHourData) {
-                        updatedProduct.bonnetWorkHours = workHourData.workHours;
-                        const selectedMachineRate = p.bonnetMachineRate || 0;
-                        machineCost = workHourData.workHours * selectedMachineRate;
-                        updatedProduct.bonnetMachineCost = machineCost;
-                        console.log(`✅ Bonnet machine cost: ${machineCost} (${p.bonnetMachineTypeName || 'No machine'})`);
+                    // Machining cost - FIXED PRICE lookup (series + size + rating + bonnetType + material)
+                    const machiningPrice = await getMachiningCostForBonnet(
+                        p.seriesId!, p.size!, p.rating!, p.bonnetType!, material.name
+                    );
+                    const machineCost = machiningPrice || 0;
+                    updatedProduct.bonnetMachineCost = machineCost;
+                    if (machiningPrice) {
+                        console.log(`✅ Bonnet machining cost: ₹${machineCost} (fixed price)`);
                     } else {
-                        console.warn('Bonnet work hour data not found');
+                        console.warn('⚠️ Bonnet machining price not found - cost will be 0');
                     }
 
                     // Total = Material + Machine
@@ -335,7 +327,7 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
             }
 
             // 3. Plug
-            console.log('📦 Calculating Plug weight and machine cost...');
+            console.log('📦 Calculating Plug cost...');
             if (p.plugMaterialId) {
                 const plugData = await getPlugWeight(p.seriesId!, p.size!, p.rating!);
                 const material = materials.find(m => m.id === p.plugMaterialId);
@@ -352,17 +344,16 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
                     updatedProduct.plugMaterialPrice = material.pricePerKg;
                     const materialCost = plugData.weight * material.pricePerKg;
 
-                    // Machine cost - use SELECTED machine (Plug REQUIRES trimType)
-                    const workHourData = await getWorkHourForPlug(p.seriesId!, p.size!, p.rating!, p.trimType!);
-                    let machineCost = 0;
-                    if (workHourData) {
-                        updatedProduct.plugWorkHours = workHourData.workHours;
-                        const selectedMachineRate = p.plugMachineRate || 0;
-                        machineCost = workHourData.workHours * selectedMachineRate;
-                        updatedProduct.plugMachineCost = machineCost;
-                        console.log(`✅ Plug machine cost: ${machineCost} (${p.plugMachineTypeName || 'No machine'})`);
+                    // Machining cost - FIXED PRICE lookup (series + size + rating + trimType + material)
+                    const machiningPrice = await getMachiningCostForPlug(
+                        p.seriesId!, p.size!, p.rating!, p.trimType!, material.name
+                    );
+                    const machineCost = machiningPrice || 0;
+                    updatedProduct.plugMachineCost = machineCost;
+                    if (machiningPrice) {
+                        console.log(`✅ Plug machining cost: ₹${machineCost} (fixed price)`);
                     } else {
-                        console.warn('Plug work hour data not found');
+                        console.warn('⚠️ Plug machining price not found - cost will be 0');
                     }
 
                     // Total = Material + Machine
@@ -372,7 +363,7 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
             }
 
             // 4. Seat
-            console.log('📦 Calculating Seat weight and machine cost...');
+            console.log('📦 Calculating Seat cost...');
             if (p.seatMaterialId) {
                 const seatData = await getSeatWeight(p.seriesId!, p.size!, p.rating!);
                 const material = materials.find(m => m.id === p.seatMaterialId);
@@ -389,17 +380,16 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
                     updatedProduct.seatMaterialPrice = material.pricePerKg;
                     const materialCost = seatData.weight * material.pricePerKg;
 
-                    // Machine cost - use SELECTED machine (Seat REQUIRES trimType)
-                    const workHourData = await getWorkHourForSeat(p.seriesId!, p.size!, p.rating!, p.trimType!);
-                    let machineCost = 0;
-                    if (workHourData) {
-                        updatedProduct.seatWorkHours = workHourData.workHours;
-                        const selectedMachineRate = p.seatMachineRate || 0;
-                        machineCost = workHourData.workHours * selectedMachineRate;
-                        updatedProduct.seatMachineCost = machineCost;
-                        console.log(`✅ Seat machine cost: ${machineCost}`);
+                    // Machining cost - FIXED PRICE lookup (series + size + rating + trimType + material)
+                    const machiningPrice = await getMachiningCostForSeat(
+                        p.seriesId!, p.size!, p.rating!, p.trimType!, material.name
+                    );
+                    const machineCost = machiningPrice || 0;
+                    updatedProduct.seatMachineCost = machineCost;
+                    if (machiningPrice) {
+                        console.log(`✅ Seat machining cost: ₹${machineCost} (fixed price)`);
                     } else {
-                        console.warn('Seat work hour data not found');
+                        console.warn('⚠️ Seat machining price not found - cost will be 0');
                     }
 
                     // Total = Material + Machine
@@ -409,7 +399,7 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
             }
 
             // 5. Stem
-            console.log('📦 Calculating Stem price and machine cost...');
+            console.log('📦 Calculating Stem cost...');
             if (p.stemMaterialId) {
                 const material = materials.find(m => m.id === p.stemMaterialId);
                 if (!material) {
@@ -425,17 +415,16 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
                         updatedProduct.stemFixedPrice = fixedPrice;
                         const materialCost = fixedPrice;
 
-                        // Machine cost - use SELECTED machine (Stem REQUIRES trimType)
-                        const workHourData = await getWorkHourForStem(p.seriesId!, p.size!, p.rating!, p.trimType!);
-                        let machineCost = 0;
-                        if (workHourData) {
-                            updatedProduct.stemWorkHours = workHourData.workHours;
-                            const selectedMachineRate = p.stemMachineRate || 0;
-                            machineCost = workHourData.workHours * selectedMachineRate;
-                            updatedProduct.stemMachineCost = machineCost;
-                            console.log(`✅ Stem machine cost: ${machineCost}`);
+                        // Machining cost - FIXED PRICE lookup (series + size + rating + trimType + material)
+                        const machiningPrice = await getMachiningCostForStem(
+                            p.seriesId!, p.size!, p.rating!, p.trimType!, material.name
+                        );
+                        const machineCost = machiningPrice || 0;
+                        updatedProduct.stemMachineCost = machineCost;
+                        if (machiningPrice) {
+                            console.log(`✅ Stem machining cost: ₹${machineCost} (fixed price)`);
                         } else {
-                            console.warn('Stem work hour data not found');
+                            console.warn('⚠️ Stem machining price not found - cost will be 0');
                         }
 
                         // Total = Material + Machine
@@ -447,7 +436,7 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
 
             // 6. Cage
             if (p.hasCage && p.cageMaterialId) {
-                console.log('📦 Calculating Cage weight and machine cost...');
+                console.log('📦 Calculating Cage cost...');
                 const weight = await getCageWeight(p.seriesId!, p.size!, p.rating!);
                 const material = materials.find(m => m.id === p.cageMaterialId);
 
@@ -463,17 +452,16 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
                     updatedProduct.cageMaterialPrice = material.pricePerKg;
                     const materialCost = weight * material.pricePerKg;
 
-                    // Machine cost - use SELECTED machine (Cage REQUIRES trimType)
-                    const workHourData = await getWorkHourForCage(p.seriesId!, p.size!, p.rating!, p.trimType!);
-                    let machineCost = 0;
-                    if (workHourData) {
-                        updatedProduct.cageWorkHours = workHourData.workHours;
-                        const selectedMachineRate = p.cageMachineRate || 0;
-                        machineCost = workHourData.workHours * selectedMachineRate;
-                        updatedProduct.cageMachineCost = machineCost;
-                        console.log(`✅ Cage machine cost: ${machineCost}`);
+                    // Machining cost - FIXED PRICE lookup (series + size + rating + trimType + material)
+                    const machiningPrice = await getMachiningCostForCage(
+                        p.seriesId!, p.size!, p.rating!, p.trimType!, material.name
+                    );
+                    const machineCost = machiningPrice || 0;
+                    updatedProduct.cageMachineCost = machineCost;
+                    if (machiningPrice) {
+                        console.log(`✅ Cage machining cost: ₹${machineCost} (fixed price)`);
                     } else {
-                        console.warn('Cage work hour data not found');
+                        console.warn('⚠️ Cage machining price not found - cost will be 0');
                     }
 
                     // Total = Material + Machine
@@ -482,34 +470,18 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
                 }
             }
 
-            // 7. Seal Ring
+            // 7. Seal Ring (NO machining cost - only fixed price)
             if (p.hasSealRing && p.sealType) {
-                console.log('📦 Calculating Seal Ring price and machine cost...');
+                console.log('📦 Calculating Seal Ring price...');
                 const price = await getSealRingPrice(p.seriesId!, p.sealType!, p.size!, p.rating!);
                 if (!price) {
                     errors.push(`Seal Ring Price not found for: Series ${p.seriesNumber}, Seal Type ${p.sealType}, Size ${p.size}, Rating ${p.rating}`);
                     console.error('❌ Seal ring price not found');
                 } else {
-                    // Material cost (fixed price)
+                    // Material cost (fixed price only - NO machining for Seal Ring)
                     updatedProduct.sealRingFixedPrice = price;
-                    const materialCost = price;
-
-                    // Machine cost - use SELECTED machine (Seal Ring REQUIRES trimType)
-                    const workHourData = await getWorkHourForSealRing(p.seriesId!, p.size!, p.rating!, p.trimType!);
-                    let machineCost = 0;
-                    if (workHourData) {
-                        updatedProduct.sealRingWorkHours = workHourData.workHours;
-                        const selectedMachineRate = p.sealRingMachineRate || 0;
-                        machineCost = workHourData.workHours * selectedMachineRate;
-                        updatedProduct.sealRingMachineCost = machineCost;
-                        console.log(`✅ Seal Ring machine cost: ${machineCost}`);
-                    } else {
-                        console.warn('Seal Ring work hour data not found');
-                    }
-
-                    // Total = Material + Machine
-                    updatedProduct.sealRingTotalCost = materialCost + machineCost;
-                    console.log(`✅ Seal Ring total: ₹${updatedProduct.sealRingTotalCost}`);
+                    updatedProduct.sealRingTotalCost = price;
+                    console.log(`✅ Seal Ring total: ₹${price} (no machining cost)`);
                 }
             }
 

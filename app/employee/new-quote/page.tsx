@@ -22,6 +22,7 @@ import { calculateQuoteTotals } from '@/utils/priceCalculator';
 import ProductList from '@/components/quotes/ProductList';
 import ProductConfigurationForm from '@/components/quotes/ProductConfigurationForm';
 import QuoteSummary from '@/components/quotes/QuoteSummary';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 
 export default function NewQuotePage() {
   const { user } = useAuth();
@@ -255,26 +256,92 @@ export default function NewQuotePage() {
         </div>
       </div>
 
-      {/* Step 1: Customer Selection */}
+      {/* Step 1: Customer & Quote Details */}
       {currentStep === 1 && (
         <div className="bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-xl font-bold mb-4">Select Customer</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {customers.map((customer) => (
-              <div
-                key={customer.id}
-                onClick={() => {
-                  setSelectedCustomer(customer);
-                  setCurrentStep(2);
-                }}
-                className={`p-4 border-2 rounded-lg cursor-pointer hover:border-green-500 transition-colors ${selectedCustomer?.id === customer.id ? 'border-green-600 bg-green-50' : 'border-gray-200'
-                  }`}
-              >
-                <h3 className="font-semibold text-gray-900">{customer.name}</h3>
-                <p className="text-sm text-gray-600">{customer.email}</p>
-                <p className="text-sm text-gray-500">{customer.country}</p>
+          <h2 className="text-xl font-bold mb-6">📋 Quote Details & Customer</h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Left Column - Customer Selection */}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">👤 Select Customer *</label>
+                <SearchableSelect
+                  value={selectedCustomer?.id || ''}
+                  onChange={(value) => {
+                    const customer = customers.find(c => c.id === value);
+                    setSelectedCustomer(customer || null);
+                  }}
+                  options={customers.map((customer) => ({
+                    value: customer.id,
+                    label: `${customer.name} (${customer.email})`
+                  }))}
+                  placeholder="Search customer by name or email..."
+                />
               </div>
-            ))}
+
+              {/* Show selected customer details */}
+              {selectedCustomer && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-green-900 mb-2">Selected Customer</h4>
+                  <p className="text-sm text-green-800"><strong>{selectedCustomer.name}</strong></p>
+                  <p className="text-sm text-green-700">{selectedCustomer.email}</p>
+                  <p className="text-sm text-green-600">{selectedCustomer.country}</p>
+                  {selectedCustomer.phone && <p className="text-sm text-green-600">📞 {selectedCustomer.phone}</p>}
+                </div>
+              )}
+            </div>
+
+            {/* Right Column - Quote Details */}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">📝 Quote Number</label>
+                <input
+                  type="text"
+                  value={customQuoteNumber}
+                  onChange={(e) => setCustomQuoteNumber(e.target.value)}
+                  className="w-full px-4 py-3 border-2 rounded-lg border-blue-300 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Leave blank for auto-generate"
+                />
+                <p className="text-xs text-gray-500 mt-1">Optional - will auto-generate if empty</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">🏗️ Project Name</label>
+                <input
+                  type="text"
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
+                  className="w-full px-4 py-3 border-2 rounded-lg border-purple-300 focus:ring-purple-500 focus:border-purple-500"
+                  placeholder="e.g., Refinery Expansion Project"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">📨 Enquiry ID / Reference</label>
+                <input
+                  type="text"
+                  value={enquiryId}
+                  onChange={(e) => setEnquiryId(e.target.value)}
+                  className="w-full px-4 py-3 border-2 rounded-lg border-orange-300 focus:ring-orange-500 focus:border-orange-500"
+                  placeholder="e.g., RFQ-2023-001"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Next Button */}
+          <div className="flex justify-end mt-8">
+            <button
+              onClick={() => setCurrentStep(2)}
+              disabled={!selectedCustomer}
+              className="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 font-bold disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+            >
+              Next: Add Products
+              <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
           </div>
         </div>
       )}
@@ -355,38 +422,18 @@ export default function NewQuotePage() {
 
             {/* Quote Details Form */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {/* Custom Quote Number */}
-              <div>
-                <label className="block text-sm font-medium mb-2">📝 Custom Quote Number</label>
-                <input
-                  type="text"
-                  value={customQuoteNumber}
-                  onChange={(e) => setCustomQuoteNumber(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg border-blue-300 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Leave blank for auto-generate"
-                />
-                <p className="text-xs text-gray-500 mt-1">Override default quote number</p>
+              {/* Quote Info Summary (from Step 1) */}
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <label className="block text-sm font-medium text-blue-700 mb-1">📝 Quote Number</label>
+                <p className="font-semibold text-blue-900">{customQuoteNumber || '(Auto-generated)'}</p>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Project Name</label>
-                <input
-                  type="text"
-                  value={projectName}
-                  onChange={(e) => setProjectName(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg"
-                  placeholder="e.g., Refinery Expansion Project"
-                />
+              <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <label className="block text-sm font-medium text-purple-700 mb-1">🏗️ Project Name</label>
+                <p className="font-semibold text-purple-900">{projectName || '(Not specified)'}</p>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Enquiry ID/Ref</label>
-                <input
-                  type="text"
-                  value={enquiryId}
-                  onChange={(e) => setEnquiryId(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg"
-                  placeholder="e.g., RFQ-2023-001"
-                />
+              <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                <label className="block text-sm font-medium text-orange-700 mb-1">📨 Enquiry ID</label>
+                <p className="font-semibold text-orange-900">{enquiryId || '(Not specified)'}</p>
               </div>
 
               {/* Validity Period Dropdown */}
