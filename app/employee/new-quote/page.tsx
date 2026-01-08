@@ -22,6 +22,7 @@ import { calculateQuoteTotals } from '@/utils/priceCalculator';
 import ProductList from '@/components/quotes/ProductList';
 import ProductConfigurationForm from '@/components/quotes/ProductConfigurationForm';
 import QuoteSummary from '@/components/quotes/QuoteSummary';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 
 export default function NewQuotePage() {
   const { user } = useAuth();
@@ -265,21 +266,18 @@ export default function NewQuotePage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-2">👤 Select Customer *</label>
-                <select
+                <SearchableSelect
                   value={selectedCustomer?.id || ''}
-                  onChange={(e) => {
-                    const customer = customers.find(c => c.id === e.target.value);
+                  onChange={(value) => {
+                    const customer = customers.find(c => c.id === value);
                     setSelectedCustomer(customer || null);
                   }}
-                  className="w-full px-4 py-3 border-2 rounded-lg border-green-300 focus:ring-green-500 focus:border-green-500 text-lg"
-                >
-                  <option value="">-- Select a Customer --</option>
-                  {customers.map((customer) => (
-                    <option key={customer.id} value={customer.id}>
-                      {customer.name} ({customer.email})
-                    </option>
-                  ))}
-                </select>
+                  options={customers.map((customer) => ({
+                    value: customer.id,
+                    label: `${customer.name} (${customer.email})`
+                  }))}
+                  placeholder="Search customer by name or email..."
+                />
               </div>
 
               {/* Show selected customer details */}
