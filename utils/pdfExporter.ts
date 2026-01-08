@@ -1,6 +1,10 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { PDFDocument } from 'pdf-lib';
 import { Quote } from '@/types';
+
+// Path to Terms and Conditions PDF
+const TERMS_CONDITIONS_PDF_PATH = '/3. COMMERCIAL TERMS AND CONDITIONS(MK).pdf';
 
 // Company information matching reference PDFs
 const COMPANY = {
@@ -116,6 +120,102 @@ const loadLogoBase64 = async (): Promise<string | undefined> => {
         console.error('Error loading logo:', error);
         return undefined;
     }
+};
+
+// Helper function to load Terms & Conditions PDF as ArrayBuffer
+const loadTermsConditionsPDF = async (): Promise<ArrayBuffer | undefined> => {
+    try {
+        const response = await fetch(TERMS_CONDITIONS_PDF_PATH);
+        if (!response.ok) {
+            console.error('Failed to load Terms & Conditions PDF:', response.statusText);
+            return undefined;
+        }
+        return await response.arrayBuffer();
+    } catch (error) {
+        console.error('Error loading Terms & Conditions PDF:', error);
+        return undefined;
+    }
+};
+
+// Helper function to merge jsPDF document with Terms & Conditions PDF
+const mergePDFWithTermsConditions = async (jsPdfDoc: jsPDF): Promise<Uint8Array> => {
+    // Convert jsPDF to ArrayBuffer
+    const jsPdfArrayBuffer = jsPdfDoc.output('arraybuffer');
+    
+    // Load the Terms & Conditions PDF
+    const tcPdfArrayBuffer = await loadTermsConditionsPDF();
+    
+    if (!tcPdfArrayBuffer) {
+        // If T&C PDF fails to load, return the original PDF
+        console.warn('Terms & Conditions PDF not found, returning original PDF');
+        return new Uint8Array(jsPdfArrayBuffer);
+    }
+    
+    // Create PDFDocument instances
+    const mainPdf = await PDFDocument.load(jsPdfArrayBuffer);
+    const tcPdf = await PDFDocument.load(tcPdfArrayBuffer);
+    
+    // Copy all pages from T&C PDF to main PDF
+    const tcPageCount = tcPdf.getPageCount();
+    const copiedPages = await mainPdf.copyPages(tcPdf, Array.from({ length: tcPageCount }, (_, i) => i));
+    
+    copiedPages.forEach((page) => {
+        mainPdf.addPage(page);
+    });
+    
+    // Return merged PDF bytes
+    return await mainPdf.save();
+};
+
+// Helper function to merge PDFs for combined document (insert T&C between cover letter and price summary)
+const createCombinedPDFWithTermsConditions = async (
+    coverLetterPdf: jsPDF,
+    priceSummaryPdf: jsPDF
+): Promise<Uint8Array> => {
+    // Convert jsPDFs to ArrayBuffers
+    const coverLetterArrayBuffer = coverLetterPdf.output('arraybuffer');
+    const priceSummaryArrayBuffer = priceSummaryPdf.output('arraybuffer');
+    
+    // Load the Terms & Conditions PDF
+    const tcPdfArrayBuffer = await loadTermsConditionsPDF();
+    
+    // Create final merged PDF
+    const finalPdf = await PDFDocument.create();
+    
+    // Load cover letter PDF and add all its pages
+    const coverPdf = await PDFDocument.load(coverLetterArrayBuffer);
+    const coverPages = await finalPdf.copyPages(coverPdf, coverPdf.getPageIndices());
+    coverPages.forEach((page) => finalPdf.addPage(page));
+    
+    // Add Terms & Conditions PDF pages (if available)
+    if (tcPdfArrayBuffer) {
+        const tcPdf = await PDFDocument.load(tcPdfArrayBuffer);
+        const tcPages = await finalPdf.copyPages(tcPdf, tcPdf.getPageIndices());
+        tcPages.forEach((page) => finalPdf.addPage(page));
+    } else {
+        console.warn('Terms & Conditions PDF not found for combined document');
+    }
+    
+    // Load price summary PDF and add all its pages
+    const pricePdf = await PDFDocument.load(priceSummaryArrayBuffer);
+    const pricePages = await finalPdf.copyPages(pricePdf, pricePdf.getPageIndices());
+    pricePages.forEach((page) => finalPdf.addPage(page));
+    
+    return await finalPdf.save();
+};
+
+// Helper function to download PDF bytes
+const downloadPDFBytes = (pdfBytes: Uint8Array, filename: string) => {
+    // Convert Uint8Array to ArrayBuffer properly for Blob creation
+    const blob = new Blob([pdfBytes.slice().buffer], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 };
 
 // Generate Cover Letter PDF
@@ -265,7 +365,9 @@ export async function generateCoverLetterPDF(quote: Quote, customerDetails: any)
 
     addFooter(doc, pageWidth, pageHeight);
 
-    doc.save(`${quote.quoteNumber}_CoverLetter.pdf`);
+    // Merge with Terms & Conditions PDF and download
+    const mergedPdfBytes = await mergePDFWithTermsConditions(doc);
+    downloadPDFBytes(mergedPdfBytes, `${quote.quoteNumber}_CoverLetter.pdf`);
 }
 
 // Generate Price Summary PDF
@@ -526,83 +628,81 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
     doc.save(`${quote.quoteNumber}_PriceSummary.pdf`);
 }
 
-// Generate Combined PDF (Cover Letter + Price Summary)
+// Generate Combined PDF (Cover Letter + Terms & Conditions + Price Summary)
 export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
-    const doc = new jsPDF('p', 'pt', 'a4');
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-
     // Load logo once for all pages
     const logoBase64 = await loadLogoBase64();
-
-    // ==================== PAGE 1: COVER LETTER ====================
-    await addHeader(doc, pageWidth, logoBase64);
+    
+    // ==================== Create Cover Letter PDF ====================
+    const coverLetterDoc = new jsPDF('p', 'pt', 'a4');
+    const pageWidth = coverLetterDoc.internal.pageSize.getWidth();
+    const pageHeight = coverLetterDoc.internal.pageSize.getHeight();
+    
+    await addHeader(coverLetterDoc, pageWidth, logoBase64);
 
     let yPos = 70;
 
     // Title
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 139);
-    doc.text('OFFER COVERING LETTER', pageWidth / 2, yPos, { align: 'center' });
+    coverLetterDoc.setFontSize(14);
+    coverLetterDoc.setFont('helvetica', 'bold');
+    coverLetterDoc.setTextColor(0, 0, 139);
+    coverLetterDoc.text('OFFER COVERING LETTER', pageWidth / 2, yPos, { align: 'center' });
 
     yPos += 30;
 
     // Date and Location (Left side)
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0, 0, 0);
-    doc.text('Coimbatore, INDIA', 50, yPos);
+    coverLetterDoc.setFontSize(10);
+    coverLetterDoc.setFont('helvetica', 'normal');
+    coverLetterDoc.setTextColor(0, 0, 0);
+    coverLetterDoc.text('Coimbatore, INDIA', 50, yPos);
     yPos += 15;
-    doc.text(`Date: ${formatDate(quote.createdAt)}`, 50, yPos);
+    coverLetterDoc.text(`Date: ${formatDate(quote.createdAt)}`, 50, yPos);
 
     yPos += 30;
 
     // Customer Details (To Section)
-    doc.setFont('helvetica', 'bold');
+    coverLetterDoc.setFont('helvetica', 'bold');
     yPos += 15;
-    doc.setFont('helvetica', 'normal');
-    doc.text(customerDetails.name || quote.customerName, 50, yPos);
+    coverLetterDoc.setFont('helvetica', 'normal');
+    coverLetterDoc.text(customerDetails.name || quote.customerName, 50, yPos);
     yPos += 15;
 
     if (customerDetails.address) {
-        const addressLines = doc.splitTextToSize(customerDetails.address, 400);
+        const addressLines = coverLetterDoc.splitTextToSize(customerDetails.address, 400);
         addressLines.forEach((line: string) => {
-            doc.text(line, 50, yPos);
+            coverLetterDoc.text(line, 50, yPos);
             yPos += 12;
         });
     }
 
     if (customerDetails.country) {
-        doc.text(customerDetails.country, 50, yPos);
+        coverLetterDoc.text(customerDetails.country, 50, yPos);
         yPos += 15;
     }
 
     yPos += 20;
 
     // Salutation
-    doc.text('Dear Sir/Madam,', 50, yPos);
+    coverLetterDoc.text('Dear Sir/Madam,', 50, yPos);
 
     yPos += 30;
 
-
-
     // Body paragraph
     const bodyText = `We thank you for the above referred RFQ/Enquiry, and are pleased to submit our techno-commercial offer for your kind consideration.`;
-    const bodyLines = doc.splitTextToSize(bodyText, pageWidth - 100);
+    const bodyLines = coverLetterDoc.splitTextToSize(bodyText, pageWidth - 100);
     bodyLines.forEach((line: string) => {
-        doc.text(line, 50, yPos);
+        coverLetterDoc.text(line, 50, yPos);
         yPos += 14;
     });
 
     yPos += 20;
 
     // Offer comprises section
-    doc.setFont('helvetica', 'bold');
-    doc.text('Our Offer comprises of the following:', 50, yPos);
+    coverLetterDoc.setFont('helvetica', 'bold');
+    coverLetterDoc.text('Our Offer comprises of the following:', 50, yPos);
     yPos += 20;
 
-    doc.setFont('helvetica', 'normal');
+    coverLetterDoc.setFont('helvetica', 'normal');
     const offerItems = [
         '1.  Covering Letter',
         '2.  Priced Bid with Commercial Terms and Conditions',
@@ -610,7 +710,7 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
     ];
 
     offerItems.forEach(item => {
-        doc.text(item, 70, yPos);
+        coverLetterDoc.text(item, 70, yPos);
         yPos += 18;
     });
 
@@ -618,70 +718,73 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
 
     // Closing paragraphs
     const closingText1 = 'We trust our offer meets your requirements. Should you require any further clarification or technical assistance, please feel free to contact the undersigned.';
-    const closingLines1 = doc.splitTextToSize(closingText1, pageWidth - 100);
+    const closingLines1 = coverLetterDoc.splitTextToSize(closingText1, pageWidth - 100);
     closingLines1.forEach((line: string) => {
-        doc.text(line, 50, yPos);
+        coverLetterDoc.text(line, 50, yPos);
         yPos += 14;
     });
 
     yPos += 20;
 
     const closingText2 = 'We look forward to receiving your valuable order and assure you of our best services at all times.';
-    const closingLines2 = doc.splitTextToSize(closingText2, pageWidth - 100);
+    const closingLines2 = coverLetterDoc.splitTextToSize(closingText2, pageWidth - 100);
     closingLines2.forEach((line: string) => {
-        doc.text(line, 50, yPos);
+        coverLetterDoc.text(line, 50, yPos);
         yPos += 14;
     });
 
     yPos += 30;
 
     // Thanking you
-    doc.setFont('helvetica', 'bold');
-    doc.text('Thanking you,', 50, yPos);
+    coverLetterDoc.setFont('helvetica', 'bold');
+    coverLetterDoc.text('Thanking you,', 50, yPos);
     yPos += 15;
-    doc.text('Yours faithfully,', 50, yPos);
+    coverLetterDoc.text('Yours faithfully,', 50, yPos);
 
     yPos += 30;
 
     // For company
-    doc.setFont('helvetica', 'bold');
-    doc.text(`For ${COMPANY.name}`, 50, yPos);
+    coverLetterDoc.setFont('helvetica', 'bold');
+    coverLetterDoc.text(`For ${COMPANY.name}`, 50, yPos);
 
     yPos += 40;
 
     // Signature space
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.text('_________________________', 50, yPos);
+    coverLetterDoc.setFont('helvetica', 'normal');
+    coverLetterDoc.setFontSize(9);
+    coverLetterDoc.text('_________________________', 50, yPos);
 
     yPos += 15;
 
     // Employee details
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.text(quote.createdByName, 50, yPos);
+    coverLetterDoc.setFont('helvetica', 'bold');
+    coverLetterDoc.setFontSize(10);
+    coverLetterDoc.text(quote.createdByName, 50, yPos);
     yPos += 13;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.text('Assistant Manager - Application Engineering', 50, yPos);
+    coverLetterDoc.setFont('helvetica', 'normal');
+    coverLetterDoc.setFontSize(9);
+    coverLetterDoc.text('Assistant Manager - Application Engineering', 50, yPos);
     yPos += 12;
-    doc.text('Internal Sales/Marketing Department', 50, yPos);
+    coverLetterDoc.text('Internal Sales/Marketing Department', 50, yPos);
     yPos += 12;
-    doc.text('Mobile: +91 9497471386', 50, yPos);
+    coverLetterDoc.text('Mobile: +91 9497471386', 50, yPos);
     yPos += 12;
-    doc.text(`Email: ${COMPANY.email}`, 50, yPos);
+    coverLetterDoc.text(`Email: ${COMPANY.email}`, 50, yPos);
 
-    addFooter(doc, pageWidth, pageHeight);
+    addFooter(coverLetterDoc, pageWidth, pageHeight);
 
-    // ==================== PAGE 2: PRICE SUMMARY ====================
-    doc.addPage();
-    await addHeader(doc, pageWidth, logoBase64);
+    // ==================== Create Price Summary PDF ====================
+    const priceSummaryDoc = new jsPDF('p', 'pt', 'a4');
+    const pricePageWidth = priceSummaryDoc.internal.pageSize.getWidth();
+    const pricePageHeight = priceSummaryDoc.internal.pageSize.getHeight();
+    
+    await addHeader(priceSummaryDoc, pricePageWidth, logoBase64);
 
     yPos = 70;
 
     // Quote Information Box (title is in header)
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(9);
+    priceSummaryDoc.setTextColor(0, 0, 0);
+    priceSummaryDoc.setFontSize(9);
 
     const infoData = [
         ['Customer:', customerDetails.name || quote.customerName, 'Unicorn Ref:', quote.quoteNumber],
@@ -689,7 +792,7 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
         ['Project:', quote.projectName || '-', 'Revision:', '00'],
     ];
 
-    autoTable(doc, {
+    autoTable(priceSummaryDoc, {
         startY: yPos,
         body: infoData,
         theme: 'plain',
@@ -707,12 +810,12 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
         },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 25;
+    yPos = (priceSummaryDoc as any).lastAutoTable.finalY + 25;
 
     // Products Table Header
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.text('ITEM DETAILS', 50, yPos);
+    priceSummaryDoc.setFontSize(11);
+    priceSummaryDoc.setFont('helvetica', 'bold');
+    priceSummaryDoc.text('ITEM DETAILS', 50, yPos);
 
     yPos += 15;
 
@@ -734,7 +837,7 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
         ];
     });
 
-    autoTable(doc, {
+    autoTable(priceSummaryDoc, {
         startY: yPos,
         head: [['S.No', 'Tag No.', 'Item Description', 'Unit Price\n(INR)', 'Qty', 'Total Price\n(INR)']],
         body: productsTableData,
@@ -766,18 +869,17 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
         margin: { left: 40, right: 40 },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 20;
+    yPos = (priceSummaryDoc as any).lastAutoTable.finalY + 20;
 
     // Calculate pricing - use stored packagePrice from quote
     const packingCharges = quote.packagePrice || 0;
 
     // TOTAL row - centered header spanning full width
-    // Using explicit tableWidth: 515 to match products table exactly (35+70+200+85+30+95)
-    autoTable(doc, {
+    autoTable(priceSummaryDoc, {
         startY: yPos,
         body: [['TOTAL']],
         theme: 'grid',
-        tableWidth: 515, // Explicit width matching products table
+        tableWidth: 515,
         styles: {
             fontSize: 8,
             cellPadding: 4,
@@ -790,23 +892,20 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
         margin: { left: 40, right: 40 },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY;
+    yPos = (priceSummaryDoc as any).lastAutoTable.finalY;
 
-    // Summary rows - TRUE 2-column layout
-    // Col 0: 420pt (matches first 5 product cols: 35+70+200+85+30)
-    // Col 1: 95pt (matches Total Price column)
-    // Total: 515pt
-    const summaryRows2 = [
+    // Summary rows
+    const summaryRows = [
         ['Ex-Works Price Coimbatore', formatINR(quote.subtotal)],
         ['Packing Charges', formatINR(packingCharges)],
         ['IGST(18 %)', formatINR(quote.taxAmount)],
     ];
 
-    autoTable(doc, {
+    autoTable(priceSummaryDoc, {
         startY: yPos,
-        body: summaryRows2,
+        body: summaryRows,
         theme: 'grid',
-        tableWidth: 515, // Explicit width
+        tableWidth: 515,
         styles: {
             fontSize: 8,
             cellPadding: 4,
@@ -816,19 +915,19 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
         },
         columnStyles: {
             0: { cellWidth: 405, halign: 'left' },
-            1: { cellWidth: 110, halign: 'right', fontStyle: 'bold' },
+            1: { cellWidth: 110, halign: 'left', fontStyle: 'bold' },
         },
         margin: { left: 40, right: 40 },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY;
+    yPos = (priceSummaryDoc as any).lastAutoTable.finalY;
 
     // Grand Total row - highlighted
-    autoTable(doc, {
+    autoTable(priceSummaryDoc, {
         startY: yPos,
         body: [['Total Ex-works Price(Excluding Freight/Insurance)', formatINR(quote.total)]],
         theme: 'grid',
-        tableWidth: 515, // Explicit width
+        tableWidth: 515,
         styles: {
             fontSize: 8,
             cellPadding: 4,
@@ -839,25 +938,25 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
         },
         columnStyles: {
             0: { cellWidth: 405, halign: 'left', fillColor: [240, 240, 240] },
-            1: { cellWidth: 110, halign: 'right', fillColor: [240, 240, 240] },
+            1: { cellWidth: 110, halign: 'left', fillColor: [240, 240, 240] },
         },
         margin: { left: 40, right: 40 },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 30;
+    yPos = (priceSummaryDoc as any).lastAutoTable.finalY + 30;
 
     // Check if we need a new page
-    if (yPos > pageHeight - 250) {
-        doc.addPage();
-        await addHeader(doc, pageWidth, logoBase64);
+    if (yPos > pricePageHeight - 250) {
+        priceSummaryDoc.addPage();
+        await addHeader(priceSummaryDoc, pricePageWidth, logoBase64);
         yPos = 70;
     }
 
     // Commercial Terms & Conditions
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 139);
-    doc.text('COMMERCIAL TERMS & CONDITIONS', 50, yPos);
+    priceSummaryDoc.setFontSize(12);
+    priceSummaryDoc.setFont('helvetica', 'bold');
+    priceSummaryDoc.setTextColor(0, 0, 139);
+    priceSummaryDoc.text('COMMERCIAL TERMS & CONDITIONS', 50, yPos);
 
     yPos += 20;
 
@@ -872,7 +971,7 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
         ['Manufacturer', 'Unicorn Valves Private Limited'],
     ];
 
-    autoTable(doc, {
+    autoTable(priceSummaryDoc, {
         startY: yPos,
         body: termsData,
         theme: 'plain',
@@ -888,39 +987,41 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
         },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 40;
+    yPos = (priceSummaryDoc as any).lastAutoTable.finalY + 40;
 
     // Check if signature fits on this page
-    if (yPos > pageHeight - 150) {
-        doc.addPage();
-        await addHeader(doc, pageWidth, logoBase64);
+    if (yPos > pricePageHeight - 150) {
+        priceSummaryDoc.addPage();
+        await addHeader(priceSummaryDoc, pricePageWidth, logoBase64);
         yPos = 70;
     }
 
     // Signature Section
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0, 0, 0);
-    doc.text('For Unicorn Valves Private Limited,', 50, yPos);
+    priceSummaryDoc.setFontSize(10);
+    priceSummaryDoc.setFont('helvetica', 'normal');
+    priceSummaryDoc.setTextColor(0, 0, 0);
+    priceSummaryDoc.text('For Unicorn Valves Private Limited,', 50, yPos);
 
     yPos += 40;
 
-    doc.setFont('helvetica', 'bold');
-    doc.text(quote.createdByName, 50, yPos);
+    priceSummaryDoc.setFont('helvetica', 'bold');
+    priceSummaryDoc.text(quote.createdByName, 50, yPos);
     yPos += 13;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.text('Assistant Manager - Application Engineering', 50, yPos);
+    priceSummaryDoc.setFont('helvetica', 'normal');
+    priceSummaryDoc.setFontSize(9);
+    priceSummaryDoc.text('Assistant Manager - Application Engineering', 50, yPos);
     yPos += 12;
-    doc.text('Internal Sales/Marketing Department', 50, yPos);
+    priceSummaryDoc.text('Internal Sales/Marketing Department', 50, yPos);
     yPos += 12;
-    doc.text('Mobile: +91 9497471386', 50, yPos);
+    priceSummaryDoc.text('Mobile: +91 9497471386', 50, yPos);
     yPos += 12;
-    doc.text(`Email: ${COMPANY.email}`, 50, yPos);
+    priceSummaryDoc.text(`Email: ${COMPANY.email}`, 50, yPos);
 
-    addFooter(doc, pageWidth, pageHeight);
+    addFooter(priceSummaryDoc, pricePageWidth, pricePageHeight);
 
-    doc.save(`${quote.quoteNumber}_Complete.pdf`);
+    // ==================== Merge PDFs: Cover Letter + T&C + Price Summary ====================
+    const mergedPdfBytes = await createCombinedPDFWithTermsConditions(coverLetterDoc, priceSummaryDoc);
+    downloadPDFBytes(mergedPdfBytes, `${quote.quoteNumber}_Complete.pdf`);
 }
 
 // Export type for menu options
