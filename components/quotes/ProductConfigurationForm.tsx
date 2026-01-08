@@ -439,7 +439,7 @@ export default function ProductConfigurationForm({
                         {/* Body */}
                         <div className="bg-white rounded-lg p-4 border-2 border-blue-300">
                             <h4 className="font-semibold mb-3 text-gray-900 flex items-center">
-                                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs mr-2">Material Group 1</span>
+                                
                                 Body
                             </h4>
                             <div className="space-y-3">
@@ -468,7 +468,6 @@ export default function ProductConfigurationForm({
                         {/* Bonnet */}
                         <div className="bg-white rounded-lg p-4 border-2 border-blue-300">
                             <h4 className="font-semibold mb-3 text-gray-900 flex items-center">
-                                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs mr-2">Material Group 1</span>
                                 Bonnet
                             </h4>
                             <div className="space-y-3">
@@ -488,7 +487,6 @@ export default function ProductConfigurationForm({
                         {/* Plug */}
                         <div className="bg-white rounded-lg p-4 border-2 border-purple-300">
                             <h4 className="font-semibold mb-3 text-gray-900 flex items-center">
-                                <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs mr-2">Material Group 2</span>
                                 Plug
                             </h4>
                             <div className="space-y-3">
@@ -508,7 +506,6 @@ export default function ProductConfigurationForm({
                         {/* Seat */}
                         <div className="bg-white rounded-lg p-4 border-2 border-pink-300">
                             <h4 className="font-semibold mb-3 text-gray-900 flex items-center">
-                                <span className="bg-pink-100 text-pink-800 px-2 py-1 rounded text-xs mr-2">Material Group 3</span>
                                 Seat
                             </h4>
                             <div className="space-y-3">
@@ -528,7 +525,6 @@ export default function ProductConfigurationForm({
                         {/* Stem */}
                         <div className="bg-white rounded-lg p-4 border-2 border-orange-300">
                             <h4 className="font-semibold mb-3 text-gray-900 flex items-center">
-                                <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs mr-2">Material Group 4</span>
                                 Stem
                             </h4>
                             <div className="space-y-3">
@@ -549,7 +545,6 @@ export default function ProductConfigurationForm({
                         {currentProduct.hasCage && (
                             <div className="bg-white rounded-lg p-4 border-2 border-green-300">
                                 <h4 className="font-semibold mb-3 text-gray-900 flex items-center">
-                                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs mr-2">Material Group 5</span>
                                     Cage
                                 </h4>
                                 <div className="space-y-3">
@@ -1223,18 +1218,7 @@ export default function ProductConfigurationForm({
                             <div className="bg-white rounded-lg p-4 mb-4">
                                 <h3 className="font-bold text-lg mb-3 text-purple-900">⚙️ Actuator Sub-Assembly</h3>
                                 <div className="space-y-2 text-sm">
-                                    {(currentProduct.actuatorFixedPrice || 0) > 0 && (
-                                        <div className="flex justify-between">
-                                            <span>Actuator ({currentProduct.actuatorType} - {currentProduct.actuatorSeries} - {currentProduct.actuatorModel})</span>
-                                            <span className="font-semibold">₹{(currentProduct.actuatorFixedPrice || 0).toLocaleString('en-IN')}</span>
-                                        </div>
-                                    )}
-                                    {(currentProduct.handwheelFixedPrice || 0) > 0 && (
-                                        <div className="flex justify-between">
-                                            <span>Handwheel ({currentProduct.handwheelType} - {currentProduct.handwheelSeries} - {currentProduct.handwheelModel})</span>
-                                            <span className="font-semibold">₹{(currentProduct.handwheelFixedPrice || 0).toLocaleString('en-IN')}</span>
-                                        </div>
-                                    )}
+
                                     <div className="border-t pt-2 mt-2 flex justify-between font-bold text-purple-900">
                                         <span>Subtotal</span>
                                         <span>₹{(currentProduct.actuatorSubAssemblyTotal || 0).toLocaleString('en-IN')}</span>
