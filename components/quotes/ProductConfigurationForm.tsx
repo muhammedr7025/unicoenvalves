@@ -462,9 +462,7 @@ export default function ProductConfigurationForm({
                                         options={bodyBonnetMaterialOptions}
                                         placeholder="Search material..."
                                     />
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        * This material is shared for both Body and Bonnet
-                                    </p>
+
                                 </div>
                             </div>
                         </div>
@@ -548,9 +546,7 @@ export default function ProductConfigurationForm({
                                         options={stemMaterialOptions}
                                         placeholder="Search material..."
                                     />
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        * Stem price = Fixed price based on series, size, rating, and material
-                                    </p>
+
                                 </div>
                             </div>
                         </div>
@@ -576,9 +572,7 @@ export default function ProductConfigurationForm({
                                             options={cageMaterialOptions}
                                             placeholder="Search material..."
                                         />
-                                        <p className="text-xs text-gray-500 mt-1">
-                                            * Cage price = Weight × Material price
-                                        </p>
+
                                     </div>
                                 </div>
                             </div>
@@ -1117,138 +1111,87 @@ export default function ProductConfigurationForm({
                         {/* Body Sub-Assembly Breakdown */}
                         <div className="bg-white rounded-lg p-4 mb-4">
                             <h3 className="font-bold text-lg mb-3 text-blue-900">🔧 Body Sub-Assembly</h3>
-                            <div className="space-y-2 text-sm">
+
+                            {/* Specs Summary */}
+                            <div className="bg-blue-50 rounded-lg p-3 mb-3 text-sm">
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                    <div>
+                                        <span className="text-gray-600">Series:</span>
+                                        <span className="font-semibold ml-1">{currentProduct.seriesNumber}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-600">Size:</span>
+                                        <span className="font-semibold ml-1">{currentProduct.size}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-600">Rating:</span>
+                                        <span className="font-semibold ml-1">{currentProduct.rating}</span>
+                                    </div>
+                                    {currentProduct.trimType && (
+                                        <div>
+                                            <span className="text-gray-600">Trim:</span>
+                                            <span className="font-semibold ml-1">{currentProduct.trimType}</span>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
+                                    {currentProduct.bodyEndConnectType && (
+                                        <div>
+                                            <span className="text-gray-600">End:</span>
+                                            <span className="font-semibold ml-1">{currentProduct.bodyEndConnectType}</span>
+                                        </div>
+                                    )}
+                                    {currentProduct.bonnetType && (
+                                        <div>
+                                            <span className="text-gray-600">Bonnet:</span>
+                                            <span className="font-semibold ml-1">{currentProduct.bonnetType}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Component Totals */}
+                            <div className="space-y-1 text-sm">
                                 {(currentProduct.bodyTotalCost || 0) > 0 && (
-                                    <div className="border-l-4 border-blue-400 pl-3 py-2 bg-blue-50">
-                                        <div className="font-semibold text-blue-900 mb-1">Body</div>
-                                        <div className="flex justify-between text-xs">
-                                            <span>Material: {currentProduct.bodyWeight}kg × ₹{currentProduct.bodyMaterialPrice}/kg</span>
-                                            <span>₹{((currentProduct.bodyWeight || 0) * (currentProduct.bodyMaterialPrice || 0)).toLocaleString('en-IN')}</span>
-                                        </div>
-                                        {(currentProduct.bodyMachineCost || 0) > 0 && (
-                                            <div className="flex justify-between text-xs text-purple-700">
-                                                <span>Machine: {currentProduct.bodyWorkHours}hr × ₹{currentProduct.bodyMachineRate}/hr ({currentProduct.bodyMachineTypeName})</span>
-                                                <span>₹{(currentProduct.bodyMachineCost || 0).toLocaleString('en-IN')}</span>
-                                            </div>
-                                        )}
-                                        <div className="flex justify-between font-bold text-sm mt-1 pt-1 border-t border-blue-200">
-                                            <span>Body Total:</span>
-                                            <span>₹{(currentProduct.bodyTotalCost || 0).toLocaleString('en-IN')}</span>
-                                        </div>
+                                    <div className="flex justify-between">
+                                        <span>Body</span>
+                                        <span className="font-semibold">₹{(currentProduct.bodyTotalCost || 0).toLocaleString('en-IN')}</span>
                                     </div>
                                 )}
                                 {(currentProduct.bonnetTotalCost || 0) > 0 && (
-                                    <div className="border-l-4 border-green-400 pl-3 py-2 bg-green-50">
-                                        <div className="font-semibold text-green-900 mb-1">Bonnet</div>
-                                        <div className="flex justify-between text-xs">
-                                            <span>Material: {currentProduct.bonnetWeight}kg × ₹{currentProduct.bonnetMaterialPrice}/kg</span>
-                                            <span>₹{((currentProduct.bonnetWeight || 0) * (currentProduct.bonnetMaterialPrice || 0)).toLocaleString('en-IN')}</span>
-                                        </div>
-                                        {(currentProduct.bonnetMachineCost || 0) > 0 && (
-                                            <div className="flex justify-between text-xs text-purple-700">
-                                                <span>Machine: {currentProduct.bonnetWorkHours}hr × ₹{currentProduct.bonnetMachineRate}/hr ({currentProduct.bonnetMachineTypeName})</span>
-                                                <span>₹{(currentProduct.bonnetMachineCost || 0).toLocaleString('en-IN')}</span>
-                                            </div>
-                                        )}
-                                        <div className="flex justify-between font-bold text-sm mt-1 pt-1 border-t border-green-200">
-                                            <span>Bonnet Total:</span>
-                                            <span>₹{(currentProduct.bonnetTotalCost || 0).toLocaleString('en-IN')}</span>
-                                        </div>
+                                    <div className="flex justify-between">
+                                        <span>Bonnet</span>
+                                        <span className="font-semibold">₹{(currentProduct.bonnetTotalCost || 0).toLocaleString('en-IN')}</span>
                                     </div>
                                 )}
                                 {(currentProduct.plugTotalCost || 0) > 0 && (
-                                    <div className="border-l-4 border-orange-400 pl-3 py-2 bg-orange-50">
-                                        <div className="font-semibold text-orange-900 mb-1">Plug</div>
-                                        <div className="flex justify-between text-xs">
-                                            <span>Material: {currentProduct.plugWeight}kg × ₹{currentProduct.plugMaterialPrice}/kg</span>
-                                            <span>₹{((currentProduct.plugWeight || 0) * (currentProduct.plugMaterialPrice || 0)).toLocaleString('en-IN')}</span>
-                                        </div>
-                                        {(currentProduct.plugMachineCost || 0) > 0 && (
-                                            <div className="flex justify-between text-xs text-purple-700">
-                                                <span>Machine: {currentProduct.plugWorkHours}hr × ₹{currentProduct.plugMachineRate}/hr ({currentProduct.plugMachineTypeName})</span>
-                                                <span>₹{(currentProduct.plugMachineCost || 0).toLocaleString('en-IN')}</span>
-                                            </div>
-                                        )}
-                                        <div className="flex justify-between font-bold text-sm mt-1 pt-1 border-t border-orange-200">
-                                            <span>Plug Total:</span>
-                                            <span>₹{(currentProduct.plugTotalCost || 0).toLocaleString('en-IN')}</span>
-                                        </div>
+                                    <div className="flex justify-between">
+                                        <span>Plug</span>
+                                        <span className="font-semibold">₹{(currentProduct.plugTotalCost || 0).toLocaleString('en-IN')}</span>
                                     </div>
                                 )}
                                 {(currentProduct.seatTotalCost || 0) > 0 && (
-                                    <div className="border-l-4 border-red-400 pl-3 py-2 bg-red-50">
-                                        <div className="font-semibold text-red-900 mb-1">Seat</div>
-                                        <div className="flex justify-between text-xs">
-                                            <span>Material: {currentProduct.seatWeight}kg × ₹{currentProduct.seatMaterialPrice}/kg</span>
-                                            <span>₹{((currentProduct.seatWeight || 0) * (currentProduct.seatMaterialPrice || 0)).toLocaleString('en-IN')}</span>
-                                        </div>
-                                        {(currentProduct.seatMachineCost || 0) > 0 && (
-                                            <div className="flex justify-between text-xs text-purple-700">
-                                                <span>Machine: {currentProduct.seatWorkHours}hr × ₹{currentProduct.seatMachineRate}/hr ({currentProduct.seatMachineTypeName})</span>
-                                                <span>₹{(currentProduct.seatMachineCost || 0).toLocaleString('en-IN')}</span>
-                                            </div>
-                                        )}
-                                        <div className="flex justify-between font-bold text-sm mt-1 pt-1 border-t border-red-200">
-                                            <span>Seat Total:</span>
-                                            <span>₹{(currentProduct.seatTotalCost || 0).toLocaleString('en-IN')}</span>
-                                        </div>
+                                    <div className="flex justify-between">
+                                        <span>Seat</span>
+                                        <span className="font-semibold">₹{(currentProduct.seatTotalCost || 0).toLocaleString('en-IN')}</span>
                                     </div>
                                 )}
                                 {(currentProduct.stemTotalCost || 0) > 0 && (
-                                    <div className="border-l-4 border-yellow-400 pl-3 py-2 bg-yellow-50">
-                                        <div className="font-semibold text-yellow-900 mb-1">Stem</div>
-                                        <div className="flex justify-between text-xs">
-                                            <span>Material: Fixed Price</span>
-                                            <span>₹{(currentProduct.stemFixedPrice || 0).toLocaleString('en-IN')}</span>
-                                        </div>
-                                        {(currentProduct.stemMachineCost || 0) > 0 && (
-                                            <div className="flex justify-between text-xs text-purple-700">
-                                                <span>Machine: {currentProduct.stemWorkHours}hr × ₹{currentProduct.stemMachineRate}/hr ({currentProduct.stemMachineTypeName})</span>
-                                                <span>₹{(currentProduct.stemMachineCost || 0).toLocaleString('en-IN')}</span>
-                                            </div>
-                                        )}
-                                        <div className="flex justify-between font-bold text-sm mt-1 pt-1 border-t border-yellow-200">
-                                            <span>Stem Total:</span>
-                                            <span>₹{(currentProduct.stemTotalCost || 0).toLocaleString('en-IN')}</span>
-                                        </div>
+                                    <div className="flex justify-between">
+                                        <span>Stem</span>
+                                        <span className="font-semibold">₹{(currentProduct.stemTotalCost || 0).toLocaleString('en-IN')}</span>
                                     </div>
                                 )}
                                 {(currentProduct.cageTotalCost || 0) > 0 && (
-                                    <div className="border-l-4 border-indigo-400 pl-3 py-2 bg-indigo-50">
-                                        <div className="font-semibold text-indigo-900 mb-1">Cage</div>
-                                        <div className="flex justify-between text-xs">
-                                            <span>Material: {currentProduct.cageWeight}kg × ₹{currentProduct.cageMaterialPrice}/kg</span>
-                                            <span>₹{((currentProduct.cageWeight || 0) * (currentProduct.cageMaterialPrice || 0)).toLocaleString('en-IN')}</span>
-                                        </div>
-                                        {(currentProduct.cageMachineCost || 0) > 0 && (
-                                            <div className="flex justify-between text-xs text-purple-700">
-                                                <span>Machine: {currentProduct.cageWorkHours}hr × ₹{currentProduct.cageMachineRate}/hr ({currentProduct.cageMachineTypeName})</span>
-                                                <span>₹{(currentProduct.cageMachineCost || 0).toLocaleString('en-IN')}</span>
-                                            </div>
-                                        )}
-                                        <div className="flex justify-between font-bold text-sm mt-1 pt-1 border-t border-indigo-200">
-                                            <span>Cage Total:</span>
-                                            <span>₹{(currentProduct.cageTotalCost || 0).toLocaleString('en-IN')}</span>
-                                        </div>
+                                    <div className="flex justify-between">
+                                        <span>Cage</span>
+                                        <span className="font-semibold">₹{(currentProduct.cageTotalCost || 0).toLocaleString('en-IN')}</span>
                                     </div>
                                 )}
                                 {(currentProduct.sealRingTotalCost || 0) > 0 && (
-                                    <div className="border-l-4 border-pink-400 pl-3 py-2 bg-pink-50">
-                                        <div className="font-semibold text-pink-900 mb-1">Seal Ring</div>
-                                        <div className="flex justify-between text-xs">
-                                            <span>Material: Fixed Price</span>
-                                            <span>₹{(currentProduct.sealRingFixedPrice || 0).toLocaleString('en-IN')}</span>
-                                        </div>
-                                        {(currentProduct.sealRingMachineCost || 0) > 0 && (
-                                            <div className="flex justify-between text-xs text-purple-700">
-                                                <span>Machine: {currentProduct.sealRingWorkHours}hr × ₹{currentProduct.sealRingMachineRate}/hr ({currentProduct.sealRingMachineTypeName})</span>
-                                                <span>₹{(currentProduct.sealRingMachineCost || 0).toLocaleString('en-IN')}</span>
-                                            </div>
-                                        )}
-                                        <div className="flex justify-between font-bold text-sm mt-1 pt-1 border-t border-pink-200">
-                                            <span>Seal Ring Total:</span>
-                                            <span>₹{(currentProduct.sealRingTotalCost || 0).toLocaleString('en-IN')}</span>
-                                        </div>
+                                    <div className="flex justify-between">
+                                        <span>Seal Ring</span>
+                                        <span className="font-semibold">₹{(currentProduct.sealRingTotalCost || 0).toLocaleString('en-IN')}</span>
                                     </div>
                                 )}
                                 <div className="border-t pt-2 mt-2 flex justify-between font-bold text-blue-900">
