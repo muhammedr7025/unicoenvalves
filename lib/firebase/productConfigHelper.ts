@@ -595,19 +595,46 @@ export async function getAvailableHandwheelModels(
 // ============================================
 
 /**
- * Get available trim types
- * Used for Plug, Seat, Stem, Cage machining price lookups
+ * Get available trim types from machiningPrices collection
+ * Fetches unique typeKey values for Plug, Seat, Stem, Cage components
  */
 export async function getAvailableTrimTypes(): Promise<string[]> {
-  // Hardcoded list for Phase 1
-  // In Phase 2, this can be made dynamic from Firestore
-  return [
-    'Metal Seated',
-    'Soft Seated',
-    'Hard Faced',
-    'PTFE Seated',
-    'Ceramic Seated',
-  ];
+  try {
+    const { getAllMachiningPrices } = await import('./machiningPriceService');
+    const allPrices = await getAllMachiningPrices();
+
+    // Filter for trim-based components (Plug, Seat, Stem, Cage)
+    const trimComponents = ['Plug', 'Seat', 'Stem', 'Cage'];
+    const trimPrices = allPrices.filter(p => trimComponents.includes(p.component));
+
+    // Get unique typeKey values
+    const uniqueTrimTypes = [...new Set(trimPrices.map(p => p.typeKey))];
+
+    // Return sorted unique values, or fallback if empty
+    if (uniqueTrimTypes.length > 0) {
+      return uniqueTrimTypes.sort();
+    }
+
+    // Fallback to hardcoded list if no data in Firestore
+    console.warn('No trim types found in machiningPrices, using hardcoded fallback');
+    return [
+      'Metal Seated',
+      'Soft Seated',
+      'Hard Faced',
+      'PTFE Seated',
+      'Ceramic Seated',
+    ];
+  } catch (error) {
+    console.error('Error fetching trim types:', error);
+    // Return fallback on error
+    return [
+      'Metal Seated',
+      'Soft Seated',
+      'Hard Faced',
+      'PTFE Seated',
+      'Ceramic Seated',
+    ];
+  }
 }
 
 // ============================================
