@@ -282,6 +282,7 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
                     if (machiningPrice) {
                         console.log(`✅ Body machining cost: ₹${machineCost} (fixed price)`);
                     } else {
+                        errors.push(`Body Machining Price not found for: Series ${p.seriesNumber}, Size ${p.size}, Rating ${p.rating}, End ${p.bodyEndConnectType}, Material ${material.name}`);
                         console.warn('⚠️ Body machining price not found - cost will be 0');
                     }
 
@@ -318,6 +319,7 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
                     if (machiningPrice) {
                         console.log(`✅ Bonnet machining cost: ₹${machineCost} (fixed price)`);
                     } else {
+                        errors.push(`Bonnet Machining Price not found for: Series ${p.seriesNumber}, Size ${p.size}, Rating ${p.rating}, Bonnet ${p.bonnetType}, Material ${material.name}`);
                         console.warn('⚠️ Bonnet machining price not found - cost will be 0');
                     }
 
@@ -354,6 +356,7 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
                     if (machiningPrice) {
                         console.log(`✅ Plug machining cost: ₹${machineCost} (fixed price)`);
                     } else {
+                        errors.push(`Plug Machining Price not found for: Series ${p.seriesNumber}, Size ${p.size}, Rating ${p.rating}, Trim ${p.trimType || 'Not Set'}, Material ${material.name}`);
                         console.warn('⚠️ Plug machining price not found - cost will be 0');
                     }
 
@@ -390,6 +393,7 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
                     if (machiningPrice) {
                         console.log(`✅ Seat machining cost: ₹${machineCost} (fixed price)`);
                     } else {
+                        errors.push(`Seat Machining Price not found for: Series ${p.seriesNumber}, Size ${p.size}, Rating ${p.rating}, Trim ${p.trimType || 'Not Set'}, Material ${material.name}`);
                         console.warn('⚠️ Seat machining price not found - cost will be 0');
                     }
 
@@ -425,6 +429,7 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
                         if (machiningPrice) {
                             console.log(`✅ Stem machining cost: ₹${machineCost} (fixed price)`);
                         } else {
+                            errors.push(`Stem Machining Price not found for: Series ${p.seriesNumber}, Size ${p.size}, Rating ${p.rating}, Trim ${p.trimType || 'Not Set'}, Material ${material.name}`);
                             console.warn('⚠️ Stem machining price not found - cost will be 0');
                         }
 
@@ -462,6 +467,7 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
                     if (machiningPrice) {
                         console.log(`✅ Cage machining cost: ₹${machineCost} (fixed price)`);
                     } else {
+                        errors.push(`Cage Machining Price not found for: Series ${p.seriesNumber}, Size ${p.size}, Rating ${p.rating}, Trim ${p.trimType || 'Not Set'}, Material ${material.name}`);
                         console.warn('⚠️ Cage machining price not found - cost will be 0');
                     }
 
@@ -572,8 +578,12 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
 
             console.log('✅ FINAL TOTAL COST:', updatedProduct.productTotalCost, `(includes ${negotiationMargin}% negotiation margin: ₹${updatedProduct.negotiationMarginAmount})`);
 
-            if (errors.length === 0) {
-                alert(`✅ Price calculated successfully!\n\nTotal Cost: ₹${updatedProduct.productTotalCost.toLocaleString('en-IN')} `);
+            // Show results with any warnings
+            if (errors.length > 0) {
+                const warningMessage = `⚠️ Price calculated with MISSING DATA:\n\n${errors.map(e => `• ${e}`).join('\n')}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nCalculated Total: ₹${updatedProduct.productTotalCost.toLocaleString('en-IN')}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n⚠️ Some costs may be ₹0 due to missing data.\nPlease contact admin to add the missing pricing data.`;
+                alert(warningMessage);
+            } else {
+                alert(`✅ Price calculated successfully!\n\nTotal Cost: ₹${updatedProduct.productTotalCost.toLocaleString('en-IN')}`);
             }
 
             setCurrentProduct(updatedProduct);
