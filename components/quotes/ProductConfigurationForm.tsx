@@ -1213,52 +1213,10 @@ export default function ProductConfigurationForm({
                                 </div>
                             </div>
 
-                            {/* Component Totals */}
+                            {/* Body Sub-Assembly Total */}
                             <div className="space-y-1 text-sm">
-                                {(currentProduct.bodyTotalCost || 0) > 0 && (
-                                    <div className="flex justify-between">
-                                        <span>Body</span>
-                                        <span className="font-semibold">₹{(currentProduct.bodyTotalCost || 0).toLocaleString('en-IN')}</span>
-                                    </div>
-                                )}
-                                {(currentProduct.bonnetTotalCost || 0) > 0 && (
-                                    <div className="flex justify-between">
-                                        <span>Bonnet</span>
-                                        <span className="font-semibold">₹{(currentProduct.bonnetTotalCost || 0).toLocaleString('en-IN')}</span>
-                                    </div>
-                                )}
-                                {(currentProduct.plugTotalCost || 0) > 0 && (
-                                    <div className="flex justify-between">
-                                        <span>Plug</span>
-                                        <span className="font-semibold">₹{(currentProduct.plugTotalCost || 0).toLocaleString('en-IN')}</span>
-                                    </div>
-                                )}
-                                {(currentProduct.seatTotalCost || 0) > 0 && (
-                                    <div className="flex justify-between">
-                                        <span>Seat</span>
-                                        <span className="font-semibold">₹{(currentProduct.seatTotalCost || 0).toLocaleString('en-IN')}</span>
-                                    </div>
-                                )}
-                                {(currentProduct.stemTotalCost || 0) > 0 && (
-                                    <div className="flex justify-between">
-                                        <span>Stem</span>
-                                        <span className="font-semibold">₹{(currentProduct.stemTotalCost || 0).toLocaleString('en-IN')}</span>
-                                    </div>
-                                )}
-                                {(currentProduct.cageTotalCost || 0) > 0 && (
-                                    <div className="flex justify-between">
-                                        <span>Cage</span>
-                                        <span className="font-semibold">₹{(currentProduct.cageTotalCost || 0).toLocaleString('en-IN')}</span>
-                                    </div>
-                                )}
-                                {(currentProduct.sealRingTotalCost || 0) > 0 && (
-                                    <div className="flex justify-between">
-                                        <span>Seal Ring</span>
-                                        <span className="font-semibold">₹{(currentProduct.sealRingTotalCost || 0).toLocaleString('en-IN')}</span>
-                                    </div>
-                                )}
-                                <div className="border-t pt-2 mt-2 flex justify-between font-bold text-blue-900">
-                                    <span>Subtotal</span>
+                                <div className="flex justify-between font-bold text-blue-900 text-lg">
+                                    <span>Body Sub-Assembly Total:</span>
                                     <span>₹{(currentProduct.bodySubAssemblyTotal || 0).toLocaleString('en-IN')}</span>
                                 </div>
                             </div>
