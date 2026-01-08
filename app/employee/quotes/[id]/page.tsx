@@ -166,7 +166,7 @@ export default function QuoteDetailsPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                   <div>
-                    <div className="font-semibold text-gray-900">Cover Letter Only</div>
+                    <div className="font-semibold text-gray-900">Cover Letter + Terms & Conditions</div>
                     <div className="text-xs text-gray-500">Formal offer covering letter</div>
                   </div>
                 </button>
@@ -193,7 +193,7 @@ export default function QuoteDetailsPage() {
                   </svg>
                   <div>
                     <div className="font-semibold text-gray-900">Complete Quote</div>
-                    <div className="text-xs text-gray-500">Cover letter + price summary</div>
+                    <div className="text-xs text-gray-500">Cover letter + price summary + terms & conditions</div>
                   </div>
                 </button>
               </div>
