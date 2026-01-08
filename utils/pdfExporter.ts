@@ -556,11 +556,25 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
     // Col 0: 420pt (matches first 5 product cols: 35+70+200+85+30)
     // Col 1: 95pt (matches Total Price column)
     // Total: 515pt
-    const summaryRows = [
-        ['Ex-Works Price Coimbatore', formatINR(quote.subtotal)],
-        ['Packing Charges', formatINR(packingCharges)],
-        ['IGST(18 %)', formatINR(quote.taxAmount)],
-    ];
+    const isFOR = quote.pricingType === 'F.O.R.';
+    const freightCharges = quote.freightPrice || 0;
+    
+    // Build summary rows based on pricing type
+    const summaryRows: string[][] = [];
+    
+    // Show price label based on pricing type
+    const priceLabel = isFOR ? 'F.O.R. Price Coimbatore' : 'Ex-Works Price Coimbatore';
+    summaryRows.push([priceLabel, formatINR(quote.subtotal)]);
+    
+    // For F.O.R., add freight charges as a separate row
+    if (isFOR && freightCharges > 0) {
+        summaryRows.push(['Freight Charges', formatINR(freightCharges)]);
+    }
+    
+    summaryRows.push(['Packing Charges', formatINR(packingCharges)]);
+    summaryRows.push([`IGST(${quote.tax || 18} %)`, formatINR(quote.taxAmount)]);
+
+
 
     autoTable(doc, {
         startY: yPos,
@@ -584,9 +598,16 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
     yPos = (doc as any).lastAutoTable.finalY;
 
     // Grand Total row - highlighted
+    // For F.O.R., freight is included but insurance is excluded; for Ex-Works, both are excluded
+    const grandTotalLabel = isFOR 
+        ? 'Total F.O.R. Price (Excluding Insurance)' 
+        : 'Total Ex-works Price(Excluding Freight/Insurance)';
+    const grandTotalValue = isFOR ? quote.total + freightCharges : quote.total;
+
+    
     autoTable(doc, {
         startY: yPos,
-        body: [['Total Ex-works Price(Excluding Freight/Insurance)', formatINR(quote.total)]],
+        body: [[grandTotalLabel, formatINR(grandTotalValue)]],
         theme: 'grid',
         tableWidth: 515, // Explicit width
         styles: {
@@ -603,6 +624,7 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
         },
         margin: { left: 40, right: 40 },
     });
+
 
     yPos = (doc as any).lastAutoTable.finalY + 30;
 
@@ -621,16 +643,24 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
 
     yPos += 20;
 
-    const termsData = [
+    // Build terms data based on pricing type
+    const termsData: string[][] = [
         ['Prices', `${quote.pricingType || 'Ex-Works'} INR each net`],
         ['Validity', `${quote.validity || '30 days'} from the date of quotation`],
-        ['Delivery\n(Ex-Works)', quote.deliveryDays || '24 working weeks from the date of advance payment and approved technical documents (whichever comes later).'],
+        // For F.O.R., show just "Delivery"; for Ex-Works, show "Delivery (Ex-Works)"
+        [isFOR ? 'Delivery' : 'Delivery\n(Ex-Works)', quote.deliveryDays || '24 working weeks from the date of advance payment and approved technical documents (whichever comes later).'],
         ['Warranty', `UVPL Standard Warranty - ${quote.warrantyTerms?.shipmentDays || 18} months from shipping or ${quote.warrantyTerms?.installationDays || 12} months from installation, whichever is earlier (on material & workmanship)`],
         ['Payment Terms', formatPaymentTerms(quote.paymentTerms)],
-        ['Freight', 'To be borne by buyer'],
-        ['Insurance', 'To be arranged by buyer'],
-        ['Manufacturer', 'Unicorn Valves Private Limited'],
     ];
+    
+    // Only show Freight row if NOT F.O.R. (since freight is included in F.O.R.)
+    if (!isFOR) {
+        termsData.push(['Freight', 'To be borne by buyer']);
+    }
+    
+    termsData.push(['Insurance', 'To be arranged by buyer']);
+    termsData.push(['Manufacturer', 'Unicorn Valves Private Limited']);
+
 
 
     autoTable(doc, {
@@ -944,16 +974,29 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
 
     yPos = (priceSummaryDoc as any).lastAutoTable.finalY;
 
-    // Summary rows
-    const summaryRows = [
-        ['Ex-Works Price Coimbatore', formatINR(quote.subtotal)],
-        ['Packing Charges', formatINR(packingCharges)],
-        ['IGST(18 %)', formatINR(quote.taxAmount)],
-    ];
+    // Summary rows - F.O.R. vs Ex-Works pricing
+    const isFORCombined = quote.pricingType === 'F.O.R.';
+    const freightChargesCombined = quote.freightPrice || 0;
+    
+    const summaryRowsCombined: string[][] = [];
+    
+    // Show price label based on pricing type
+    const priceLabelCombined = isFORCombined ? 'F.O.R. Price' : 'Ex-Works Price Coimbatore';
+    summaryRowsCombined.push([priceLabelCombined, formatINR(quote.subtotal)]);
+    
+    // For F.O.R., add freight charges as a separate row
+    if (isFORCombined && freightChargesCombined > 0) {
+        summaryRowsCombined.push(['Freight Charges', formatINR(freightChargesCombined)]);
+    }
+    
+    summaryRowsCombined.push(['Packing Charges', formatINR(packingCharges)]);
+    summaryRowsCombined.push([`IGST(${quote.tax || 18} %)`, formatINR(quote.taxAmount)]);
+
+
 
     autoTable(priceSummaryDoc, {
         startY: yPos,
-        body: summaryRows,
+        body: summaryRowsCombined,
         theme: 'grid',
         tableWidth: 515,
         styles: {
@@ -973,9 +1016,14 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
     yPos = (priceSummaryDoc as any).lastAutoTable.finalY;
 
     // Grand Total row - highlighted
+    const grandTotalLabelCombined = isFORCombined 
+        ? 'Total F.O.R. Price (Excluding Insurance)' 
+        : 'Total Ex-works Price(Excluding Freight/Insurance)';
+    const grandTotalValueCombined = isFORCombined ? quote.total + freightChargesCombined : quote.total;
+    
     autoTable(priceSummaryDoc, {
         startY: yPos,
-        body: [['Total Ex-works Price(Excluding Freight/Insurance)', formatINR(quote.total)]],
+        body: [[grandTotalLabelCombined, formatINR(grandTotalValueCombined)]],
         theme: 'grid',
         tableWidth: 515,
         styles: {
@@ -1010,21 +1058,30 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
 
     yPos += 20;
 
-    const termsData = [
+    // Build terms data based on pricing type
+    const termsDataCombined: string[][] = [
         ['Prices', `${quote.pricingType || 'Ex-Works'} INR each net`],
         ['Validity', `${quote.validity || '30 days'} from the date of quotation`],
-        ['Delivery\n(Ex-Works)', quote.deliveryDays || '24 working weeks from the date of advance payment and approved technical documents (whichever comes later).'],
+        // For F.O.R., show just "Delivery"; for Ex-Works, show "Delivery (Ex-Works)"
+        [isFORCombined ? 'Delivery' : 'Delivery\n(Ex-Works)', quote.deliveryDays || '24 working weeks from the date of advance payment and approved technical documents (whichever comes later).'],
         ['Warranty', `UVPL Standard Warranty - ${quote.warrantyTerms?.shipmentDays || 18} months from shipping or ${quote.warrantyTerms?.installationDays || 12} months from installation, whichever is earlier (on material & workmanship)`],
         ['Payment Terms', formatPaymentTerms(quote.paymentTerms)],
-        ['Freight', 'To be borne by buyer'],
-        ['Insurance', 'To be arranged by buyer'],
-        ['Manufacturer', 'Unicorn Valves Private Limited'],
     ];
+    
+    // Only show Freight row if NOT F.O.R. (since freight is included in F.O.R.)
+    if (!isFORCombined) {
+        termsDataCombined.push(['Freight', 'To be borne by buyer']);
+    }
+    
+    termsDataCombined.push(['Insurance', 'To be arranged by buyer']);
+    termsDataCombined.push(['Manufacturer', 'Unicorn Valves Private Limited']);
+
 
 
     autoTable(priceSummaryDoc, {
         startY: yPos,
-        body: termsData,
+        body: termsDataCombined,
+
         theme: 'plain',
         styles: {
             fontSize: 9,

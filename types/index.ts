@@ -337,7 +337,7 @@ export type QuoteStatus = 'draft' | 'sent' | 'approved' | 'rejected';
 export type ValidityPeriod = '15 days' | '30 days' | '45 days' | '50 days' | '60 days' | '90 days';
 
 // Pricing Type Options
-export type PricingType = 'Ex-Works' | 'FOR';
+export type PricingType = 'Ex-Works' | 'F.O.R.';
 
 // Payment Terms Structure
 export interface PaymentTerms {
@@ -367,7 +367,8 @@ export interface Quote {
   deliveryDays?: string;          // Delivery timeline (custom value)
   paymentTerms?: PaymentTerms;    // Payment terms with percentages
   currencyExchangeRate?: number;  // For international customers (non-India)
-  pricingType?: PricingType;      // Ex-Works or FOR pricing
+  pricingType?: PricingType;      // Ex-Works or F.O.R. pricing
+  freightPrice?: number;          // Freight charges (only for F.O.R. pricing)
 
   products: QuoteProduct[];
   subtotal: number;
@@ -385,6 +386,7 @@ export interface Quote {
   notes?: string;
   isArchived: boolean;
 }
+
 
 export interface DashboardStats {
   totalEmployees: number;

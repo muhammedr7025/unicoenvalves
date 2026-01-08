@@ -59,6 +59,8 @@ export default function NewQuotePage() {
   const [customPaymentTerms, setCustomPaymentTerms] = useState('');
   const [currencyExchangeRate, setCurrencyExchangeRate] = useState<number | null>(null);
   const [pricingType, setPricingType] = useState<PricingType>('Ex-Works');
+  const [freightPrice, setFreightPrice] = useState(0);
+
 
   useEffect(() => {
     fetchInitialData();
@@ -200,7 +202,9 @@ export default function NewQuotePage() {
         },
         currencyExchangeRate: currencyExchangeRate || null,
         pricingType: pricingType,
+        freightPrice: pricingType === 'F.O.R.' ? freightPrice : null,
         createdAt: Timestamp.now(),
+
         updatedAt: Timestamp.now(),
       });
 
@@ -458,11 +462,18 @@ export default function NewQuotePage() {
                 <label className="block text-sm font-medium mb-2">💰 Pricing Type</label>
                 <select
                   value={pricingType}
-                  onChange={(e) => setPricingType(e.target.value as PricingType)}
+                  onChange={(e) => {
+                    const newType = e.target.value as PricingType;
+                    setPricingType(newType);
+                    // Reset freight price when switching to Ex-Works
+                    if (newType === 'Ex-Works') {
+                      setFreightPrice(0);
+                    }
+                  }}
                   className="w-full px-3 py-2 border rounded-lg border-green-300 focus:ring-green-500 focus:border-green-500"
                 >
                   <option value="Ex-Works">Ex-Works</option>
-                  <option value="FOR">FOR (Freight on Road)</option>
+                  <option value="F.O.R.">F.O.R.</option>
                 </select>
               </div>
 
@@ -478,6 +489,7 @@ export default function NewQuotePage() {
                 />
               </div>
             </div>
+
 
             {/* Warranty Section */}
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 mb-6">
@@ -593,7 +605,7 @@ export default function NewQuotePage() {
             )}
 
             {/* Pricing & Tax Section */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            <div className={`grid grid-cols-1 md:grid-cols-2 ${pricingType === 'F.O.R.' ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-6 mb-6`}>
               <div>
                 <label className="block text-sm font-medium mb-2">Discount (%)</label>
                 <input
@@ -627,6 +639,20 @@ export default function NewQuotePage() {
                   placeholder="Enter packaging cost"
                 />
               </div>
+              {/* Freight Price - only shown for F.O.R. pricing */}
+              {pricingType === 'F.O.R.' && (
+                <div>
+                  <label className="block text-sm font-medium mb-2">🚛 Freight Price (₹)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={freightPrice}
+                    onChange={(e) => setFreightPrice(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-2 border rounded-lg border-cyan-300 focus:ring-cyan-500 focus:border-cyan-500"
+                    placeholder="Enter freight charges"
+                  />
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium mb-2">Status</label>
                 <select
@@ -635,10 +661,11 @@ export default function NewQuotePage() {
                   className="w-full px-3 py-2 border rounded-lg"
                 >
                   <option value="draft">Draft</option>
-                  <option value="sent">Sent</option>
+                  <option value="sent">Submitted</option>
                 </select>
               </div>
             </div>
+
 
             {/* Notes */}
             <div className="mb-6">
