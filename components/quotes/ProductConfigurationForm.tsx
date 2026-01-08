@@ -485,7 +485,7 @@ export default function ProductConfigurationForm({
                                         placeholder="Search bonnet type..."
                                     />
                                 </div>
-                            
+
                             </div>
                         </div>
 
@@ -595,7 +595,7 @@ export default function ProductConfigurationForm({
                                             placeholder="Search seal type..."
                                             disabled={!availableSealTypes.length}
                                         />
-                                        
+
                                     </div>
                                 </div>
                             </div>
@@ -1433,6 +1433,11 @@ export default function ProductConfigurationForm({
                                 <div className="flex justify-between text-sm text-green-700">
                                     <span>+ Profit ({currentProduct.boughtoutProfitPercentage}%):</span>
                                     <span>₹{(currentProduct.boughtoutProfitAmount || 0).toLocaleString('en-IN')}</span>
+                                </div>
+
+                                <div className="flex justify-between font-semibold border-b pb-2">
+                                    <span>Bought-out with Profit:</span>
+                                    <span>₹{(currentProduct.boughtoutCostWithProfit || 0).toLocaleString('en-IN')}</span>
                                 </div>
 
                                 <div className="flex justify-between text-2xl font-bold text-green-900 pt-3 border-t-4 border-green-500">
