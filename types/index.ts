@@ -322,9 +322,13 @@ export interface QuoteProduct {
 
   unitCost: number;
 
+  // Negotiation Margin (buffer applied on top of grand total)
+  negotiationMarginPercentage?: number;
+  negotiationMarginAmount?: number;
+
   // Product Totals
-  productTotalCost: number;
-  lineTotal: number;
+  productTotalCost: number; // Grand total before negotiation margin
+  lineTotal: number; // Final total including negotiation margin × quantity
 }
 
 export type QuoteStatus = 'draft' | 'sent' | 'approved' | 'rejected';

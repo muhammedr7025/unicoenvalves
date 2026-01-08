@@ -82,6 +82,7 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
     // Profits
     const [manufacturingProfit, setManufacturingProfit] = useState<number>(initialProduct?.manufacturingProfitPercentage || 0);
     const [boughtoutProfit, setBoughtoutProfit] = useState<number>(initialProduct?.boughtoutProfitPercentage || 0);
+    const [negotiationMargin, setNegotiationMargin] = useState<number>(initialProduct?.negotiationMarginPercentage || 0);
 
     const [calculating, setCalculating] = useState(false);
 
@@ -559,10 +560,17 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
             updatedProduct.boughtoutCostWithProfit = updatedProduct.boughtoutItemCost + updatedProduct.boughtoutProfitAmount;
 
             updatedProduct.unitCost = updatedProduct.manufacturingCostWithProfit + updatedProduct.boughtoutCostWithProfit;
-            updatedProduct.productTotalCost = updatedProduct.unitCost;
-            updatedProduct.lineTotal = updatedProduct.unitCost * (updatedProduct.quantity || 1);
 
-            console.log('✅ FINAL TOTAL COST:', updatedProduct.productTotalCost);
+            // Negotiation Margin (buffer calculated on grand total after profits)
+            const grandTotalBeforeMargin = updatedProduct.unitCost;
+            updatedProduct.negotiationMarginPercentage = negotiationMargin;
+            updatedProduct.negotiationMarginAmount = (grandTotalBeforeMargin * negotiationMargin) / 100;
+
+            // Final product total = grand total + negotiation margin
+            updatedProduct.productTotalCost = grandTotalBeforeMargin + updatedProduct.negotiationMarginAmount;
+            updatedProduct.lineTotal = updatedProduct.productTotalCost * (updatedProduct.quantity || 1);
+
+            console.log('✅ FINAL TOTAL COST:', updatedProduct.productTotalCost, `(includes ${negotiationMargin}% negotiation margin: ₹${updatedProduct.negotiationMarginAmount})`);
 
             if (errors.length === 0) {
                 alert(`✅ Price calculated successfully!\n\nTotal Cost: ₹${updatedProduct.productTotalCost.toLocaleString('en-IN')} `);
@@ -602,6 +610,8 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
         setManufacturingProfit,
         boughtoutProfit,
         setBoughtoutProfit,
+        negotiationMargin,
+        setNegotiationMargin,
         calculating,
         bodyBonnetMaterials,
         plugMaterials,

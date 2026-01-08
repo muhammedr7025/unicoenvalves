@@ -52,6 +52,8 @@ export default function ProductConfigurationForm({
         setManufacturingProfit,
         boughtoutProfit,
         setBoughtoutProfit,
+        negotiationMargin,
+        setNegotiationMargin,
         calculating,
         bodyBonnetMaterials,
         plugMaterials,
@@ -1061,9 +1063,9 @@ export default function ProductConfigurationForm({
 
             {/* PROFIT & QUANTITY */}
             <div className="border-2 border-yellow-200 rounded-lg p-6 mb-6 bg-yellow-50">
-                <h3 className="text-xl font-bold mb-4 text-yellow-900">💰 Profit & Quantity</h3>
+                <h3 className="text-xl font-bold mb-4 text-yellow-900">💰 Profit, Margin & Quantity</h3>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div>
                         <label className="block text-sm font-medium mb-2">Manufacturing Profit (%)</label>
                         <input
@@ -1085,6 +1087,19 @@ export default function ProductConfigurationForm({
                             onChange={(e) => setBoughtoutProfit(parseFloat(e.target.value) || 0)}
                             className="w-full px-3 py-2 border rounded-lg"
                         />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-2 text-purple-700">Negotiation Margin (%)</label>
+                        <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={negotiationMargin}
+                            onChange={(e) => setNegotiationMargin(parseFloat(e.target.value) || 0)}
+                            className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                            placeholder="0"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Buffer for price negotiations</p>
                     </div>
                     <div>
                         <label className="block text-sm font-medium mb-2">Quantity *</label>
@@ -1431,8 +1446,16 @@ export default function ProductConfigurationForm({
                                     <span>₹{(currentProduct.unitCost || 0).toLocaleString('en-IN')}</span>
                                 </div>
 
+                                {/* Negotiation Margin */}
+                                {(currentProduct.negotiationMarginPercentage || 0) > 0 && (
+                                    <div className="flex justify-between text-sm text-purple-700 mt-2">
+                                        <span>+ Negotiation Margin ({currentProduct.negotiationMarginPercentage}%):</span>
+                                        <span>₹{(currentProduct.negotiationMarginAmount || 0).toLocaleString('en-IN')}</span>
+                                    </div>
+                                )}
+
                                 <div className="flex justify-between text-xl font-bold text-emerald-900 bg-emerald-200 px-4 py-3 rounded-lg mt-4">
-                                    <span>TOTAL (Qty: {currentProduct.quantity || 1}):</span>
+                                    <span>FINAL PRICE (Qty: {currentProduct.quantity || 1}):</span>
                                     <span>₹{(currentProduct.lineTotal || 0).toLocaleString('en-IN')}</span>
                                 </div>
                             </div>
