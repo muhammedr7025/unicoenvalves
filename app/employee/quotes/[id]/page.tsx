@@ -397,33 +397,7 @@ export default function QuoteDetailsPage() {
         </div>
       </div>
 
-      {/* Products */}
-      <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-        <h2 className="text-2xl font-bold mb-6">Product Details</h2>
 
-        {quote.products.map((product, index) => (
-          <ProductDetailedView
-            key={index}
-            product={product}
-            index={index}
-          />
-        ))}
-
-        {/* Totals */}
-        <div className="border-t-4 border-gray-300 pt-6 mt-6">
-          <QuoteSummary
-            subtotal={quote.subtotal}
-            productsSubtotal={quote.products.reduce((sum, p) => sum + (p.lineTotal || 0), 0)}
-            packagePrice={quote.packagePrice}
-            discount={quote.discount}
-            discountAmount={quote.discountAmount}
-            tax={quote.tax}
-            taxAmount={quote.taxAmount}
-            total={quote.total}
-          />
-
-        </div>
-      </div>
     </div>
   );
 }
