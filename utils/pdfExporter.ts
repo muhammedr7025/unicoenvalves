@@ -167,7 +167,7 @@ const mergePDFWithTermsConditions = async (jsPdfDoc: jsPDF): Promise<Uint8Array>
     return await mainPdf.save();
 };
 
-// Helper function to merge PDFs for combined document (insert T&C between cover letter and price summary)
+// Helper function to merge PDFs for combined document (Cover Letter + Price Summary + T&C)
 const createCombinedPDFWithTermsConditions = async (
     coverLetterPdf: jsPDF,
     priceSummaryPdf: jsPDF
@@ -187,7 +187,12 @@ const createCombinedPDFWithTermsConditions = async (
     const coverPages = await finalPdf.copyPages(coverPdf, coverPdf.getPageIndices());
     coverPages.forEach((page) => finalPdf.addPage(page));
     
-    // Add Terms & Conditions PDF pages (if available)
+    // Load price summary PDF and add all its pages
+    const pricePdf = await PDFDocument.load(priceSummaryArrayBuffer);
+    const pricePages = await finalPdf.copyPages(pricePdf, pricePdf.getPageIndices());
+    pricePages.forEach((page) => finalPdf.addPage(page));
+    
+    // Add Terms & Conditions PDF pages at the end (if available)
     if (tcPdfArrayBuffer) {
         const tcPdf = await PDFDocument.load(tcPdfArrayBuffer);
         const tcPages = await finalPdf.copyPages(tcPdf, tcPdf.getPageIndices());
@@ -195,11 +200,6 @@ const createCombinedPDFWithTermsConditions = async (
     } else {
         console.warn('Terms & Conditions PDF not found for combined document');
     }
-    
-    // Load price summary PDF and add all its pages
-    const pricePdf = await PDFDocument.load(priceSummaryArrayBuffer);
-    const pricePages = await finalPdf.copyPages(pricePdf, pricePdf.getPageIndices());
-    pricePages.forEach((page) => finalPdf.addPage(page));
     
     return await finalPdf.save();
 };
