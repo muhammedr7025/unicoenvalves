@@ -305,6 +305,98 @@ export default function QuoteDetailsPage() {
         )}
       </div>
 
+      {/* Item Details Table (Pricing Summary) */}
+      <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
+        <h2 className="text-2xl font-bold mb-6 flex items-center">
+          <span className="mr-2">📋</span>
+          Item Details
+        </h2>
+
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-blue-900 text-white">
+                <th className="border border-gray-300 px-4 py-3 text-center font-semibold">S.No</th>
+                <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Tag No.</th>
+                <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Item Description</th>
+                <th className="border border-gray-300 px-4 py-3 text-right font-semibold">Unit Price (INR)</th>
+                <th className="border border-gray-300 px-4 py-3 text-center font-semibold">Qty</th>
+                <th className="border border-gray-300 px-4 py-3 text-right font-semibold">Total Price (INR)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {quote.products.map((product, index) => {
+                // Build description - values only, comma separated
+                const descParts: string[] = [];
+                descParts.push(`${product.seriesNumber}`);
+                if (product.size) descParts.push(`${product.size}`);
+                if (product.rating) descParts.push(`${product.rating}`);
+                if (product.bodyEndConnectType) descParts.push(`${product.bodyEndConnectType}`);
+                if (product.bodyBonnetMaterialName) descParts.push(`${product.bodyBonnetMaterialName}`);
+                if (product.actuatorSeries && product.actuatorModel) {
+                  descParts.push(`${product.actuatorSeries}/${product.actuatorModel}`);
+                }
+                if (product.accessories && product.accessories.length > 0) {
+                  const accessoryNames = product.accessories.map(a => a.title).join(', ');
+                  descParts.push(accessoryNames);
+                }
+
+                return (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="border border-gray-300 px-4 py-3 text-center">{index + 1}</td>
+                    <td className="border border-gray-300 px-4 py-3">{product.productTag || `Item ${index + 1}`}</td>
+                    <td className="border border-gray-300 px-4 py-3 text-sm">{descParts.join(', ')}</td>
+                    <td className="border border-gray-300 px-4 py-3 text-right font-medium">
+                      ₹{(product.unitCost || 0).toLocaleString('en-IN')}
+                    </td>
+                    <td className="border border-gray-300 px-4 py-3 text-center">{product.quantity}</td>
+                    <td className="border border-gray-300 px-4 py-3 text-right font-bold text-green-700">
+                      ₹{(product.lineTotal || 0).toLocaleString('en-IN')}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr className="bg-gray-100 font-bold">
+                <td colSpan={5} className="border border-gray-300 px-4 py-3 text-right">Subtotal:</td>
+                <td className="border border-gray-300 px-4 py-3 text-right text-green-700">
+                  ₹{(quote.subtotal || 0).toLocaleString('en-IN')}
+                </td>
+              </tr>
+              {quote.packagePrice && quote.packagePrice > 0 && (
+                <tr className="bg-gray-50">
+                  <td colSpan={5} className="border border-gray-300 px-4 py-3 text-right">Packing Charges:</td>
+                  <td className="border border-gray-300 px-4 py-3 text-right">
+                    ₹{quote.packagePrice.toLocaleString('en-IN')}
+                  </td>
+                </tr>
+              )}
+              {quote.discount && quote.discount > 0 && (
+                <tr className="bg-gray-50">
+                  <td colSpan={5} className="border border-gray-300 px-4 py-3 text-right">Discount ({quote.discount}%):</td>
+                  <td className="border border-gray-300 px-4 py-3 text-right text-red-600">
+                    -₹{(quote.discountAmount || 0).toLocaleString('en-IN')}
+                  </td>
+                </tr>
+              )}
+              <tr className="bg-gray-50">
+                <td colSpan={5} className="border border-gray-300 px-4 py-3 text-right">IGST ({quote.tax || 18}%):</td>
+                <td className="border border-gray-300 px-4 py-3 text-right">
+                  ₹{(quote.taxAmount || 0).toLocaleString('en-IN')}
+                </td>
+              </tr>
+              <tr className="bg-green-100 font-bold text-lg">
+                <td colSpan={5} className="border border-gray-300 px-4 py-4 text-right">Grand Total:</td>
+                <td className="border border-gray-300 px-4 py-4 text-right text-green-700">
+                  ₹{(quote.total || 0).toLocaleString('en-IN')}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
       {/* Products */}
       <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
         <h2 className="text-2xl font-bold mb-6">Product Details</h2>
