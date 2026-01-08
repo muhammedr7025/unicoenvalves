@@ -412,7 +412,7 @@ export default function ProductConfigurationForm({
             {/* Trim Type Selection - After Series/Size/Rating, Required for Machine Pricing */}
             {currentProduct.size && currentProduct.rating && (
                 <div className="mb-6 bg-orange-50 border-2 border-orange-300 rounded-lg p-4">
-                    <label className="block text-sm font-medium mb-2">Trim Type * (Used for Plug, Seat, Stem, Cage pricing)</label>
+                    <label className="block text-sm font-medium mb-2">Trim Type </label>
                     <select
                         value={currentProduct.trimType || ''}
                         onChange={(e) => setCurrentProduct({ ...currentProduct, trimType: e.target.value })}
@@ -1084,7 +1084,7 @@ export default function ProductConfigurationForm({
                             className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
                             placeholder="0"
                         />
-                        <p className="text-xs text-gray-500 mt-1">Buffer for price negotiations</p>
+                        
                     </div>
                     <div>
                         <label className="block text-sm font-medium mb-2">Quantity *</label>
@@ -1110,7 +1110,6 @@ export default function ProductConfigurationForm({
 
                         {/* Body Sub-Assembly Breakdown */}
                         <div className="bg-white rounded-lg p-4 mb-4">
-                            <h3 className="font-bold text-lg mb-3 text-blue-900">🔧 Body Sub-Assembly</h3>
 
                             {/* Specs Summary */}
                             <div className="bg-blue-50 rounded-lg p-3 mb-3 text-sm">
@@ -1130,7 +1129,7 @@ export default function ProductConfigurationForm({
                                     </div>
                                     {currentProduct.trimType && (
                                         <div>
-                                            <span className="text-gray-600">Trim:</span>
+                                            <span className="text-gray-600">Trim type:</span>
                                             <span className="font-semibold ml-1">{currentProduct.trimType}</span>
                                         </div>
                                     )}
@@ -1139,7 +1138,7 @@ export default function ProductConfigurationForm({
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
                                     {currentProduct.bodyEndConnectType && (
                                         <div>
-                                            <span className="text-gray-600">End:</span>
+                                            <span className="text-gray-600">End connection:</span>
                                             <span className="font-semibold ml-1">{currentProduct.bodyEndConnectType}</span>
                                         </div>
                                     )}
