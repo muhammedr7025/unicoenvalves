@@ -33,18 +33,7 @@ export default function ProductList({ products, onEdit, onRemove, readOnly = fal
                                 )}
                             </div>
                             <div className="text-sm text-gray-600 mt-2 space-y-1">
-                                <p>Quantity: {product.quantity}</p>
-                                <p>Manufacturing: ₹{product.manufacturingCost?.toLocaleString('en-IN')}
-                                    {product.manufacturingProfitPercentage && product.manufacturingProfitPercentage > 0 && (
-                                        <span className="text-blue-600 ml-2">(+{product.manufacturingProfitPercentage}% profit)</span>
-                                    )}
-                                </p>
-                                <p>Boughtout: ₹{product.boughtoutItemCost?.toLocaleString('en-IN')}
-                                    {product.boughtoutProfitPercentage && product.boughtoutProfitPercentage > 0 && (
-                                        <span className="text-pink-600 ml-2">(+{product.boughtoutProfitPercentage}% profit)</span>
-                                    )}
-                                </p>
-                                <p className="font-semibold text-green-700">Unit Cost: ₹{product.unitCost?.toLocaleString('en-IN')}</p>
+    
                             </div>
                         </div>
                         <div className="flex items-center space-x-4 ml-4">
