@@ -1114,6 +1114,7 @@ export default function ProductConfigurationForm({
 
                             {/* Specs Summary */}
                             <div className="bg-blue-50 rounded-lg p-3 mb-3 text-sm">
+                                {/* Basic Specs Row */}
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                                     <div>
                                         <span className="text-gray-600">Series:</span>
@@ -1134,6 +1135,7 @@ export default function ProductConfigurationForm({
                                         </div>
                                     )}
                                 </div>
+                                {/* Type/Connection Row */}
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
                                     {currentProduct.bodyEndConnectType && (
                                         <div>
@@ -1143,10 +1145,62 @@ export default function ProductConfigurationForm({
                                     )}
                                     {currentProduct.bonnetType && (
                                         <div>
-                                            <span className="text-gray-600">Bonnet:</span>
+                                            <span className="text-gray-600">Bonnet Type:</span>
                                             <span className="font-semibold ml-1">{currentProduct.bonnetType}</span>
                                         </div>
                                     )}
+                                    {currentProduct.sealType && (
+                                        <div>
+                                            <span className="text-gray-600">Seal:</span>
+                                            <span className="font-semibold ml-1">{currentProduct.sealType}</span>
+                                        </div>
+                                    )}
+                                </div>
+                                {/* Materials Row */}
+                                <div className="border-t border-blue-200 mt-3 pt-3">
+                                    <div className="text-xs text-gray-500 mb-2 font-medium">Materials:</div>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                                        {currentProduct.bodyBonnetMaterialId && (
+                                            <div>
+                                                <span className="text-gray-500">Body/Bonnet:</span>
+                                                <span className="font-medium ml-1">
+                                                    {bodyBonnetMaterials.find(m => m.id === currentProduct.bodyBonnetMaterialId)?.name || '-'}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {currentProduct.plugMaterialId && (
+                                            <div>
+                                                <span className="text-gray-500">Plug:</span>
+                                                <span className="font-medium ml-1">
+                                                    {plugMaterials.find(m => m.id === currentProduct.plugMaterialId)?.name || '-'}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {currentProduct.seatMaterialId && (
+                                            <div>
+                                                <span className="text-gray-500">Seat:</span>
+                                                <span className="font-medium ml-1">
+                                                    {seatMaterials.find(m => m.id === currentProduct.seatMaterialId)?.name || '-'}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {currentProduct.stemMaterialId && (
+                                            <div>
+                                                <span className="text-gray-500">Stem:</span>
+                                                <span className="font-medium ml-1">
+                                                    {stemMaterials.find(m => m.id === currentProduct.stemMaterialId)?.name || '-'}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {currentProduct.cageMaterialId && (
+                                            <div>
+                                                <span className="text-gray-500">Cage:</span>
+                                                <span className="font-medium ml-1">
+                                                    {cageMaterials.find(m => m.id === currentProduct.cageMaterialId)?.name || '-'}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
