@@ -1,0 +1,7 @@
+Type,Series,Model,Standard/Special,Fixed Price,Active
+Manual,Series H,HW-50,standard,1500,TRUE
+Manual,Series H,HW-100,standard,2000,TRUE
+Manual,Series H,HW-200,standard,2500,TRUE
+Manual,Series H,HW-300,standard,3000,TRUE
+Chainwheel,Series C,CW-100,standard,3000,TRUE
+Chainwheel,Series C,CW-200,standard,4000,TRUE

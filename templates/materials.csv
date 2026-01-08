@@ -1,0 +1,17 @@
+Material Name,Price Per Kg (INR),Material Group,Active
+Carbon Steel CS A216-WCB,180,BodyBonnet,TRUE
+Stainless Steel SS304,450,BodyBonnet,TRUE
+Stainless Steel SS316,550,BodyBonnet,TRUE
+Alloy Steel A217-WC6,320,BodyBonnet,TRUE
+Chrome Moly A217-WC9,380,BodyBonnet,TRUE
+SS304 Plug,450,Plug,TRUE
+SS316 Plug,550,Plug,TRUE
+Stellite Plug,1200,Plug,TRUE
+SS304 Seat,450,Seat,TRUE
+SS316 Seat,550,Seat,TRUE
+Stellite Seat,1200,Seat,TRUE
+SS304 Stem,450,Stem,TRUE
+SS316 Stem,550,Stem,TRUE
+SS410 Stem,380,Stem,TRUE
+SS304 Cage,450,Cage,TRUE
+SS316 Cage,550,Cage,TRUE

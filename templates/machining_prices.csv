@@ -1,0 +1,29 @@
+Component,SeriesNumber,Size,Rating,TypeKey,MaterialName,FixedPrice
+Body,91000,1/2,150,Flanged,SS316,2500
+Body,91000,1/2,150,Flanged,SS304,2000
+Body,91000,1/2,150,Threaded,SS316,2300
+Body,91000,3/4,150,Flanged,SS316,3200
+Body,91000,1,150,Flanged,SS316,4000
+Body,91000,2,150,Flanged,SS316,6500
+Bonnet,91000,1/2,150,Standard,SS316,1500
+Bonnet,91000,1/2,150,Extended,SS316,2000
+Bonnet,91000,3/4,150,Standard,SS316,2000
+Bonnet,91000,1,150,Standard,SS316,2500
+Bonnet,91000,2,150,Standard,SS316,4000
+Plug,91000,1/2,150,Metal Seated,SS316,1200
+Plug,91000,1/2,150,Soft Seated,SS316,1000
+Plug,91000,3/4,150,Metal Seated,SS316,1500
+Plug,91000,1,150,Metal Seated,SS316,1800
+Plug,91000,2,150,Metal Seated,SS316,2800
+Seat,91000,1/2,150,Metal Seated,SS316,1000
+Seat,91000,1/2,150,Soft Seated,SS316,800
+Seat,91000,3/4,150,Metal Seated,SS316,1300
+Seat,91000,1,150,Metal Seated,SS316,1600
+Seat,91000,2,150,Metal Seated,SS316,2500
+Stem,91000,1/2,150,Standard,SS316,800
+Stem,91000,3/4,150,Standard,SS316,1000
+Stem,91000,1,150,Standard,SS316,1200
+Stem,91000,2,150,Standard,SS316,2000
+Cage,92000,1/2,150,Standard,SS316,1800
+Cage,92000,1,150,Standard,SS316,2500
+Cage,92000,2,150,Standard,SS316,4200

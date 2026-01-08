@@ -1,0 +1,11 @@
+Series Number,Size,Rating,Bonnet Type,Weight (kg),Active
+91000,1/2,150,Standard,1.2,TRUE
+91000,1/2,150,Extended,1.8,TRUE
+91000,1/2,300,Standard,1.5,TRUE
+91000,3/4,150,Standard,1.8,TRUE
+91000,1,150,Standard,2.5,TRUE
+91000,1-1/2,150,Standard,4.0,TRUE
+91000,2,150,Standard,5.5,TRUE
+92000,1/2,150,Standard,1.4,TRUE
+92000,1,150,Standard,2.8,TRUE
+92000,2,150,Standard,5.8,TRUE

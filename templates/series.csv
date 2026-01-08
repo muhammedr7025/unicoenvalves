@@ -1,0 +1,5 @@
+Product Type,Series Number,Series Name,Has Cage,Has Seal Ring,Active
+Globe Valve,91000,Standard Globe Valve,FALSE,FALSE,TRUE
+Globe Valve,92000,Cage Guided Globe Valve,TRUE,TRUE,TRUE
+Angle Valve,93000,Angle Control Valve,TRUE,TRUE,TRUE
+Ball Valve,94000,Trunnion Ball Valve,FALSE,FALSE,TRUE

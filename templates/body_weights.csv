@@ -1,0 +1,11 @@
+Series Number,Size,Rating,End Connect Type,Weight (kg),Active
+91000,1/2,150,Flanged,2.5,TRUE
+91000,1/2,150,Threaded,2.3,TRUE
+91000,1/2,300,Flanged,3.2,TRUE
+91000,3/4,150,Flanged,3.8,TRUE
+91000,1,150,Flanged,5.2,TRUE
+91000,1-1/2,150,Flanged,8.5,TRUE
+91000,2,150,Flanged,12.5,TRUE
+92000,1/2,150,Flanged,2.7,TRUE
+92000,1,150,Flanged,5.5,TRUE
+92000,2,150,Flanged,13.0,TRUE
