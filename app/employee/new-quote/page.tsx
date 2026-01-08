@@ -481,15 +481,17 @@ export default function NewQuotePage() {
 
               {/* Delivery Days */}
               <div>
-                <label className="block text-sm font-medium mb-2">🚚 Delivery Timeline</label>
+                <label className="block text-sm font-medium mb-2">🚚 Delivery Timeline (Weeks)</label>
                 <input
-                  type="text"
+                  type="number"
+                  min="1"
                   value={deliveryDays}
                   onChange={(e) => setDeliveryDays(e.target.value)}
                   className="w-full px-3 py-2 border rounded-lg border-teal-300 focus:ring-teal-500 focus:border-teal-500"
-                  placeholder="e.g., 4-6 weeks"
+                  placeholder="e.g., 4"
                 />
               </div>
+
             </div>
 
 

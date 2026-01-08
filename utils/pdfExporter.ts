@@ -494,14 +494,18 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
             descParts.push(accessoryNames);
         }
 
+        // Calculate unit price as lineTotal / quantity to include accessories
+        const unitPrice = product.quantity > 0 ? product.lineTotal / product.quantity : product.unitCost;
+
         return [
             (index + 1).toString(),
             product.productTag || `Item ${index + 1}`,
             descParts.join(', '),
-            formatINR(product.unitCost),
+            formatINR(unitPrice),
             product.quantity.toString(),
             formatINR(product.lineTotal),
         ];
+
     });
 
     autoTable(doc, {
@@ -535,7 +539,21 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
             5: { halign: 'left', cellWidth: 100 },
         },
         margin: { left: 40, right: 40 },
+        // Add footer row with total quantity
+        foot: [[
+            '', '', '',
+            'Total Qty:',
+            quote.products.reduce((sum, p) => sum + (p.quantity || 0), 0).toString(),
+            ''
+        ]],
+        footStyles: {
+            fillColor: [255, 255, 255],
+            textColor: [0, 0, 0],
+            fontStyle: 'bold',
+            fontSize: 9,
+        },
     });
+
 
     yPos = (doc as any).lastAutoTable.finalY + 20;
 
@@ -573,10 +591,14 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
     // Build summary rows based on pricing type
     const summaryRows: string[][] = [];
 
+    // Calculate actual products subtotal (before any discount)
+    const productsSubtotal = quote.products.reduce((sum, p) => sum + (p.lineTotal || 0), 0);
+
     // Show price label based on pricing type
     const priceLabel = isFOR ? 'F.O.R. Price' : 'Ex-Works Price Coimbatore';
 
-    summaryRows.push([priceLabel, formatINR(quote.subtotal)]);
+    summaryRows.push([priceLabel, formatINR(productsSubtotal)]);
+
 
     // For F.O.R., add freight charges as a separate row
     if (isFOR && freightCharges > 0) {
@@ -584,8 +606,12 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
     }
 
     summaryRows.push(['Packing Charges', formatINR(packingCharges)]);
-    summaryRows.push([`IGST(${quote.tax || 18} %)`, formatINR(quote.taxAmount)]);
+    
+    // Discount row removed as per request
 
+    
+    // IGST
+    summaryRows.push([`IGST(${quote.tax || 18} %)`, formatINR(quote.taxAmount)]);
 
 
     autoTable(doc, {
@@ -601,9 +627,10 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
             overflow: 'ellipsize',
         },
         columnStyles: {
-            0: { cellWidth: 405, halign: 'left' },
-            1: { cellWidth: 110, halign: 'left', fontStyle: 'bold' },
+            0: { cellWidth: 385, halign: 'left' },
+            1: { cellWidth: 130, halign: 'right', fontStyle: 'bold' },
         },
+
         margin: { left: 40, right: 40 },
     });
 
@@ -631,9 +658,10 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
             overflow: 'ellipsize',
         },
         columnStyles: {
-            0: { cellWidth: 405, halign: 'left', fillColor: [240, 240, 240] },
-            1: { cellWidth: 110, halign: 'left', fillColor: [240, 240, 240] },
+            0: { cellWidth: 385, halign: 'left', fillColor: [240, 240, 240] },
+            1: { cellWidth: 130, halign: 'right', fillColor: [240, 240, 240] },
         },
+
         margin: { left: 40, right: 40 },
     });
 
@@ -660,7 +688,8 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
         ['Prices', `${quote.pricingType || 'Ex-Works'} INR each net`],
         ['Validity', `${quote.validity || '30 days'} from the date of quotation`],
         // For F.O.R., show just "Delivery"; for Ex-Works, show "Delivery (Ex-Works)"
-        [isFOR ? 'Delivery' : 'Delivery\n(Ex-Works)', quote.deliveryDays || '24 working weeks from the date of advance payment and approved technical documents (whichever comes later).'],
+        [isFOR ? 'Delivery' : 'Delivery\n(Ex-Works)', `${quote.deliveryDays || '4-6'} weeks for delivery`],
+
         ['Warranty', `UVPL Standard Warranty - ${quote.warrantyTerms?.shipmentDays || 18} months from shipping or ${quote.warrantyTerms?.installationDays || 12} months from installation, whichever is earlier (on material & workmanship)`],
         ['Payment Terms', formatPaymentTerms(quote.paymentTerms)],
     ];
@@ -929,14 +958,18 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
             descParts.push(accessoryNames);
         }
 
+        // Calculate unit price as lineTotal / quantity to include accessories
+        const unitPrice = product.quantity > 0 ? product.lineTotal / product.quantity : product.unitCost;
+
         return [
             (index + 1).toString(),
             product.productTag || `Item ${index + 1}`,
             descParts.join(', '),
-            formatINR(product.unitCost),
+            formatINR(unitPrice),
             product.quantity.toString(),
             formatINR(product.lineTotal),
         ];
+
     });
 
     autoTable(priceSummaryDoc, {
@@ -970,7 +1003,21 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
             5: { halign: 'right', cellWidth: 110 },
         },
         margin: { left: 40, right: 40 },
+        // Add footer row with total quantity
+        foot: [[
+            '', '', '',
+            'Total Qty:',
+            quote.products.reduce((sum, p) => sum + (p.quantity || 0), 0).toString(),
+            ''
+        ]],
+        footStyles: {
+            fillColor: [255, 255, 255],
+            textColor: [0, 0, 0],
+            fontStyle: 'bold',
+            fontSize: 9,
+        },
     });
+
 
     yPos = (priceSummaryDoc as any).lastAutoTable.finalY + 20;
 
@@ -1003,9 +1050,13 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
 
     const summaryRowsCombined: string[][] = [];
 
+    // Calculate actual products subtotal (before any discount)
+    const productsSubtotalCombined = quote.products.reduce((sum, p) => sum + (p.lineTotal || 0), 0);
+
     // Show price label based on pricing type
     const priceLabelCombined = isFORCombined ? 'F.O.R. Price' : 'Ex-Works Price Coimbatore';
-    summaryRowsCombined.push([priceLabelCombined, formatINR(quote.subtotal)]);
+    summaryRowsCombined.push([priceLabelCombined, formatINR(productsSubtotalCombined)]);
+
 
     // For F.O.R., add freight charges as a separate row
     if (isFORCombined && freightChargesCombined > 0) {
@@ -1013,7 +1064,12 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
     }
 
     summaryRowsCombined.push(['Packing Charges', formatINR(packingCharges)]);
+    
+    // Discount row removed as per request
+
+    
     summaryRowsCombined.push([`IGST(${quote.tax || 18} %)`, formatINR(quote.taxAmount)]);
+
 
 
 
@@ -1086,7 +1142,8 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
         ['Prices', `${quote.pricingType || 'Ex-Works'} INR each net`],
         ['Validity', `${quote.validity || '30 days'} from the date of quotation`],
         // For F.O.R., show just "Delivery"; for Ex-Works, show "Delivery (Ex-Works)"
-        [isFORCombined ? 'Delivery' : 'Delivery\n(Ex-Works)', quote.deliveryDays || '24 working weeks from the date of advance payment and approved technical documents (whichever comes later).'],
+        [isFORCombined ? 'Delivery' : 'Delivery\n(Ex-Works)', `${quote.deliveryDays || '4-6'} weeks for delivery`],
+
         ['Warranty', `UVPL Standard Warranty - ${quote.warrantyTerms?.shipmentDays || 18} months from shipping or ${quote.warrantyTerms?.installationDays || 12} months from installation, whichever is earlier (on material & workmanship)`],
         ['Payment Terms', formatPaymentTerms(quote.paymentTerms)],
     ];
@@ -1156,7 +1213,8 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
 }
 
 // Export type for menu options
-export type PDFExportType = 'cover' | 'pricing' | 'both';
+export type PDFExportType = 'cover' | 'pricing' | 'both' | 'unpriced';
+
 
 // Main export function
 export async function exportQuotePDF(
@@ -1174,5 +1232,226 @@ export async function exportQuotePDF(
         case 'both':
             await generateCombinedPDF(quote, customerDetails);
             break;
+        case 'unpriced':
+            await generateUnpricedSummaryPDF(quote, customerDetails);
+            break;
     }
 }
+
+// Generate Unpriced Summary PDF - shows 'Quoted' instead of prices
+async function generateUnpricedSummaryPDF(quote: Quote, customerDetails: any) {
+    const doc = new jsPDF('p', 'pt', 'a4');
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    // Load logo
+    const logoBase64 = await loadLogoBase64();
+    await addHeader(doc, pageWidth, logoBase64);
+
+    let yPos = 70;
+
+    // Title
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 139);
+    doc.text('PRICE SUMMARY (UNPRICED)', pageWidth / 2, yPos, { align: 'center' });
+
+    yPos += 30;
+
+    // Quote Info Box
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
+    
+    const quoteInfoData = [
+        ['Quote No:', quote.quoteNumber],
+        ['Date:', formatDate(quote.createdAt)],
+        ['Customer:', customerDetails?.name || quote.customerName],
+        ['Project:', quote.projectName || '-'],
+        ['Enquiry Ref:', quote.enquiryId || '-'],
+    ];
+
+    autoTable(doc, {
+        startY: yPos,
+        body: quoteInfoData,
+        theme: 'plain',
+        styles: { fontSize: 9, cellPadding: 3 },
+        columnStyles: {
+            0: { fontStyle: 'bold', cellWidth: 80 },
+            1: { cellWidth: 200 },
+        },
+        margin: { left: 40 },
+    });
+
+    yPos = (doc as any).lastAutoTable.finalY + 20;
+
+    // ITEM DETAILS Header
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 139);
+    doc.text('ITEM DETAILS', 50, yPos);
+
+    yPos += 15;
+
+    // Products Table - with 'Quoted' instead of prices
+    const productsTableData = quote.products.map((product, index) => {
+        const descParts: string[] = [];
+        descParts.push(`${product.seriesNumber}`);
+        if (product.size) descParts.push(`${product.size}`);
+        if (product.rating) descParts.push(`${product.rating}`);
+        if (product.bodyEndConnectType) descParts.push(`${product.bodyEndConnectType}`);
+        if (product.bodyBonnetMaterialName) descParts.push(`${product.bodyBonnetMaterialName}`);
+        if (product.actuatorSeries && product.actuatorModel) {
+            descParts.push(`${product.actuatorSeries}/${product.actuatorModel}`);
+        }
+        if (product.accessories && product.accessories.length > 0) {
+            const accessoryNames = product.accessories.map(a => a.title).join(', ');
+            descParts.push(accessoryNames);
+        }
+
+        return [
+            (index + 1).toString(),
+            product.productTag || `Item ${index + 1}`,
+            descParts.join(', '),
+            'Quoted', // Instead of unit price
+            product.quantity.toString(),
+            'Quoted', // Instead of total price
+        ];
+    });
+
+    autoTable(doc, {
+        startY: yPos,
+        head: [['S.No', 'Tag No.', 'Item Description', 'Unit Price\n(INR)', 'Qty', 'Total Price\n(INR)']],
+        body: productsTableData,
+        theme: 'grid',
+        headStyles: {
+            fillColor: [255, 255, 255],
+            textColor: [0, 0, 0],
+            fontStyle: 'bold',
+            fontSize: 9,
+            halign: 'center',
+            valign: 'middle',
+        },
+        styles: {
+            fontSize: 8.5,
+            cellPadding: 5,
+            lineColor: [200, 200, 200],
+            lineWidth: 0.5,
+            overflow: 'linebreak',
+            cellWidth: 'wrap',
+        },
+        columnStyles: {
+            0: { halign: 'center', cellWidth: 35 },
+            1: { halign: 'left', cellWidth: 60 },
+            2: { halign: 'left', cellWidth: 175 },
+            3: { halign: 'center', cellWidth: 105 },
+            4: { halign: 'center', cellWidth: 30 },
+            5: { halign: 'center', cellWidth: 100 },
+        },
+        margin: { left: 40, right: 40 },
+        foot: [[
+            '', '', '',
+            'Total Qty:',
+            quote.products.reduce((sum, p) => sum + (p.quantity || 0), 0).toString(),
+            ''
+        ]],
+        footStyles: {
+            fillColor: [255, 255, 255],
+            textColor: [0, 0, 0],
+            fontStyle: 'bold',
+            fontSize: 9,
+        },
+    });
+
+    yPos = (doc as any).lastAutoTable.finalY + 20;
+
+    // Summary section - unpriced
+    autoTable(doc, {
+        startY: yPos,
+        body: [['TOTAL']],
+        theme: 'grid',
+        tableWidth: 515,
+        styles: {
+            fontSize: 8,
+            cellPadding: 4,
+            lineColor: [200, 200, 200],
+            lineWidth: 0.5,
+            halign: 'center',
+            fontStyle: 'bold',
+        },
+        margin: { left: 40, right: 40 },
+    });
+
+    yPos = (doc as any).lastAutoTable.finalY;
+
+    // Summary rows - unpriced
+    const isFOR = quote.pricingType === 'F.O.R.';
+    const priceLabel = isFOR ? 'F.O.R. Price' : 'Ex-Works Price Coimbatore';
+    const summaryRows: string[][] = [
+        [priceLabel, 'Quoted'],
+    ];
+    
+    if (isFOR) {
+        summaryRows.push(['Freight Charges', 'Quoted']);
+    }
+    
+    summaryRows.push(['Packing Charges', 'Quoted']);
+    
+    if (quote.discount > 0) {
+        summaryRows.push([`Discount (${quote.discount}%)`, 'Quoted']);
+    }
+    
+    summaryRows.push([`IGST(${quote.tax || 18} %)`, 'Quoted']);
+
+    autoTable(doc, {
+        startY: yPos,
+        body: summaryRows,
+        theme: 'grid',
+        tableWidth: 515,
+        styles: {
+            fontSize: 8,
+            cellPadding: 4,
+            lineColor: [200, 200, 200],
+            lineWidth: 0.5,
+        },
+        columnStyles: {
+            0: { cellWidth: 385, halign: 'left' },
+            1: { cellWidth: 130, halign: 'center', fontStyle: 'bold' },
+        },
+        margin: { left: 40, right: 40 },
+    });
+
+    yPos = (doc as any).lastAutoTable.finalY;
+
+    // Grand Total row
+    const grandTotalLabel = isFOR
+        ? 'Total F.O.R. Price (Excluding Insurance)'
+        : 'Total Ex-works Price(Excluding Freight/Insurance)';
+
+    autoTable(doc, {
+        startY: yPos,
+        body: [[grandTotalLabel, 'Quoted']],
+        theme: 'grid',
+        tableWidth: 515,
+        styles: {
+            fontSize: 8,
+            cellPadding: 4,
+            fontStyle: 'bold',
+            lineColor: [200, 200, 200],
+            lineWidth: 0.5,
+        },
+        columnStyles: {
+            0: { cellWidth: 385, halign: 'left', fillColor: [240, 240, 240] },
+            1: { cellWidth: 130, halign: 'center', fillColor: [240, 240, 240] },
+        },
+        margin: { left: 40, right: 40 },
+    });
+
+    // Add footer
+    addFooter(doc, pageWidth, pageHeight);
+
+    // Merge with T&C and download
+    const mergedPdfBytes = await mergePDFWithTermsConditions(doc);
+    downloadPDFBytes(mergedPdfBytes, `${quote.quoteNumber}_Unpriced.pdf`);
+}
+

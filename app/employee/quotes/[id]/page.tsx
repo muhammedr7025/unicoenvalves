@@ -185,6 +185,19 @@ export default function QuoteDetailsPage() {
                 </button>
 
                 <button
+                  onClick={() => handlePDFExport('unpriced')}
+                  className="w-full text-left px-4 py-3 hover:bg-gray-100 flex items-start transition-colors border-t border-gray-100"
+                >
+                  <svg className="w-5 h-5 mr-3 mt-0.5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                  </svg>
+                  <div>
+                    <div className="font-semibold text-gray-900">Unpriced Summary</div>
+                    <div className="text-xs text-gray-500">Item list without prices (shows &apos;Quoted&apos;)</div>
+                  </div>
+                </button>
+
+                <button
                   onClick={() => handlePDFExport('both')}
                   className="w-full text-left px-4 py-3 hover:bg-gray-100 flex items-start transition-colors border-t border-gray-100"
                 >
@@ -196,6 +209,7 @@ export default function QuoteDetailsPage() {
                     <div className="text-xs text-gray-500">Cover letter + price summary + terms & conditions</div>
                   </div>
                 </button>
+
               </div>
             </div>
           </div>
@@ -347,7 +361,7 @@ export default function QuoteDetailsPage() {
                     <td className="border border-gray-300 px-4 py-3">{product.productTag || `Item ${index + 1}`}</td>
                     <td className="border border-gray-300 px-4 py-3 text-sm">{descParts.join(', ')}</td>
                     <td className="border border-gray-300 px-4 py-3 text-right font-medium">
-                      ₹{(product.unitCost || 0).toLocaleString('en-IN')}
+                      ₹{(product.quantity > 0 ? (product.lineTotal || 0) / product.quantity : 0).toLocaleString('en-IN')}
                     </td>
                     <td className="border border-gray-300 px-4 py-3 text-center">{product.quantity}</td>
                     <td className="border border-gray-300 px-4 py-3 text-right font-bold text-green-700">
@@ -361,7 +375,7 @@ export default function QuoteDetailsPage() {
               <tr className="bg-gray-100 font-bold">
                 <td colSpan={5} className="border border-gray-300 px-4 py-3 text-right">Subtotal:</td>
                 <td className="border border-gray-300 px-4 py-3 text-right text-green-700">
-                  ₹{(quote.subtotal || 0).toLocaleString('en-IN')}
+                  ₹{(quote.products.reduce((sum, p) => sum + (p.lineTotal || 0), 0)).toLocaleString('en-IN')}
                 </td>
               </tr>
               {quote.packagePrice && quote.packagePrice > 0 && (
