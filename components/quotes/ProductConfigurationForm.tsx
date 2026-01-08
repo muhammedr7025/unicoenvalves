@@ -1154,6 +1154,13 @@ export default function ProductConfigurationForm({
                                             <span className="font-semibold ml-1">{currentProduct.sealType}</span>
                                         </div>
                                     )}
+                                        {currentProduct.actuatorSeries && (
+                                            <div>
+                                                <span className="text-gray-600">Actuator:</span>
+                                                <span className="font-semibold ml-1">{currentProduct.actuatorSeries} / {currentProduct.actuatorModel}</span>
+                                            </div>
+                                        )}
+                                      
                                 </div>
                                 {/* Materials Row */}
                                 <div className="border-t border-blue-200 mt-3 pt-3">
@@ -1210,74 +1217,23 @@ export default function ProductConfigurationForm({
                                     <span>₹{(currentProduct.bodySubAssemblyTotal || 0).toLocaleString('en-IN')}</span>
                                 </div>
                             </div>
-                        </div>
-
-                        {/* Actuator Sub-Assembly Breakdown */}
-                        {(currentProduct.actuatorSubAssemblyTotal || 0) > 0 && (
-                            <div className="bg-white rounded-lg p-4 mb-4">
-                                <h3 className="font-bold text-lg mb-3 text-purple-900">⚙️ Actuator Sub-Assembly</h3>
-
-                                {/* Actuator Specifications */}
-                                <div className="bg-purple-50 rounded-lg p-3 mb-3">
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                                        {currentProduct.actuatorType && (
-                                            <div>
-                                                <span className="text-gray-600">Actuator Type:</span>
-                                                <span className="font-semibold ml-1">{currentProduct.actuatorType}</span>
-                                            </div>
-                                        )}
-                                        {currentProduct.actuatorSeries && (
-                                            <div>
-                                                <span className="text-gray-600">Series:</span>
-                                                <span className="font-semibold ml-1">{currentProduct.actuatorSeries}</span>
-                                            </div>
-                                        )}
-                                        {currentProduct.actuatorModel && (
-                                            <div>
-                                                <span className="text-gray-600">Model:</span>
-                                                <span className="font-semibold ml-1">{currentProduct.actuatorModel}</span>
-                                            </div>
-                                        )}
-                                        {currentProduct.actuatorStandard && (
-                                            <div>
-                                                <span className="text-gray-600">Standard:</span>
-                                                <span className="font-semibold ml-1 capitalize">{currentProduct.actuatorStandard}</span>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Handwheel Row */}
-                                    {currentProduct.handwheelType && (
-                                        <div className="border-t border-purple-200 mt-3 pt-3">
-                                            <div className="text-xs text-gray-500 mb-2 font-medium">Handwheel:</div>
-                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                                                <div>
-                                                    <span className="text-gray-500">Type:</span>
-                                                    <span className="font-medium ml-1">{currentProduct.handwheelType}</span>
-                                                </div>
-                                                {currentProduct.handwheelSeries && (
-                                                    <div>
-                                                        <span className="text-gray-500">Series:</span>
-                                                        <span className="font-medium ml-1">{currentProduct.handwheelSeries}</span>
-                                                    </div>
-                                                )}
-                                                {currentProduct.handwheelModel && (
-                                                    <div>
-                                                        <span className="text-gray-500">Model:</span>
-                                                        <span className="font-medium ml-1">{currentProduct.handwheelModel}</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="space-y-2 text-sm">
+                            <div className="space-y-2 text-sm">
                                     <div className="flex justify-between font-bold text-purple-900 text-lg">
                                         <span>Actuator Sub-Assembly Total:</span>
                                         <span>₹{(currentProduct.actuatorSubAssemblyTotal || 0).toLocaleString('en-IN')}</span>
                                     </div>
                                 </div>
+                        </div>
+
+                        {/* Actuator Sub-Assembly Breakdown */}
+                        {(currentProduct.actuatorSubAssemblyTotal || 0) > 0 && (
+                            <div className="bg-white rounded-lg p-4 mb-4">
+                                
+
+                                {/* Actuator Specifications */}
+                                
+
+                               
                             </div>
                         )}
 
