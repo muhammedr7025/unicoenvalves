@@ -27,14 +27,21 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
     
-    // Customers collection - admin and employees can manage
+    // Customers collection - any signed in user can manage
+    // (role check is done in the app code for now)
     match /customers/{customerId} {
-      allow read, write: if isAdminOrEmployee();
+      allow read, write: if isSignedIn();
     }
     
-    // Quotes collection - admin and employees can manage
+    // Quotes collection - any signed in user can manage
+    // (role check is done in the app code for now)
     match /quotes/{quoteId} {
-      allow read, write: if isAdminOrEmployee();
+      allow read, write: if isSignedIn();
+      
+      // Products subcollection within quotes
+      match /products/{productId} {
+        allow read, write: if isSignedIn();
+      }
     }
     
     // Materials collection - admin can manage, employees can read

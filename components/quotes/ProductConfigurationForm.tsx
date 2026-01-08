@@ -485,11 +485,7 @@ export default function ProductConfigurationForm({
                                         placeholder="Search bonnet type..."
                                     />
                                 </div>
-                                <div className="bg-blue-50 p-3 rounded">
-                                    <p className="text-xs text-blue-800">
-                                        ℹ️ Uses the same material as Body (Material Group 1)
-                                    </p>
-                                </div>
+                            
                             </div>
                         </div>
 
@@ -599,9 +595,7 @@ export default function ProductConfigurationForm({
                                             placeholder="Search seal type..."
                                             disabled={!availableSealTypes.length}
                                         />
-                                        <p className="text-xs text-gray-500 mt-1">
-                                            Fixed price based on seal type, size, and rating
-                                        </p>
+                                        
                                     </div>
                                 </div>
                             </div>
