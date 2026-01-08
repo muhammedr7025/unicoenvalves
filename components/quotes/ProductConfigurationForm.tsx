@@ -1297,16 +1297,7 @@ export default function ProductConfigurationForm({
                                 </div>
                             </div>
 
-                            <div className="mt-4 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded">
-                                <p className="text-sm text-yellow-900">
-                                    ✅ <strong>Price calculated successfully!</strong> You can:
-                                </p>
-                                <ul className="list-disc list-inside text-sm text-yellow-900 ml-4 mt-2">
-                                    <li>Click "Add Product" to save this to the quote</li>
-                                    <li>Modify fields above and click "Calculate Price" again</li>
-                                    <li>Click "Cancel" to discard</li>
-                                </ul>
-                            </div>
+                         
                         </div>
                     </div>
                 )
