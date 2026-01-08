@@ -1,7 +1,8 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { PDFDocument } from 'pdf-lib';
-import { Quote } from '@/types';
+import { Quote, PaymentTerms } from '@/types';
+
 
 // Path to Terms and Conditions PDF
 const TERMS_CONDITIONS_PDF_PATH = '/3. COMMERCIAL TERMS AND CONDITIONS(MK).pdf';
@@ -32,9 +33,67 @@ const formatDate = (date: Date): string => {
     return `${day}-${month}-${year}`;
 };
 
+// Helper function to format payment terms based on quote data
+// Handles all edge cases:
+// - Custom terms override everything
+// - Advance only: advance > 0, approval = 0
+// - Approval only: approval > 0, advance = 0
+// - Both zero: 100% payment before dispatch
+// - Both have values: show advance + approval + balance
+const formatPaymentTerms = (paymentTerms?: PaymentTerms): string => {
+    // If no payment terms provided, use default
+    if (!paymentTerms) {
+        return '100% payment before dispatch';
+    }
+
+    const { advancePercentage, approvalPercentage, customTerms } = paymentTerms;
+    
+    // Custom terms override everything (if provided and not empty)
+    if (customTerms && customTerms.trim() !== '') {
+        return customTerms.trim();
+    }
+    
+    
+    const advance = advancePercentage || 0;
+    const approval = approvalPercentage || 0;
+    
+    // Both are zero
+    if (advance === 0 && approval === 0) {
+        return '100% payment before dispatch';
+    }
+    
+    // Only advance is specified (approval is 0)
+    if (advance > 0 && approval === 0) {
+        const balance = 100 - advance;
+        if (balance > 0) {
+            return `${advance}% advance with purchase order\n${balance}% before dispatch`;
+        }
+        return `${advance}% advance with purchase order`;
+    }
+    
+    // Only approval is specified (advance is 0)
+    if (approval > 0 && advance === 0) {
+        const balance = 100 - approval;
+        if (balance > 0) {
+            return `${approval}% against approved drawings\n${balance}% before dispatch`;
+        }
+        return `${approval}% against approved drawings`;
+    }
+    
+    // Both have values
+    const balance = 100 - advance - approval;
+    let terms = `${advance}% advance with purchase order\n${approval}% against approved drawings`;
+    if (balance > 0) {
+        terms += `\n${balance}% before dispatch`;
+    }
+    return terms;
+
+};
+
 
 // Function to add header with logo on top right
-const addHeader = async (doc: jsPDF, pageWidth: number, logoBase64?: string) => {
+// showTitle: if false, only shows logo and line (for cover letter)
+const addHeader = async (doc: jsPDF, pageWidth: number, logoBase64?: string, showTitle: boolean = true) => {
     // Add logo on top right if available
     if (logoBase64) {
         try {
@@ -49,17 +108,20 @@ const addHeader = async (doc: jsPDF, pageWidth: number, logoBase64?: string) => 
         }
     }
 
-    // Title - centered
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 139); // Dark blue
-    doc.text('Price Summary for Control Valves & Accessories', pageWidth / 2, 35, { align: 'center' });
+    // Title - centered (only for price summary and combined PDFs)
+    if (showTitle) {
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0, 0, 139); // Dark blue
+        doc.text('Price Summary for Control Valves & Accessories', pageWidth / 2, 35, { align: 'center' });
+    }
 
     // Horizontal line under header
     doc.setDrawColor(0, 0, 139);
     doc.setLineWidth(0.5);
     doc.line(40, 55, pageWidth - 40, 55);
 };
+
 
 // Synchronous version for backward compatibility
 const addHeaderSync = (doc: jsPDF, pageWidth: number) => {
@@ -227,20 +289,12 @@ export async function generateCoverLetterPDF(quote: Quote, customerDetails: any)
     // Load logo
     const logoBase64 = await loadLogoBase64();
 
-    // Add header with logo
-    await addHeader(doc, pageWidth, logoBase64);
+    // Add header with logo only (no title for cover letter)
+    await addHeader(doc, pageWidth, logoBase64, false);
 
     let yPos = 70;
 
-    // Title
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 139);
-    doc.text('OFFER COVERING LETTER', pageWidth / 2, yPos, { align: 'center' });
-
-    yPos += 30;
-
-    // Date and Location (Left side)
+    // Date and Location (Left side) - no title for cover letter
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(0, 0, 0);
@@ -249,6 +303,7 @@ export async function generateCoverLetterPDF(quote: Quote, customerDetails: any)
     doc.text(`Date: ${formatDate(quote.createdAt)}`, 50, yPos);
 
     yPos += 30;
+
 
     // Customer Details (To Section)
     doc.setFont('helvetica', 'bold');
@@ -567,15 +622,16 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
     yPos += 20;
 
     const termsData = [
-        ['Prices', 'Ex-Works INR each net'],
-        ['Validity', '30 days from the date of quotation'],
-        ['Delivery\n(Ex-Works)', '24 working weeks from the date of advance payment and approved technical documents (whichever comes later).'],
-        ['Warranty', 'UVPL Standard Warranty - 18 months from shipping or 12 months from installation, whichever is earlier (on material & workmanship)'],
-        ['Payment Terms', '20% advance with purchase order\n30% against approved drawings\nBalance before dispatch'],
+        ['Prices', `${quote.pricingType || 'Ex-Works'} INR each net`],
+        ['Validity', `${quote.validity || '30 days'} from the date of quotation`],
+        ['Delivery\n(Ex-Works)', quote.deliveryDays || '24 working weeks from the date of advance payment and approved technical documents (whichever comes later).'],
+        ['Warranty', `UVPL Standard Warranty - ${quote.warrantyTerms?.shipmentDays || 18} months from shipping or ${quote.warrantyTerms?.installationDays || 12} months from installation, whichever is earlier (on material & workmanship)`],
+        ['Payment Terms', formatPaymentTerms(quote.paymentTerms)],
         ['Freight', 'To be borne by buyer'],
         ['Insurance', 'To be arranged by buyer'],
         ['Manufacturer', 'Unicorn Valves Private Limited'],
     ];
+
 
     autoTable(doc, {
         startY: yPos,
@@ -638,19 +694,12 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
     const pageWidth = coverLetterDoc.internal.pageSize.getWidth();
     const pageHeight = coverLetterDoc.internal.pageSize.getHeight();
     
-    await addHeader(coverLetterDoc, pageWidth, logoBase64);
+    // Add header with logo only (no title for cover letter)
+    await addHeader(coverLetterDoc, pageWidth, logoBase64, false);
 
     let yPos = 70;
 
-    // Title
-    coverLetterDoc.setFontSize(14);
-    coverLetterDoc.setFont('helvetica', 'bold');
-    coverLetterDoc.setTextColor(0, 0, 139);
-    coverLetterDoc.text('OFFER COVERING LETTER', pageWidth / 2, yPos, { align: 'center' });
-
-    yPos += 30;
-
-    // Date and Location (Left side)
+    // Date and Location (Left side) - no title for cover letter
     coverLetterDoc.setFontSize(10);
     coverLetterDoc.setFont('helvetica', 'normal');
     coverLetterDoc.setTextColor(0, 0, 0);
@@ -659,6 +708,7 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
     coverLetterDoc.text(`Date: ${formatDate(quote.createdAt)}`, 50, yPos);
 
     yPos += 30;
+
 
     // Customer Details (To Section)
     coverLetterDoc.setFont('helvetica', 'bold');
@@ -961,15 +1011,16 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
     yPos += 20;
 
     const termsData = [
-        ['Prices', 'Ex-Works INR each net'],
-        ['Validity', '30 days from the date of quotation'],
-        ['Delivery\n(Ex-Works)', '24 working weeks from the date of advance payment and approved technical documents (whichever comes later).'],
-        ['Warranty', 'UVPL Standard Warranty - 18 months from shipping or 12 months from installation, whichever is earlier (on material & workmanship)'],
-        ['Payment Terms', '20% advance with purchase order\n30% against approved drawings\nBalance before dispatch'],
+        ['Prices', `${quote.pricingType || 'Ex-Works'} INR each net`],
+        ['Validity', `${quote.validity || '30 days'} from the date of quotation`],
+        ['Delivery\n(Ex-Works)', quote.deliveryDays || '24 working weeks from the date of advance payment and approved technical documents (whichever comes later).'],
+        ['Warranty', `UVPL Standard Warranty - ${quote.warrantyTerms?.shipmentDays || 18} months from shipping or ${quote.warrantyTerms?.installationDays || 12} months from installation, whichever is earlier (on material & workmanship)`],
+        ['Payment Terms', formatPaymentTerms(quote.paymentTerms)],
         ['Freight', 'To be borne by buyer'],
         ['Insurance', 'To be arranged by buyer'],
         ['Manufacturer', 'Unicorn Valves Private Limited'],
     ];
+
 
     autoTable(priceSummaryDoc, {
         startY: yPos,

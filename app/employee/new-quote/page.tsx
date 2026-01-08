@@ -520,7 +520,8 @@ export default function NewQuotePage() {
                     max="100"
                     value={advancePercentage}
                     onChange={(e) => setAdvancePercentage(parseFloat(e.target.value) || 0)}
-                    className="w-full px-3 py-2 border rounded-lg border-green-300 focus:ring-green-500 focus:border-green-500"
+                    disabled={!!customPaymentTerms.trim()}
+                    className={`w-full px-3 py-2 border rounded-lg border-green-300 focus:ring-green-500 focus:border-green-500 ${customPaymentTerms.trim() ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
                   />
                 </div>
                 <div>
@@ -531,11 +532,12 @@ export default function NewQuotePage() {
                     max="100"
                     value={approvalPercentage}
                     onChange={(e) => setApprovalPercentage(parseFloat(e.target.value) || 0)}
-                    className="w-full px-3 py-2 border rounded-lg border-green-300 focus:ring-green-500 focus:border-green-500"
+                    disabled={!!customPaymentTerms.trim()}
+                    className={`w-full px-3 py-2 border rounded-lg border-green-300 focus:ring-green-500 focus:border-green-500 ${customPaymentTerms.trim() ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-green-700 mb-2">Custom Terms (Optional)</label>
+                  <label className="block text-sm font-medium text-green-700 mb-2">Custom Terms (Overrides %)</label>
                   <input
                     type="text"
                     value={customPaymentTerms}
@@ -545,13 +547,24 @@ export default function NewQuotePage() {
                   />
                 </div>
               </div>
-              <p className="text-xs text-green-600 mt-2">
-                Total: {advancePercentage + approvalPercentage}%
-                {advancePercentage + approvalPercentage !== 100 && (
-                  <span className="text-orange-600 ml-2">⚠️ Should equal 100%</span>
-                )}
-              </p>
+              {!customPaymentTerms.trim() && (
+                <p className="text-xs text-green-600 mt-2">
+                  Total: {advancePercentage + approvalPercentage}%
+                  {advancePercentage + approvalPercentage < 100 && (
+                    <span className="text-blue-600 ml-2">📋 {100 - advancePercentage - approvalPercentage}% before dispatch</span>
+                  )}
+                  {advancePercentage + approvalPercentage > 100 && (
+                    <span className="text-red-600 ml-2">⚠️ Exceeds 100%</span>
+                  )}
+                </p>
+              )}
+              {customPaymentTerms.trim() && (
+                <p className="text-xs text-blue-600 mt-2">
+                  📋 Using custom terms: <strong>{customPaymentTerms.trim()}</strong>
+                </p>
+              )}
             </div>
+
 
             {/* International Customer - Currency Exchange */}
             {selectedCustomer && selectedCustomer.country !== 'India' && (
