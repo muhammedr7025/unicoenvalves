@@ -439,7 +439,7 @@ export default function ProductConfigurationForm({
                         {/* Body */}
                         <div className="bg-white rounded-lg p-4 border-2 border-blue-300">
                             <h4 className="font-semibold mb-3 text-gray-900 flex items-center">
-                                
+
                                 Body
                             </h4>
                             <div className="space-y-3">
@@ -1084,7 +1084,7 @@ export default function ProductConfigurationForm({
                             className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
                             placeholder="0"
                         />
-                        
+
                     </div>
                     <div>
                         <label className="block text-sm font-medium mb-2">Quantity *</label>
@@ -1216,10 +1216,65 @@ export default function ProductConfigurationForm({
                         {(currentProduct.actuatorSubAssemblyTotal || 0) > 0 && (
                             <div className="bg-white rounded-lg p-4 mb-4">
                                 <h3 className="font-bold text-lg mb-3 text-purple-900">⚙️ Actuator Sub-Assembly</h3>
-                                <div className="space-y-2 text-sm">
 
-                                    <div className="border-t pt-2 mt-2 flex justify-between font-bold text-purple-900">
-                                        <span>Subtotal</span>
+                                {/* Actuator Specifications */}
+                                <div className="bg-purple-50 rounded-lg p-3 mb-3">
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                                        {currentProduct.actuatorType && (
+                                            <div>
+                                                <span className="text-gray-600">Actuator Type:</span>
+                                                <span className="font-semibold ml-1">{currentProduct.actuatorType}</span>
+                                            </div>
+                                        )}
+                                        {currentProduct.actuatorSeries && (
+                                            <div>
+                                                <span className="text-gray-600">Series:</span>
+                                                <span className="font-semibold ml-1">{currentProduct.actuatorSeries}</span>
+                                            </div>
+                                        )}
+                                        {currentProduct.actuatorModel && (
+                                            <div>
+                                                <span className="text-gray-600">Model:</span>
+                                                <span className="font-semibold ml-1">{currentProduct.actuatorModel}</span>
+                                            </div>
+                                        )}
+                                        {currentProduct.actuatorStandard && (
+                                            <div>
+                                                <span className="text-gray-600">Standard:</span>
+                                                <span className="font-semibold ml-1 capitalize">{currentProduct.actuatorStandard}</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Handwheel Row */}
+                                    {currentProduct.handwheelType && (
+                                        <div className="border-t border-purple-200 mt-3 pt-3">
+                                            <div className="text-xs text-gray-500 mb-2 font-medium">Handwheel:</div>
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                                                <div>
+                                                    <span className="text-gray-500">Type:</span>
+                                                    <span className="font-medium ml-1">{currentProduct.handwheelType}</span>
+                                                </div>
+                                                {currentProduct.handwheelSeries && (
+                                                    <div>
+                                                        <span className="text-gray-500">Series:</span>
+                                                        <span className="font-medium ml-1">{currentProduct.handwheelSeries}</span>
+                                                    </div>
+                                                )}
+                                                {currentProduct.handwheelModel && (
+                                                    <div>
+                                                        <span className="text-gray-500">Model:</span>
+                                                        <span className="font-medium ml-1">{currentProduct.handwheelModel}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="space-y-2 text-sm">
+                                    <div className="flex justify-between font-bold text-purple-900 text-lg">
+                                        <span>Actuator Sub-Assembly Total:</span>
                                         <span>₹{(currentProduct.actuatorSubAssemblyTotal || 0).toLocaleString('en-IN')}</span>
                                     </div>
                                 </div>
@@ -1296,7 +1351,7 @@ export default function ProductConfigurationForm({
                                 </div>
                             </div>
 
-                         
+
                         </div>
                     </div>
                 )
