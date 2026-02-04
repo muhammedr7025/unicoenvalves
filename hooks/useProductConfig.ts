@@ -29,6 +29,9 @@ import {
     getAvailableHandwheelSeries,
     getAvailableHandwheelModels,
     getMaterialById,
+    getPilotPlugWeight,
+    getTestingPresetsForConfig,
+    getTubingPresetsForConfig,
     // Fixed machining price lookups (replaced work hours)
     getAvailableTrimTypes,
     getMachiningCostForBody,
@@ -79,6 +82,10 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
     const [testingItems, setTestingItems] = useState<TestingItem[]>(initialProduct?.testing || []);
     const [accessoryItems, setAccessoryItems] = useState<AccessoryItem[]>(initialProduct?.accessories || []);
 
+    // Available presets (for user selection)
+    const [availableTestingPresets, setAvailableTestingPresets] = useState<any[]>([]);
+    const [availableTubingPresets, setAvailableTubingPresets] = useState<any[]>([]);
+
     // Profits
     const [manufacturingProfit, setManufacturingProfit] = useState<number>(initialProduct?.manufacturingProfitPercentage || 0);
     const [boughtoutProfit, setBoughtoutProfit] = useState<number>(initialProduct?.boughtoutProfitPercentage || 0);
@@ -92,6 +99,7 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
     const seatMaterials = materials.filter(m => m.materialGroup === 'Seat');
     const stemMaterials = materials.filter(m => m.materialGroup === 'Stem');
     const cageMaterials = materials.filter(m => m.materialGroup === 'Cage');
+    const pilotPlugMaterials = materials.filter(m => m.materialGroup === 'Plug'); // Same as plug materials
 
     // Load initial options
     useEffect(() => {
@@ -186,6 +194,16 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
 
             const seals = await getAvailableSealTypes(currentProduct.seriesId, currentProduct.size, rating);
             setAvailableSealTypes(seals);
+
+            // Fetch available testing presets for user selection (don't auto-add)
+            const testingPresets = await getTestingPresetsForConfig(currentProduct.seriesId, currentProduct.size, rating);
+            setAvailableTestingPresets(testingPresets);
+            console.log(`📋 Found ${testingPresets.length} testing presets available for selection`);
+
+            // Fetch available tubing presets for user selection (don't auto-add)
+            const tubingPresets = await getTubingPresetsForConfig(currentProduct.seriesId, currentProduct.size, rating);
+            setAvailableTubingPresets(tubingPresets);
+            console.log(`📋 Found ${tubingPresets.length} tubing presets available for selection`);
         }
     };
 
@@ -497,6 +515,31 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
                 }
             }
 
+            // 8. Pilot Plug (weight × material price - NO machining)
+            if (p.hasPilotPlug && p.pilotPlugMaterialId) {
+                console.log('📦 Calculating Pilot Plug cost...');
+                const weight = await getPilotPlugWeight(p.seriesId!, p.size!, p.rating!);
+                const material = materials.find(m => m.id === p.pilotPlugMaterialId);
+
+                if (!weight) {
+                    errors.push(`Pilot Plug Weight not found for: Series ${p.seriesNumber}, Size ${p.size}, Rating ${p.rating}`);
+                    console.error('❌ Pilot Plug weight not found');
+                } else if (!material) {
+                    errors.push('Pilot Plug Material not found');
+                    console.error('❌ Pilot Plug material not found');
+                } else {
+                    // Material cost = weight × price per kg (NO machining for Pilot Plug)
+                    updatedProduct.pilotPlugWeight = weight;
+                    updatedProduct.pilotPlugMaterialPrice = material.pricePerKg;
+                    updatedProduct.pilotPlugMaterialName = material.name;
+                    const materialCost = weight * material.pricePerKg;
+                    updatedProduct.pilotPlugTotalCost = materialCost;
+                    console.log(`✅ Pilot Plug total: ₹${materialCost} (no machining cost)`);
+                }
+            } else {
+                updatedProduct.pilotPlugTotalCost = 0;
+            }
+
             // Show errors if any components failed
             if (errors.length > 0) {
                 console.error('❌ Pricing errors:', errors);
@@ -510,7 +553,8 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
                 (updatedProduct.seatTotalCost || 0) +
                 (updatedProduct.stemTotalCost || 0) +
                 (updatedProduct.cageTotalCost || 0) +
-                (updatedProduct.sealRingTotalCost || 0);
+                (updatedProduct.sealRingTotalCost || 0) +
+                (updatedProduct.pilotPlugTotalCost || 0);
 
             console.log('💰 Body Sub-Assembly Total:', updatedProduct.bodySubAssemblyTotal);
 
@@ -600,6 +644,42 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
         }
     };
 
+    // Add a testing preset to the items list
+    const addTestingPreset = (preset: any) => {
+        const alreadyAdded = testingItems.some(item => item.id === `preset-test-${preset.id}`);
+        if (alreadyAdded) {
+            console.log(`⚠️ Testing preset "${preset.testName}" already added`);
+            return;
+        }
+        const newItem = {
+            id: `preset-test-${preset.id}`,
+            title: preset.testName,
+            price: preset.price,
+            isPreset: true,
+            seriesId: currentProduct.seriesId,
+        };
+        setTestingItems(prev => [...prev, newItem]);
+        console.log(`✅ Added testing preset: ${preset.testName}`);
+    };
+
+    // Add a tubing preset to the items list
+    const addTubingPreset = (preset: any) => {
+        const alreadyAdded = tubingAndFittingItems.some(item => item.id === `preset-tubing-${preset.id}`);
+        if (alreadyAdded) {
+            console.log(`⚠️ Tubing preset "${preset.itemName}" already added`);
+            return;
+        }
+        const newItem = {
+            id: `preset-tubing-${preset.id}`,
+            title: preset.itemName,
+            price: preset.price,
+            isPreset: true,
+            seriesId: currentProduct.seriesId,
+        };
+        setTubingAndFittingItems(prev => [...prev, newItem]);
+        console.log(`✅ Added tubing preset: ${preset.itemName}`);
+    };
+
     return {
         currentProduct,
         setCurrentProduct,
@@ -621,6 +701,11 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
         setTestingItems,
         accessoryItems,
         setAccessoryItems,
+        // Available presets for selection
+        availableTestingPresets,
+        availableTubingPresets,
+        addTestingPreset,
+        addTubingPreset,
         manufacturingProfit,
         setManufacturingProfit,
         boughtoutProfit,
@@ -633,6 +718,7 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
         seatMaterials,
         stemMaterials,
         cageMaterials,
+        pilotPlugMaterials,
         handleSeriesChange,
         handleSizeChange,
         handleRatingChange,

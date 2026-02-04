@@ -12,6 +12,9 @@ export interface ExcelData {
   sealRingPrices: any[]; // Keep for backward compatibility, but will be ignored
   actuatorModels: any[];
   handwheelPrices: any[];
+  pilotPlugWeights: any[]; // NEW
+  testingPresets: any[]; // NEW
+  tubingPresets: any[]; // NEW
 }
 
 export interface ExportData {
@@ -26,6 +29,9 @@ export interface ExportData {
   sealRingPrices: any[];
   actuatorModels: any[];
   handwheelPrices: any[];
+  pilotPlugWeights?: any[]; // NEW
+  testingPresets?: any[]; // NEW
+  tubingPresets?: any[]; // NEW
 }
 
 export function generateExcelTemplate(): void {
@@ -320,6 +326,48 @@ export function generateExcelTemplate(): void {
   const handwheelPricesWs = XLSX.utils.aoa_to_sheet(handwheelPricesData);
   XLSX.utils.book_append_sheet(wb, handwheelPricesWs, 'Handwheel Prices');
 
+  // Sheet 12: Pilot Plug Weights
+  const pilotPlugWeightsData = [
+    ['Series Number', 'Size', 'Rating', 'Weight (kg)', 'Active'],
+    ['91000', '1/2', '150', '0.25', 'TRUE'],
+    ['91000', '1/2', '300', '0.3', 'TRUE'],
+    ['91000', '3/4', '150', '0.35', 'TRUE'],
+    ['91000', '1', '150', '0.45', 'TRUE'],
+    ['92000', '1/2', '150', '0.28', 'TRUE'],
+    ['92000', '1', '150', '0.48', 'TRUE'],
+    ['93000', '1/2', '150', '0.3', 'TRUE'],
+    ['93000', '1', '150', '0.5', 'TRUE'],
+  ];
+  const pilotPlugWeightsWs = XLSX.utils.aoa_to_sheet(pilotPlugWeightsData);
+  XLSX.utils.book_append_sheet(wb, pilotPlugWeightsWs, 'Pilot Plug Weights');
+
+  // Sheet 13: Testing Presets
+  const testingPresetsData = [
+    ['Series Number', 'Size', 'Rating', 'Test Name', 'Price', 'Active'],
+    ['91000', '1/2', '150', 'Hydro Test', '2500', 'TRUE'],
+    ['91000', '1/2', '150', 'Pneumatic Test', '1800', 'TRUE'],
+    ['91000', '1/2', '150', 'PMI Test', '3500', 'TRUE'],
+    ['91000', '1/2', '300', 'Hydro Test', '3000', 'TRUE'],
+    ['92000', '1/2', '150', 'Hydro Test', '2600', 'TRUE'],
+    ['92000', '1', '150', 'Hydro Test', '3400', 'TRUE'],
+    ['93000', '1/2', '150', 'Hydro Test', '2700', 'TRUE'],
+  ];
+  const testingPresetsWs = XLSX.utils.aoa_to_sheet(testingPresetsData);
+  XLSX.utils.book_append_sheet(wb, testingPresetsWs, 'Testing Presets');
+
+  // Sheet 14: Tubing Presets
+  const tubingPresetsData = [
+    ['Series Number', 'Size', 'Rating', 'Item Name', 'Price', 'Active'],
+    ['91000', '1/2', '150', 'Standard Tubing Kit', '4500', 'TRUE'],
+    ['91000', '1/2', '150', 'Premium Fitting Set', '6500', 'TRUE'],
+    ['91000', '1/2', '300', 'Standard Tubing Kit', '5000', 'TRUE'],
+    ['92000', '1/2', '150', 'Standard Tubing Kit', '4800', 'TRUE'],
+    ['92000', '1', '150', 'Standard Tubing Kit', '6200', 'TRUE'],
+    ['93000', '1/2', '150', 'Standard Tubing Kit', '5000', 'TRUE'],
+  ];
+  const tubingPresetsWs = XLSX.utils.aoa_to_sheet(tubingPresetsData);
+  XLSX.utils.book_append_sheet(wb, tubingPresetsWs, 'Tubing Presets');
+
   // Generate and download
   XLSX.writeFile(wb, 'Unicorn_Valves_Pricing_Template_COMPLETE.xlsx');
 }
@@ -345,6 +393,9 @@ export function parseExcelFile(file: File): Promise<ExcelData> {
           sealRingPrices: [],
           actuatorModels: [],
           handwheelPrices: [],
+          pilotPlugWeights: [],
+          testingPresets: [],
+          tubingPresets: [],
         };
 
         // Parse Materials
@@ -422,6 +473,27 @@ export function parseExcelFile(file: File): Promise<ExcelData> {
           const sheet = workbook.Sheets['Handwheel Prices'];
           const json = XLSX.utils.sheet_to_json(sheet);
           result.handwheelPrices = json;
+        }
+
+        // Parse Pilot Plug Weights (NEW)
+        if (workbook.SheetNames.includes('Pilot Plug Weights')) {
+          const sheet = workbook.Sheets['Pilot Plug Weights'];
+          const json = XLSX.utils.sheet_to_json(sheet);
+          result.pilotPlugWeights = json;
+        }
+
+        // Parse Testing Presets (NEW)
+        if (workbook.SheetNames.includes('Testing Presets')) {
+          const sheet = workbook.Sheets['Testing Presets'];
+          const json = XLSX.utils.sheet_to_json(sheet);
+          result.testingPresets = json;
+        }
+
+        // Parse Tubing Presets (NEW)
+        if (workbook.SheetNames.includes('Tubing Presets')) {
+          const sheet = workbook.Sheets['Tubing Presets'];
+          const json = XLSX.utils.sheet_to_json(sheet);
+          result.tubingPresets = json;
         }
 
         resolve(result);
@@ -615,6 +687,56 @@ export function exportPricingDataToExcel(data: ExportData): void {
   ];
   const handwheelPricesWs = XLSX.utils.aoa_to_sheet(handwheelPricesRows);
   XLSX.utils.book_append_sheet(wb, handwheelPricesWs, 'Handwheel Prices');
+
+  // Sheet 12: Pilot Plug Weights (NEW)
+  if (data.pilotPlugWeights && data.pilotPlugWeights.length > 0) {
+    const pilotPlugWeightsRows = [
+      ['Series Number', 'Size', 'Rating', 'Weight (kg)', 'Active'],
+      ...data.pilotPlugWeights.map((p) => [
+        data.series.find((s) => s.id === p.seriesId)?.seriesNumber || '',
+        p.size,
+        p.rating,
+        p.weight,
+        fmtBool(p.isActive),
+      ]),
+    ];
+    const pilotPlugWeightsWs = XLSX.utils.aoa_to_sheet(pilotPlugWeightsRows);
+    XLSX.utils.book_append_sheet(wb, pilotPlugWeightsWs, 'Pilot Plug Weights');
+  }
+
+  // Sheet 13: Testing Presets (NEW)
+  if (data.testingPresets && data.testingPresets.length > 0) {
+    const testingPresetsRows = [
+      ['Series Number', 'Size', 'Rating', 'Test Name', 'Price', 'Active'],
+      ...data.testingPresets.map((t) => [
+        data.series.find((s) => s.id === t.seriesId)?.seriesNumber || '',
+        t.size,
+        t.rating,
+        t.testName,
+        t.price,
+        fmtBool(t.isActive),
+      ]),
+    ];
+    const testingPresetsWs = XLSX.utils.aoa_to_sheet(testingPresetsRows);
+    XLSX.utils.book_append_sheet(wb, testingPresetsWs, 'Testing Presets');
+  }
+
+  // Sheet 14: Tubing Presets (NEW)
+  if (data.tubingPresets && data.tubingPresets.length > 0) {
+    const tubingPresetsRows = [
+      ['Series Number', 'Size', 'Rating', 'Item Name', 'Price', 'Active'],
+      ...data.tubingPresets.map((t) => [
+        data.series.find((s) => s.id === t.seriesId)?.seriesNumber || '',
+        t.size,
+        t.rating,
+        t.itemName,
+        t.price,
+        fmtBool(t.isActive),
+      ]),
+    ];
+    const tubingPresetsWs = XLSX.utils.aoa_to_sheet(tubingPresetsRows);
+    XLSX.utils.book_append_sheet(wb, tubingPresetsWs, 'Tubing Presets');
+  }
 
   // Generate and download
   XLSX.writeFile(wb, 'Unicorn_Valves_Pricing_Data.xlsx');

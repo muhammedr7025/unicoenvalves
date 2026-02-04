@@ -267,6 +267,109 @@ export async function getSealRingPrice(
   }
 }
 
+// NEW: Get pilot plug weight (similar to plug/cage weight lookup)
+export async function getPilotPlugWeight(
+  seriesId: string,
+  size: string,
+  rating: string
+): Promise<number | null> {
+  try {
+    console.log('Looking for pilot plug weight:', { seriesId, size, rating });
+    const weightsRef = collection(db, 'pilotPlugWeights');
+    const q = query(
+      weightsRef,
+      where('seriesId', '==', seriesId),
+      where('size', '==', size),
+      where('rating', '==', rating),
+      where('isActive', '==', true)
+    );
+    const snapshot = await getDocs(q);
+
+    console.log('Pilot plug weight results:', snapshot.docs.length);
+
+    if (snapshot.empty) return null;
+
+    return snapshot.docs[0].data().weight;
+  } catch (error) {
+    console.error('Error fetching pilot plug weight:', error);
+    return null;
+  }
+}
+
+// NEW: Get testing presets for a specific configuration
+export interface TestingPresetResult {
+  id: string;
+  testName: string;
+  price: number;
+}
+
+export async function getTestingPresetsForConfig(
+  seriesId: string,
+  size: string,
+  rating: string
+): Promise<TestingPresetResult[]> {
+  try {
+    console.log('Looking for testing presets:', { seriesId, size, rating });
+    const presetsRef = collection(db, 'testingPresets');
+    const q = query(
+      presetsRef,
+      where('seriesId', '==', seriesId),
+      where('size', '==', size),
+      where('rating', '==', rating),
+      where('isActive', '==', true)
+    );
+    const snapshot = await getDocs(q);
+
+    console.log('Testing presets results:', snapshot.docs.length);
+
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      testName: doc.data().testName,
+      price: doc.data().price,
+    }));
+  } catch (error) {
+    console.error('Error fetching testing presets:', error);
+    return [];
+  }
+}
+
+// NEW: Get tubing presets for a specific configuration
+export interface TubingPresetResult {
+  id: string;
+  itemName: string;
+  price: number;
+}
+
+export async function getTubingPresetsForConfig(
+  seriesId: string,
+  size: string,
+  rating: string
+): Promise<TubingPresetResult[]> {
+  try {
+    console.log('Looking for tubing presets:', { seriesId, size, rating });
+    const presetsRef = collection(db, 'tubingPresets');
+    const q = query(
+      presetsRef,
+      where('seriesId', '==', seriesId),
+      where('size', '==', size),
+      where('rating', '==', rating),
+      where('isActive', '==', true)
+    );
+    const snapshot = await getDocs(q);
+
+    console.log('Tubing presets results:', snapshot.docs.length);
+
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      itemName: doc.data().itemName,
+      price: doc.data().price,
+    }));
+  } catch (error) {
+    console.error('Error fetching tubing presets:', error);
+    return [];
+  }
+}
+
 // Get available sizes for a series
 export async function getAvailableSizes(seriesId: string): Promise<string[]> {
   try {

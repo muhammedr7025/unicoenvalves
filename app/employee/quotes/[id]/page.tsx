@@ -6,10 +6,11 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { getProductsFromSubcollection } from '@/lib/firebase/productService';
 import { Quote, QuoteProduct } from '@/types';
-import * as XLSX from 'xlsx';
+import { exportQuoteToExcel } from '@/utils/excelExport';
 import ProductDetailedView from '@/components/quotes/ProductDetailedView';
 import QuoteSummary from '@/components/quotes/QuoteSummary';
 import { exportQuotePDF, PDFExportType } from '@/utils/pdfExporter';
+
 
 export default function QuoteDetailsPage() {
   const params = useParams();
@@ -65,21 +66,7 @@ export default function QuoteDetailsPage() {
 
   const exportToExcel = () => {
     if (!quote) return;
-
-    const data = quote.products.map((p, index) => ({
-      'S.No': index + 1,
-      'Product': `${p.productType} - Series ${p.seriesNumber}`,
-      'Size': p.size,
-      'Rating': p.rating,
-      'Qty': p.quantity,
-      'Unit Price': p.unitCost,
-      'Total Price': p.lineTotal,
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Quote Details');
-    XLSX.writeFile(wb, `Quote_${quote.quoteNumber}.xlsx`);
+    exportQuoteToExcel(quote);
   };
 
   const handlePDFExport = async (exportType: PDFExportType) => {

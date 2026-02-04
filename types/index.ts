@@ -87,6 +87,16 @@ export interface CageWeight {
   isActive: boolean;
 }
 
+// NEW: Pilot Plug Weight
+export interface PilotPlugWeight {
+  id: string;
+  seriesId: string;
+  size: string;
+  rating: string;
+  weight: number;
+  isActive: boolean;
+}
+
 // NEW: Seal Ring Price
 export interface SealRingPrice {
   id: string;
@@ -160,12 +170,38 @@ export interface TubingAndFittingItem {
   id: string;
   title: string;
   price: number;
+  isPreset?: boolean; // NEW: Flag for preset items
+  seriesId?: string; // NEW: For preset reference
 }
 
 export interface TestingItem {
   id: string;
   title: string;
   price: number;
+  isPreset?: boolean; // NEW: Flag for preset items
+  seriesId?: string; // NEW: For preset reference
+}
+
+// NEW: Testing Preset (price varies by series/size/rating)
+export interface TestingPreset {
+  id: string;
+  seriesId: string;
+  size: string;
+  rating: string;
+  testName: string;
+  price: number;
+  isActive: boolean;
+}
+
+// NEW: Tubing Preset (price varies by series/size/rating)
+export interface TubingPreset {
+  id: string;
+  seriesId: string;
+  size: string;
+  rating: string;
+  itemName: string;
+  price: number;
+  isActive: boolean;
 }
 
 export interface AccessoryItem {
@@ -286,6 +322,14 @@ export interface QuoteProduct {
   sealRingMachineTypeName?: string;
   sealRingMachineRate?: number;
   sealRingMachineCost?: number;
+
+  // NEW: Pilot Plug
+  hasPilotPlug: boolean;
+  pilotPlugMaterialId?: string;
+  pilotPlugMaterialName?: string;
+  pilotPlugWeight?: number;
+  pilotPlugMaterialPrice?: number;
+  pilotPlugTotalCost?: number;
 
   bodySubAssemblyTotal: number;
 

@@ -133,6 +133,28 @@ service cloud.firestore {
     }
     
     // ========================================
+    // PRICING UPDATE COLLECTIONS (NEW)
+    // ========================================
+    
+    // Pilot Plug Weights collection
+    match /pilotPlugWeights/{weightId} {
+      allow read: if isAdminOrEmployee();
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Testing Presets collection
+    match /testingPresets/{presetId} {
+      allow read: if isAdminOrEmployee();
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Tubing Presets collection
+    match /tubingPresets/{presetId} {
+      allow read: if isAdminOrEmployee();
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // ========================================
     // OLD collections (keep for backward compatibility, can be removed later)
     // ========================================
     

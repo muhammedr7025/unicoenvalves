@@ -13,10 +13,14 @@ import {
   getAllSealRingPrices,
   getAllActuatorModels,
   getAllHandwheelPrices,
+  getAllPilotPlugWeights,
+  getAllTestingPresets,
+  getAllTubingPresets,
   importPricingData,
   clearAllPricingData,
   updatePricingDocument,
   deletePricingDocument,
+  addPricingDocument,
 } from '@/lib/firebase/pricingService';
 import { generateExcelTemplate, parseExcelFile, exportPricingDataToExcel } from '@/utils/excelTemplate';
 
@@ -31,7 +35,10 @@ type CollectionType =
   | 'cageWeights'
   | 'sealRingPrices'
   | 'actuatorModels'
-  | 'handwheelPrices';
+  | 'handwheelPrices'
+  | 'pilotPlugWeights'
+  | 'testingPresets'
+  | 'tubingPresets';
 
 interface CollectionInfo {
   name: string;
@@ -52,6 +59,9 @@ const COLLECTIONS: Record<CollectionType, CollectionInfo> = {
   sealRingPrices: { name: 'Seal Ring Prices', icon: '💍', color: 'indigo', gradient: 'from-indigo-500 to-indigo-600' },
   actuatorModels: { name: 'Actuator Models', icon: '⚙️', color: 'cyan', gradient: 'from-cyan-500 to-cyan-600' },
   handwheelPrices: { name: 'Handwheel Prices', icon: '🎡', color: 'amber', gradient: 'from-amber-500 to-amber-600' },
+  pilotPlugWeights: { name: 'Pilot Plug Weights', icon: '🔘', color: 'emerald', gradient: 'from-emerald-500 to-emerald-600' },
+  testingPresets: { name: 'Testing Presets', icon: '🧪', color: 'violet', gradient: 'from-violet-500 to-violet-600' },
+  tubingPresets: { name: 'Tubing Presets', icon: '🔗', color: 'rose', gradient: 'from-rose-500 to-rose-600' },
 };
 
 const ITEMS_PER_PAGE = 10;
@@ -76,6 +86,7 @@ export default function PricingPage() {
   const [editingItem, setEditingItem] = useState<any | null>(null);
   const [editFormData, setEditFormData] = useState<any>({});
   const [savingEdit, setSavingEdit] = useState(false);
+  const [isAddingNew, setIsAddingNew] = useState(false);
 
 
   useEffect(() => {
@@ -103,6 +114,9 @@ export default function PricingPage() {
         sealRingPrices,
         actuatorModels,
         handwheelPrices,
+        pilotPlugWeights,
+        testingPresets,
+        tubingPresets,
       ] = await Promise.all([
         getAllMaterials(),
         getAllSeries(),
@@ -115,6 +129,9 @@ export default function PricingPage() {
         getAllSealRingPrices(),
         getAllActuatorModels(),
         getAllHandwheelPrices(),
+        getAllPilotPlugWeights(),
+        getAllTestingPresets(),
+        getAllTubingPresets(),
       ]);
 
       // Build series map: seriesId -> seriesNumber
@@ -142,6 +159,9 @@ export default function PricingPage() {
         sealRingPrices: calculateStats(sealRingPrices),
         actuatorModels: calculateStats(actuatorModels),
         handwheelPrices: calculateStats(handwheelPrices),
+        pilotPlugWeights: calculateStats(pilotPlugWeights),
+        testingPresets: calculateStats(testingPresets),
+        tubingPresets: calculateStats(tubingPresets),
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -166,6 +186,9 @@ export default function PricingPage() {
         case 'sealRingPrices': data = await getAllSealRingPrices(); break;
         case 'actuatorModels': data = await getAllActuatorModels(); break;
         case 'handwheelPrices': data = await getAllHandwheelPrices(); break;
+        case 'pilotPlugWeights': data = await getAllPilotPlugWeights(); break;
+        case 'testingPresets': data = await getAllTestingPresets(); break;
+        case 'tubingPresets': data = await getAllTubingPresets(); break;
       }
       setCollectionData(data);
     } catch (error) {
@@ -322,11 +345,56 @@ export default function PricingPage() {
     // Remove id and isActive from form data for editing
     const { id, ...formData } = item;
     setEditFormData(formData);
+    setIsAddingNew(false);
+  };
+
+  const getNewItemTemplate = (collection: CollectionType): any => {
+    const seriesId = Array.from(seriesMap.keys())[0] || '';
+    switch (collection) {
+      case 'materials':
+        return { materialName: '', materialGroup: 'General', pricePerKg: 0, isActive: true };
+      case 'series':
+        return { seriesNumber: '', isActive: true };
+      case 'bodyWeights':
+        return { seriesId, size: '', rating: '', endConnectType: '', weight: 0, isActive: true };
+      case 'bonnetWeights':
+        return { seriesId, size: '', rating: '', bonnetType: '', weight: 0, isActive: true };
+      case 'plugWeights':
+        return { seriesId, size: '', rating: '', weight: 0, isActive: true };
+      case 'seatWeights':
+        return { seriesId, size: '', rating: '', weight: 0, isActive: true };
+      case 'stemFixedPrices':
+        return { seriesId, size: '', rating: '', price: 0, isActive: true };
+      case 'cageWeights':
+        return { seriesId, size: '', rating: '', weight: 0, isActive: true };
+      case 'sealRingPrices':
+        return { seriesId, size: '', rating: '', sealType: '', price: 0, isActive: true };
+      case 'actuatorModels':
+        return { actuatorType: 'pneumatic', series: '', model: '', price: 0, isActive: true };
+      case 'handwheelPrices':
+        return { handwheelType: 'manual', series: '', model: '', price: 0, isActive: true };
+      case 'pilotPlugWeights':
+        return { seriesId, size: '', rating: '', weight: 0, isActive: true };
+      case 'testingPresets':
+        return { seriesId, size: '', rating: '', testName: '', price: 0, isActive: true };
+      case 'tubingPresets':
+        return { seriesId, size: '', rating: '', itemName: '', price: 0, isActive: true };
+      default:
+        return { isActive: true };
+    }
+  };
+
+  const handleAddNewItem = () => {
+    const template = getNewItemTemplate(selectedCollection);
+    setEditingItem({ id: 'new' });
+    setEditFormData(template);
+    setIsAddingNew(true);
   };
 
   const handleCloseEditModal = () => {
     setEditingItem(null);
     setEditFormData({});
+    setIsAddingNew(false);
   };
 
   const handleFormFieldChange = (field: string, value: any) => {
@@ -338,13 +406,18 @@ export default function PricingPage() {
 
     setSavingEdit(true);
     try {
-      await updatePricingDocument(selectedCollection, editingItem.id, editFormData);
+      if (isAddingNew) {
+        await addPricingDocument(selectedCollection, editFormData);
+        alert('✅ New item added successfully!');
+      } else {
+        await updatePricingDocument(selectedCollection, editingItem.id, editFormData);
+        alert('✅ Item updated successfully!');
+      }
       await fetchStats();
       await fetchCollectionData(selectedCollection);
       handleCloseEditModal();
-      alert('✅ Item updated successfully!');
     } catch (error: any) {
-      alert(`Failed to update item: ${error.message}`);
+      alert(`Failed to save item: ${error.message}`);
     } finally {
       setSavingEdit(false);
     }
@@ -640,6 +713,14 @@ export default function PricingPage() {
                   <option key={key} value={key}>{info.icon} {info.name}</option>
                 ))}
               </select>
+              {/* Add New Button */}
+              <button
+                onClick={handleAddNewItem}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium shadow-sm flex items-center gap-2"
+              >
+                <span>➕</span>
+                <span>Add New</span>
+              </button>
             </div>
           </div>
         </div>
@@ -669,9 +750,9 @@ export default function PricingPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 rounded-t-2xl">
-              <h2 className="text-2xl font-bold text-white">✏️ Edit {COLLECTIONS[selectedCollection].name}</h2>
-              <p className="text-blue-100 text-sm mt-1">Update the values below</p>
+            <div className={`p-6 rounded-t-2xl ${isAddingNew ? 'bg-gradient-to-r from-green-600 to-emerald-600' : 'bg-gradient-to-r from-blue-600 to-indigo-600'}`}>
+              <h2 className="text-2xl font-bold text-white">{isAddingNew ? '➕ Add New' : '✏️ Edit'} {COLLECTIONS[selectedCollection].name}</h2>
+              <p className="text-white/80 text-sm mt-1">{isAddingNew ? 'Fill in the values below' : 'Update the values below'}</p>
             </div>
 
             {/* Modal Body */}

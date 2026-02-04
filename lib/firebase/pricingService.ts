@@ -16,6 +16,9 @@ import {
   Series,
   BodyWeight,
   BonnetWeight,
+  PilotPlugWeight,
+  TestingPreset,
+  TubingPreset,
 } from '@/types';
 
 // Materials
@@ -219,6 +222,51 @@ export async function getAllHandwheelPrices() {
   }
 }
 
+// Pilot Plug Weights
+export async function getAllPilotPlugWeights(): Promise<PilotPlugWeight[]> {
+  try {
+    const weightsRef = collection(db, 'pilotPlugWeights');
+    const snapshot = await getDocs(weightsRef);
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as PilotPlugWeight[];
+  } catch (error) {
+    console.error('Error fetching pilot plug weights:', error);
+    return [];
+  }
+}
+
+// Testing Presets
+export async function getAllTestingPresets(): Promise<TestingPreset[]> {
+  try {
+    const presetsRef = collection(db, 'testingPresets');
+    const snapshot = await getDocs(presetsRef);
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as TestingPreset[];
+  } catch (error) {
+    console.error('Error fetching testing presets:', error);
+    return [];
+  }
+}
+
+// Tubing Presets
+export async function getAllTubingPresets(): Promise<TubingPreset[]> {
+  try {
+    const presetsRef = collection(db, 'tubingPresets');
+    const snapshot = await getDocs(presetsRef);
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as TubingPreset[];
+  } catch (error) {
+    console.error('Error fetching tubing presets:', error);
+    return [];
+  }
+}
+
 // Helper to generate unique keys for merging
 const getMaterialKey = (m: any) => m.name;
 const getSeriesKey = (s: any) => s.seriesNumber;
@@ -231,6 +279,9 @@ const getCageWeightKey = (c: any) => `${c.seriesId}_${c.size}_${c.rating}`;
 const getSealRingPriceKey = (s: any) => `${s.seriesId}_${s.sealType}_${s.size}_${s.rating}`;
 const getActuatorModelKey = (a: any) => `${a.type}_${a.series}_${a.model}_${a.standard}`;
 const getHandwheelPriceKey = (h: any) => `${h.type}_${h.series}_${h.model}_${h.standard}`;
+const getPilotPlugWeightKey = (p: any) => `${p.seriesId}_${p.size}_${p.rating}`;
+const getTestingPresetKey = (t: any) => `${t.seriesId}_${t.size}_${t.rating}_${t.testName}`;
+const getTubingPresetKey = (t: any) => `${t.seriesId}_${t.size}_${t.rating}_${t.itemName}`;
 
 // Generic merge function
 async function mergeCollection(
@@ -453,6 +504,56 @@ export async function importPricingData(data: any): Promise<void> {
       await mergeCollection('handwheelPrices', handwheelPrices, (h: any) => `${h.type}_${h.series}_${h.model}_${h.standard}`);
     }
 
+    // 12. Pilot Plug Weights
+    if (data.pilotPlugWeights && data.pilotPlugWeights.length > 0) {
+      const pilotPlugWeights = data.pilotPlugWeights.map((item: any) => {
+        const seriesNumber = String(item['Series Number']).trim();
+        const seriesId = seriesMap.get(seriesNumber);
+        return {
+          seriesId: seriesId || seriesNumber,
+          size: String(item.Size).trim(),
+          rating: String(item.Rating).trim(),
+          weight: parseFloat(item['Weight (kg)']) || 0,
+          isActive: String(item.Active).toUpperCase() === 'TRUE',
+        };
+      });
+      await mergeCollection('pilotPlugWeights', pilotPlugWeights, getPilotPlugWeightKey);
+    }
+
+    // 13. Testing Presets
+    if (data.testingPresets && data.testingPresets.length > 0) {
+      const testingPresets = data.testingPresets.map((item: any) => {
+        const seriesNumber = String(item['Series Number']).trim();
+        const seriesId = seriesMap.get(seriesNumber);
+        return {
+          seriesId: seriesId || seriesNumber,
+          size: String(item.Size).trim(),
+          rating: String(item.Rating).trim(),
+          testName: String(item['Test Name']).trim(),
+          price: parseFloat(item.Price) || 0,
+          isActive: String(item.Active).toUpperCase() === 'TRUE',
+        };
+      });
+      await mergeCollection('testingPresets', testingPresets, getTestingPresetKey);
+    }
+
+    // 14. Tubing Presets
+    if (data.tubingPresets && data.tubingPresets.length > 0) {
+      const tubingPresets = data.tubingPresets.map((item: any) => {
+        const seriesNumber = String(item['Series Number']).trim();
+        const seriesId = seriesMap.get(seriesNumber);
+        return {
+          seriesId: seriesId || seriesNumber,
+          size: String(item.Size).trim(),
+          rating: String(item.Rating).trim(),
+          itemName: String(item['Item Name']).trim(),
+          price: parseFloat(item.Price) || 0,
+          isActive: String(item.Active).toUpperCase() === 'TRUE',
+        };
+      });
+      await mergeCollection('tubingPresets', tubingPresets, getTubingPresetKey);
+    }
+
     console.log('Import (merge) completed successfully!');
   } catch (error) {
     console.error('Error importing pricing data:', error);
@@ -477,6 +578,9 @@ export async function clearAllPricingData(): Promise<void> {
       'sealRingPrices',
       'actuatorModels',
       'handwheelPrices',
+      'pilotPlugWeights',
+      'testingPresets',
+      'tubingPresets',
     ];
 
     for (const collectionName of collections) {
@@ -553,6 +657,22 @@ export async function deletePricingDocument(
     console.log(`Deleted document ${docId} from ${collectionName}`);
   } catch (error) {
     console.error(`Error deleting document from ${collectionName}:`, error);
+    throw error;
+  }
+}
+
+// Add a new document to any collection
+export async function addPricingDocument(
+  collectionName: string,
+  data: any
+): Promise<string> {
+  try {
+    const colRef = collection(db, collectionName);
+    const docRef = await addDoc(colRef, data);
+    console.log(`Added document ${docRef.id} to ${collectionName}`);
+    return docRef.id;
+  } catch (error) {
+    console.error(`Error adding document to ${collectionName}:`, error);
     throw error;
   }
 }

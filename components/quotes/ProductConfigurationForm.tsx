@@ -48,6 +48,11 @@ export default function ProductConfigurationForm({
         setTestingItems,
         accessoryItems,
         setAccessoryItems,
+        // Available presets for user selection
+        availableTestingPresets,
+        availableTubingPresets,
+        addTestingPreset,
+        addTubingPreset,
         manufacturingProfit,
         setManufacturingProfit,
         boughtoutProfit,
@@ -60,6 +65,7 @@ export default function ProductConfigurationForm({
         seatMaterials,
         stemMaterials,
         cageMaterials,
+        pilotPlugMaterials,
         handleSeriesChange,
         handleSizeChange,
         handleRatingChange,
@@ -135,6 +141,15 @@ export default function ProductConfigurationForm({
             sublabel: `₹${m.pricePerKg}/kg`
         }))
         , [cageMaterials]);
+
+    // Pilot Plug material options (uses same materials as plug)
+    const pilotPlugMaterialOptions = useMemo(() =>
+        pilotPlugMaterials.map(m => ({
+            value: m.id,
+            label: m.name,
+            sublabel: `₹${m.pricePerKg}/kg`
+        }))
+        , [pilotPlugMaterials]);
 
     // Size options
     const sizeOptions = useMemo(() =>
@@ -591,6 +606,46 @@ export default function ProductConfigurationForm({
                                 </div>
                             </div>
                         )}
+
+                        {/* Pilot Plug (optional - toggle to add) */}
+                        <div className="bg-white rounded-lg p-4 border-2 border-emerald-300">
+                            <div className="flex items-center justify-between mb-3">
+                                <h4 className="font-semibold text-gray-900 flex items-center">
+                                    🔘 Pilot Plug
+                                </h4>
+                                <label className="flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={currentProduct.hasPilotPlug || false}
+                                        onChange={(e) => setCurrentProduct({
+                                            ...currentProduct,
+                                            hasPilotPlug: e.target.checked,
+                                            pilotPlugMaterialId: e.target.checked ? currentProduct.pilotPlugMaterialId : undefined,
+                                        })}
+                                        className="mr-2 w-5 h-5"
+                                    />
+                                    <span className="text-sm font-medium">Add Pilot Plug</span>
+                                </label>
+                            </div>
+                            {currentProduct.hasPilotPlug && (
+                                <div className="space-y-3">
+                                    <div className="bg-emerald-50 p-3 rounded">
+                                        <p className="text-sm text-emerald-800">
+                                            ✓ Pilot Plug enabled - select material below
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm mb-1">Pilot Plug Material *</label>
+                                        <SearchableSelect
+                                            value={currentProduct.pilotPlugMaterialId || ''}
+                                            onChange={(value) => setCurrentProduct({ ...currentProduct, pilotPlugMaterialId: value })}
+                                            options={pilotPlugMaterialOptions}
+                                            placeholder="Search material..."
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             )
@@ -753,6 +808,34 @@ export default function ProductConfigurationForm({
                     <div className="border-2 border-orange-200 rounded-lg p-6 mb-6 bg-orange-50">
                         <h3 className="text-xl font-bold mb-4 text-orange-900">📦 Miscellaneous</h3>
 
+                        {/* Preset Selection */}
+                        {availableTubingPresets.length > 0 && (
+                            <div className="bg-rose-50 border border-rose-200 rounded-lg p-4 mb-4">
+                                <p className="text-sm font-semibold text-rose-800 mb-3">📋 Available Presets (click to add):</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {availableTubingPresets.map((preset) => {
+                                        const isAlreadyAdded = tubingAndFittingItems.some(item => item.id === `preset-tubing-${preset.id}`);
+                                        return (
+                                            <button
+                                                key={preset.id}
+                                                onClick={() => addTubingPreset(preset)}
+                                                disabled={isAlreadyAdded}
+                                                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${isAlreadyAdded
+                                                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                                        : 'bg-rose-600 text-white hover:bg-rose-700 shadow-sm hover:shadow'
+                                                    }`}
+                                            >
+                                                <span>{isAlreadyAdded ? '✓' : '+'}</span>
+                                                <span>{preset.itemName}</span>
+                                                <span className="text-xs opacity-80">₹{preset.price.toLocaleString()}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Manual Input */}
                         <div className="bg-white rounded-lg p-4 mb-4">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="md:col-span-2">
@@ -787,9 +870,16 @@ export default function ProductConfigurationForm({
                         {tubingAndFittingItems.length > 0 && (
                             <div className="space-y-2">
                                 {tubingAndFittingItems.map((item) => (
-                                    <div key={item.id} className="bg-white p-3 rounded-lg flex justify-between items-center">
+                                    <div key={item.id} className={`bg-white p-3 rounded-lg flex justify-between items-center ${item.isPreset ? 'border-l-4 border-rose-500' : ''}`}>
                                         <div>
-                                            <p className="font-medium">{item.title}</p>
+                                            <p className="font-medium">
+                                                {item.title}
+                                                {item.isPreset && (
+                                                    <span className="ml-2 text-xs bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full">
+                                                        Preset
+                                                    </span>
+                                                )}
+                                            </p>
                                             <p className="text-sm text-gray-600">₹{item.price.toLocaleString('en-IN')}</p>
                                         </div>
                                         <button
@@ -823,6 +913,34 @@ export default function ProductConfigurationForm({
                     <div className="border-2 border-teal-200 rounded-lg p-6 mb-6 bg-teal-50">
                         <h3 className="text-xl font-bold mb-4 text-teal-900">🔬 Testing</h3>
 
+                        {/* Preset Selection */}
+                        {availableTestingPresets.length > 0 && (
+                            <div className="bg-violet-50 border border-violet-200 rounded-lg p-4 mb-4">
+                                <p className="text-sm font-semibold text-violet-800 mb-3">📋 Available Presets (click to add):</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {availableTestingPresets.map((preset) => {
+                                        const isAlreadyAdded = testingItems.some(item => item.id === `preset-test-${preset.id}`);
+                                        return (
+                                            <button
+                                                key={preset.id}
+                                                onClick={() => addTestingPreset(preset)}
+                                                disabled={isAlreadyAdded}
+                                                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${isAlreadyAdded
+                                                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                                    : 'bg-violet-600 text-white hover:bg-violet-700 shadow-sm hover:shadow'
+                                                    }`}
+                                            >
+                                                <span>{isAlreadyAdded ? '✓' : '+'}</span>
+                                                <span>{preset.testName}</span>
+                                                <span className="text-xs opacity-80">₹{preset.price.toLocaleString()}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Manual Input */}
                         <div className="bg-white rounded-lg p-4 mb-4">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="md:col-span-2">
@@ -857,9 +975,16 @@ export default function ProductConfigurationForm({
                         {testingItems.length > 0 && (
                             <div className="space-y-2">
                                 {testingItems.map((item) => (
-                                    <div key={item.id} className="bg-white p-3 rounded-lg flex justify-between items-center">
+                                    <div key={item.id} className={`bg-white p-3 rounded-lg flex justify-between items-center ${item.isPreset ? 'border-l-4 border-violet-500' : ''}`}>
                                         <div>
-                                            <p className="font-medium">{item.title}</p>
+                                            <p className="font-medium">
+                                                {item.title}
+                                                {item.isPreset && (
+                                                    <span className="ml-2 text-xs bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full">
+                                                        Preset
+                                                    </span>
+                                                )}
+                                            </p>
                                             <p className="text-sm text-gray-600">₹{item.price.toLocaleString('en-IN')}</p>
                                         </div>
                                         <button
@@ -1154,13 +1279,13 @@ export default function ProductConfigurationForm({
                                             <span className="font-semibold ml-1">{currentProduct.sealType}</span>
                                         </div>
                                     )}
-                                        {currentProduct.actuatorSeries && (
-                                            <div>
-                                                <span className="text-gray-600">Actuator:</span>
-                                                <span className="font-semibold ml-1">{currentProduct.actuatorSeries} / {currentProduct.actuatorModel}</span>
-                                            </div>
-                                        )}
-                                      
+                                    {currentProduct.actuatorSeries && (
+                                        <div>
+                                            <span className="text-gray-600">Actuator:</span>
+                                            <span className="font-semibold ml-1">{currentProduct.actuatorSeries} / {currentProduct.actuatorModel}</span>
+                                        </div>
+                                    )}
+
                                 </div>
                                 {/* Materials Row */}
                                 <div className="border-t border-blue-200 mt-3 pt-3">
@@ -1218,14 +1343,14 @@ export default function ProductConfigurationForm({
                                 </div>
                             </div>
                             <div className="space-y-2 text-sm">
-                                    <div className="flex justify-between font-bold text-purple-900 text-lg">
-                                        <span>Actuator Sub-Assembly Total:</span>
-                                        <span>₹{(currentProduct.actuatorSubAssemblyTotal || 0).toLocaleString('en-IN')}</span>
-                                    </div>
+                                <div className="flex justify-between font-bold text-purple-900 text-lg">
+                                    <span>Actuator Sub-Assembly Total:</span>
+                                    <span>₹{(currentProduct.actuatorSubAssemblyTotal || 0).toLocaleString('en-IN')}</span>
                                 </div>
+                            </div>
                         </div>
 
-         
+
 
                         {/* Miscellaneous Breakdown */}
                         {(currentProduct.tubingAndFittingTotal || 0) > 0 && (
