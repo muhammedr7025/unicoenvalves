@@ -214,14 +214,16 @@ export default function EditQuotePage() {
     setSaving(true);
 
     try {
-      // Calculate totals - discount applies only to product subtotal (not package)
+      // Calculate totals - discount applies only to product subtotal (not package/freight)
       const baseTotals = calculateQuoteTotals(products, discount, tax);
       const productSubtotal = baseTotals.subtotal;
       const discountAmount = (productSubtotal * discount) / 100;
       const discountedProductTotal = productSubtotal - discountAmount;
-      const subtotalWithPackage = discountedProductTotal + packagePrice;
-      const taxAmountWithPackage = (subtotalWithPackage * tax) / 100;
-      const totalWithPackage = subtotalWithPackage + taxAmountWithPackage;
+      // Freight is included in taxable amount only for F.O.R. pricing
+      const freightToIncludeCalc = pricingType === 'F.O.R.' ? freightPrice : 0;
+      const subtotalWithPackageAndFreight = discountedProductTotal + packagePrice + freightToIncludeCalc;
+      const taxAmountWithPackageAndFreight = (subtotalWithPackageAndFreight * tax) / 100;
+      const totalWithPackageAndFreight = subtotalWithPackageAndFreight + taxAmountWithPackageAndFreight;
 
       const quoteRef = doc(db, 'quotes', quote.id);
 
@@ -231,12 +233,12 @@ export default function EditQuotePage() {
         customQuoteNumber: customQuoteNumber || null,
         // Products stored in subcollection - only keep count here
         productCount: products.length,
-        subtotal: subtotalWithPackage,
+        subtotal: subtotalWithPackageAndFreight,
         discount,
         discountAmount: discountAmount,
         tax,
-        taxAmount: taxAmountWithPackage,
-        total: totalWithPackage,
+        taxAmount: taxAmountWithPackageAndFreight,
+        total: totalWithPackageAndFreight,
         packagePrice: packagePrice,
         status,
         projectName: projectName || '',

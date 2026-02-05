@@ -606,10 +606,10 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
     }
 
     summaryRows.push(['Packing Charges', formatINR(packingCharges)]);
-    
+
     // Discount row removed as per request
 
-    
+
     // IGST
     summaryRows.push([`IGST(${quote.tax || 18} %)`, formatINR(quote.taxAmount)]);
 
@@ -637,11 +637,13 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
     yPos = (doc as any).lastAutoTable.finalY;
 
     // Grand Total row - highlighted
-    // For F.O.R., freight is included but insurance is excluded; for Ex-Works, both are excluded
+    // For F.O.R., freight is already included in quote.total (and in taxable amount for GST)
+    // For Ex-Works, freight is excluded
     const grandTotalLabel = isFOR
         ? 'Total F.O.R. Price (Excluding Insurance)'
         : 'Total Ex-works Price(Excluding Freight/Insurance)';
-    const grandTotalValue = isFOR ? quote.total + freightCharges : quote.total;
+    // quote.total now already includes freight for F.O.R. (no need to add again)
+    const grandTotalValue = quote.total;
 
 
     autoTable(doc, {
@@ -1064,10 +1066,10 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
     }
 
     summaryRowsCombined.push(['Packing Charges', formatINR(packingCharges)]);
-    
+
     // Discount row removed as per request
 
-    
+
     summaryRowsCombined.push([`IGST(${quote.tax || 18} %)`, formatINR(quote.taxAmount)]);
 
 
@@ -1095,10 +1097,13 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
     yPos = (priceSummaryDoc as any).lastAutoTable.finalY;
 
     // Grand Total row - highlighted
+    // For F.O.R., freight is already included in quote.total (and in taxable amount for GST)
+    // For Ex-Works, freight is excluded
     const grandTotalLabelCombined = isFORCombined
         ? 'Total F.O.R. Price (Excluding Insurance)'
         : 'Total Ex-works Price(Excluding Freight/Insurance)';
-    const grandTotalValueCombined = isFORCombined ? quote.total + freightChargesCombined : quote.total;
+    // quote.total now already includes freight for F.O.R. (no need to add again)
+    const grandTotalValueCombined = quote.total;
 
     autoTable(priceSummaryDoc, {
         startY: yPos,
@@ -1262,7 +1267,7 @@ async function generateUnpricedSummaryPDF(quote: Quote, customerDetails: any) {
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(0, 0, 0);
-    
+
     const quoteInfoData = [
         ['Quote No:', quote.quoteNumber],
         ['Date:', formatDate(quote.createdAt)],
@@ -1390,17 +1395,17 @@ async function generateUnpricedSummaryPDF(quote: Quote, customerDetails: any) {
     const summaryRows: string[][] = [
         [priceLabel, 'Quoted'],
     ];
-    
+
     if (isFOR) {
         summaryRows.push(['Freight Charges', 'Quoted']);
     }
-    
+
     summaryRows.push(['Packing Charges', 'Quoted']);
-    
+
     if (quote.discount > 0) {
         summaryRows.push([`Discount (${quote.discount}%)`, 'Quoted']);
     }
-    
+
     summaryRows.push([`IGST(${quote.tax || 18} %)`, 'Quoted']);
 
     autoTable(doc, {

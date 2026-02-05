@@ -135,14 +135,16 @@ export default function NewQuotePage() {
     setLoading(true);
 
     try {
-      // Calculate totals - discount applies only to product subtotal (not package)
+      // Calculate totals - discount applies only to product subtotal (not package/freight)
       const baseTotals = calculateQuoteTotals(products, discount, tax);
       const productSubtotal = baseTotals.subtotal;
       const discountAmount = (productSubtotal * discount) / 100;
       const discountedProductTotal = productSubtotal - discountAmount;
-      const subtotalWithPackage = discountedProductTotal + packagePrice;
-      const taxAmountWithPackage = (subtotalWithPackage * tax) / 100;
-      const totalWithPackage = subtotalWithPackage + taxAmountWithPackage;
+      // Freight is included in taxable amount only for F.O.R. pricing
+      const freightToInclude = pricingType === 'F.O.R.' ? freightPrice : 0;
+      const subtotalWithPackageAndFreight = discountedProductTotal + packagePrice + freightToInclude;
+      const taxAmountWithPackageAndFreight = (subtotalWithPackageAndFreight * tax) / 100;
+      const totalWithPackageAndFreight = subtotalWithPackageAndFreight + taxAmountWithPackageAndFreight;
 
       const now = new Date();
       const currentMonth = now.getMonth();
@@ -175,12 +177,12 @@ export default function NewQuotePage() {
         customerName: selectedCustomer.name,
         // Products stored in subcollection - only keep count here
         productCount: products.length,
-        subtotal: subtotalWithPackage,
+        subtotal: subtotalWithPackageAndFreight,
         discount,
         discountAmount: discountAmount,
         tax,
-        taxAmount: taxAmountWithPackage,
-        total: totalWithPackage,
+        taxAmount: taxAmountWithPackageAndFreight,
+        total: totalWithPackageAndFreight,
         packagePrice: packagePrice,
         status,
         createdBy: user.id,
@@ -227,11 +229,13 @@ export default function NewQuotePage() {
     ? calculateQuoteTotals(products, discount, tax)
     : { subtotal: 0, discountAmount: 0, taxableAmount: 0, taxAmount: 0, total: 0 };
 
-  // Discount applies only to product subtotal (not package price)
+  // Discount applies only to product subtotal (not package price or freight)
   const productSubtotalForDisplay = baseTotals.subtotal;
   const displayDiscountAmount = (productSubtotalForDisplay * discount) / 100;
   const discountedProductTotal = productSubtotalForDisplay - displayDiscountAmount;
-  const displaySubtotal = discountedProductTotal + packagePrice;
+  // Freight is included in taxable amount only for F.O.R. pricing
+  const displayFreightToInclude = pricingType === 'F.O.R.' ? freightPrice : 0;
+  const displaySubtotal = discountedProductTotal + packagePrice + displayFreightToInclude;
   const displayTaxAmount = (displaySubtotal * tax) / 100;
   const displayTotal = displaySubtotal + displayTaxAmount;
 

@@ -273,18 +273,34 @@ export default function QuoteDetailsPage() {
             {/* Payment Terms */}
             <div className="bg-green-50 rounded-lg p-3">
               <h3 className="text-sm font-medium text-green-700 mb-1">💳 Payment Terms</h3>
-              <div className="flex space-x-4">
-                <div>
-                  <span className="text-xs text-gray-500">Advance:</span>
-                  <span className="ml-1 font-semibold text-green-800">{quote.paymentTerms?.advancePercentage || 30}%</span>
+              {quote.paymentTerms?.customTerms ? (
+                <p className="font-semibold text-green-800">{quote.paymentTerms.customTerms}</p>
+              ) : (
+                <div className="text-sm text-green-800">
+                  {(() => {
+                    const advance = quote.paymentTerms?.advancePercentage || 0;
+                    const approval = quote.paymentTerms?.approvalPercentage || 0;
+                    const balance = 100 - advance - approval;
+
+                    if (advance === 0 && approval === 0) {
+                      return <p className="font-semibold">100% payment before dispatch</p>;
+                    }
+
+                    return (
+                      <div className="space-y-1">
+                        {advance > 0 && (
+                          <p><span className="font-semibold">{advance}%</span> advance with purchase order</p>
+                        )}
+                        {approval > 0 && (
+                          <p><span className="font-semibold">{approval}%</span> against approved drawings</p>
+                        )}
+                        {balance > 0 && (
+                          <p><span className="font-semibold">{balance}%</span> before dispatch</p>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
-                <div>
-                  <span className="text-xs text-gray-500">Approval:</span>
-                  <span className="ml-1 font-semibold text-green-800">{quote.paymentTerms?.approvalPercentage || 70}%</span>
-                </div>
-              </div>
-              {quote.paymentTerms?.customTerms && (
-                <p className="text-xs text-gray-500 mt-1">Custom: {quote.paymentTerms.customTerms}</p>
               )}
             </div>
 
@@ -370,6 +386,14 @@ export default function QuoteDetailsPage() {
                   <td colSpan={5} className="border border-gray-300 px-4 py-3 text-right">Packing Charges:</td>
                   <td className="border border-gray-300 px-4 py-3 text-right">
                     ₹{quote.packagePrice.toLocaleString('en-IN')}
+                  </td>
+                </tr>
+              )}
+              {quote.pricingType === 'F.O.R.' && quote.freightPrice && quote.freightPrice > 0 && (
+                <tr className="bg-cyan-50">
+                  <td colSpan={5} className="border border-gray-300 px-4 py-3 text-right">🚛 Freight Charges:</td>
+                  <td className="border border-gray-300 px-4 py-3 text-right text-cyan-700 font-medium">
+                    ₹{quote.freightPrice.toLocaleString('en-IN')}
                   </td>
                 </tr>
               )}
