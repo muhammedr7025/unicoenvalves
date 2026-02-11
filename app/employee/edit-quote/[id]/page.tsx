@@ -505,7 +505,11 @@ export default function EditQuotePage() {
                   min="0"
                   max="100"
                   value={advancePercentage}
-                  onChange={(e) => setAdvancePercentage(parseFloat(e.target.value) || 0)}
+                  onChange={(e) => {
+                    const value = parseFloat(e.target.value) || 0;
+                    const maxAllowed = 100 - approvalPercentage;
+                    setAdvancePercentage(Math.min(value, maxAllowed));
+                  }}
                   disabled={!!customPaymentTerms.trim()}
                   className={`w-full px-3 py-2 border rounded-lg border-green-300 focus:ring-green-500 focus:border-green-500 ${customPaymentTerms.trim() ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
                 />
@@ -517,7 +521,11 @@ export default function EditQuotePage() {
                   min="0"
                   max="100"
                   value={approvalPercentage}
-                  onChange={(e) => setApprovalPercentage(parseFloat(e.target.value) || 0)}
+                  onChange={(e) => {
+                    const value = parseFloat(e.target.value) || 0;
+                    const maxAllowed = 100 - advancePercentage;
+                    setApprovalPercentage(Math.min(value, maxAllowed));
+                  }}
                   disabled={!!customPaymentTerms.trim()}
                   className={`w-full px-3 py-2 border rounded-lg border-green-300 focus:ring-green-500 focus:border-green-500 ${customPaymentTerms.trim() ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
                 />

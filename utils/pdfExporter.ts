@@ -1452,6 +1452,77 @@ async function generateUnpricedSummaryPDF(quote: Quote, customerDetails: any) {
         margin: { left: 40, right: 40 },
     });
 
+    yPos = (doc as any).lastAutoTable.finalY + 40;
+
+    // Commercial Terms & Conditions - same as priced
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 139);
+    doc.text('COMMERCIAL TERMS & CONDITIONS', 50, yPos);
+
+    yPos += 20;
+
+    // Build terms data based on pricing type
+    const unpricedTermsData: string[][] = [
+        ['Prices', `${quote.pricingType || 'Ex-Works'} INR each net`],
+        ['Validity', `${quote.validity || '30 days'} from the date of quotation`],
+        // For F.O.R., show just "Delivery"; for Ex-Works, show "Delivery (Ex-Works)"
+        [isFOR ? 'Delivery' : 'Delivery\\n(Ex-Works)', `${quote.deliveryDays || '4-6'} working weeks from the date of advance payment and approved technical documents (whichever comes later)`],
+
+        ['Warranty', `UVPL Standard Warranty - ${quote.warrantyTerms?.shipmentDays || 18} months from shipping or ${quote.warrantyTerms?.installationDays || 12} months from installation, whichever is earlier (on material & workmanship)`],
+        ['Payment Terms', formatPaymentTerms(quote.paymentTerms)],
+    ];
+
+    // Only show Freight row if NOT F.O.R. (since freight is included in F.O.R.)
+    if (!isFOR) {
+        unpricedTermsData.push(['Freight', 'To be borne by buyer']);
+    }
+
+    unpricedTermsData.push(['Insurance', 'To be arranged by buyer']);
+    unpricedTermsData.push(['Manufacturer', 'Unicorn Valves Private Limited']);
+
+    autoTable(doc, {
+        startY: yPos,
+        body: unpricedTermsData,
+        theme: 'plain',
+        styles: {
+            fontSize: 9,
+            cellPadding: 5,
+            lineColor: [220, 220, 220],
+            lineWidth: 0.3,
+        },
+        columnStyles: {
+            0: { fontStyle: 'bold', cellWidth: 110, fillColor: [250, 250, 250] },
+            1: { cellWidth: 410 },
+        },
+    });
+
+    yPos = (doc as any).lastAutoTable.finalY + 40;
+
+    // Check if signature fits on this page
+    if (yPos > pageHeight - 150) {
+        doc.addPage();
+        await addHeader(doc, pageWidth, logoBase64);
+        yPos = 70;
+    }
+
+    // Signature Section
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
+    doc.text('For Unicorn Valves Private Limited,', 50, yPos);
+
+    yPos += 40;
+
+    doc.setFont('helvetica', 'bold');
+    doc.text(quote.createdByName, 50, yPos);
+    yPos += 13;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.text('Assistant Manager - Application Engineering', 50, yPos);
+    yPos += 12;
+    doc.text('Internal Sales/Marketing Department', 50, yPos);
+
     // Add footer
     addFooter(doc, pageWidth, pageHeight);
 

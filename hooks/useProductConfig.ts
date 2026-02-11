@@ -565,6 +565,7 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
                     updatedProduct.actuatorFixedPrice = price;
                     console.log('✅ Actuator calculated:', price);
                 } else {
+                    errors.push(`Actuator Price not found for: Type ${p.actuatorType}, Series ${p.actuatorSeries}, Model ${p.actuatorModel}, Standard ${p.actuatorStandard}`);
                     console.warn('⚠️ Actuator price not found');
                 }
             } else {
