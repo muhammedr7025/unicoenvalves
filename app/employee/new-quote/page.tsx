@@ -586,7 +586,11 @@ export default function NewQuotePage() {
                     min="0"
                     max="100"
                     value={advancePercentage}
-                    onChange={(e) => setAdvancePercentage(parseFloat(e.target.value) || 0)}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value) || 0;
+                      const max = 100 - approvalPercentage - beforeDespatchPercentage;
+                      setAdvancePercentage(Math.min(Math.max(val, 0), Math.max(max, 0)));
+                    }}
                     disabled={!!customPaymentTerms.trim()}
                     className={`w-full px-3 py-2 border rounded-lg border-green-300 focus:ring-green-500 focus:border-green-500 ${customPaymentTerms.trim() ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
                   />
@@ -598,7 +602,11 @@ export default function NewQuotePage() {
                     min="0"
                     max="100"
                     value={approvalPercentage}
-                    onChange={(e) => setApprovalPercentage(parseFloat(e.target.value) || 0)}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value) || 0;
+                      const max = 100 - advancePercentage - beforeDespatchPercentage;
+                      setApprovalPercentage(Math.min(Math.max(val, 0), Math.max(max, 0)));
+                    }}
                     disabled={!!customPaymentTerms.trim()}
                     className={`w-full px-3 py-2 border rounded-lg border-green-300 focus:ring-green-500 focus:border-green-500 ${customPaymentTerms.trim() ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
                   />
@@ -610,7 +618,11 @@ export default function NewQuotePage() {
                     min="0"
                     max="100"
                     value={beforeDespatchPercentage}
-                    onChange={(e) => setBeforeDespatchPercentage(parseFloat(e.target.value) || 0)}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value) || 0;
+                      const max = 100 - advancePercentage - approvalPercentage;
+                      setBeforeDespatchPercentage(Math.min(Math.max(val, 0), Math.max(max, 0)));
+                    }}
                     disabled={!!customPaymentTerms.trim()}
                     className={`w-full px-3 py-2 border rounded-lg border-green-300 focus:ring-green-500 focus:border-green-500 ${customPaymentTerms.trim() ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
                   />
