@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/firebase/authContext';
 import { getAllCustomers } from '@/lib/firebase/customerService';
 import { getMaterialsByGroup, getAllSeries } from '@/lib/firebase/pricingService';
+import { getExchangeRate } from '@/lib/firebase/marginService';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { saveProductsInBatches } from '@/lib/firebase/productService';
@@ -80,6 +81,7 @@ export default function NewQuotePage() {
       stemMats,
       cageMats,
       seriesData,
+      adminExchangeRate,
     ] = await Promise.all([
       getAllCustomers(),
       getMaterialsByGroup('BodyBonnet'),
@@ -88,6 +90,7 @@ export default function NewQuotePage() {
       getMaterialsByGroup('Stem'),
       getMaterialsByGroup('Cage'),
       getAllSeries(),
+      getExchangeRate(),
     ]);
 
     setCustomers(customersData);
@@ -99,6 +102,9 @@ export default function NewQuotePage() {
       ...cageMats,
     ]);
     setSeries(seriesData.filter(s => s.isActive));
+    if (adminExchangeRate) {
+      setCurrencyExchangeRate(adminExchangeRate);
+    }
     setLoading(false);
   };
 
@@ -317,8 +323,8 @@ export default function NewQuotePage() {
                     type="button"
                     onClick={() => setPricingMode('standard')}
                     className={`p-3 rounded-lg border-2 text-center font-medium transition-all ${pricingMode === 'standard'
-                        ? 'border-blue-500 bg-blue-50 text-blue-800'
-                        : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300'
+                      ? 'border-blue-500 bg-blue-50 text-blue-800'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300'
                       }`}
                   >
                     📦 Standard
@@ -327,8 +333,8 @@ export default function NewQuotePage() {
                     type="button"
                     onClick={() => setPricingMode('project')}
                     className={`p-3 rounded-lg border-2 text-center font-medium transition-all ${pricingMode === 'project'
-                        ? 'border-purple-500 bg-purple-50 text-purple-800'
-                        : 'border-gray-200 bg-white text-gray-600 hover:border-purple-300'
+                      ? 'border-purple-500 bg-purple-50 text-purple-800'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-purple-300'
                       }`}
                   >
                     🏗️ Project
@@ -633,27 +639,27 @@ export default function NewQuotePage() {
             </div>
 
 
-            {/* International Customer - Currency Exchange */}
+            {/* International Customer - Exchange Rate (admin-set, read-only) */}
             {selectedCustomer && selectedCustomer.country !== 'India' && (
               <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl p-4 mb-6">
-                <h3 className="text-md font-bold text-amber-800 mb-3">💱 Currency Exchange (International Customer)</h3>
+                <h3 className="text-md font-bold text-amber-800 mb-3">💱 International Customer — USD Pricing</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-amber-700 mb-2">Exchange Rate (1 USD = ₹)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={currencyExchangeRate || ''}
-                      onChange={(e) => setCurrencyExchangeRate(parseFloat(e.target.value) || null)}
-                      className="w-full px-3 py-2 border rounded-lg border-amber-300 focus:ring-amber-500 focus:border-amber-500"
-                      placeholder="e.g., 83.50"
-                    />
+                    <div className="w-full px-4 py-3 border-2 border-amber-300 rounded-lg bg-amber-100 text-amber-900 text-lg font-bold">
+                      {currencyExchangeRate ? `₹${currencyExchangeRate}` : 'Not set'}
+                    </div>
+                    <p className="text-xs text-amber-600 mt-1">⚙️ Set by admin in Settings. Contact admin to change.</p>
                   </div>
-                  <div className="flex items-end">
-                    <p className="text-sm text-amber-600">
-                      Customer Country: <strong>{selectedCustomer.country}</strong>
-                    </p>
+                  <div className="flex items-center">
+                    <div className="bg-white rounded-lg p-3 border border-amber-200 w-full">
+                      <p className="text-sm text-amber-700">
+                        <strong>Country:</strong> {selectedCustomer.country}
+                      </p>
+                      <p className="text-sm text-amber-600">
+                        All prices will be shown in <strong>USD ($)</strong> on the quote
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>

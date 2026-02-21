@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getGlobalMargins, updateGlobalMargins, GlobalMargins } from '@/lib/firebase/marginService';
+import { getGlobalMargins, updateGlobalMargins, GlobalMargins, getExchangeRate, updateExchangeRate } from '@/lib/firebase/marginService';
 
 export default function AdminSettingsPage() {
     const [margins, setMargins] = useState<GlobalMargins | null>(null);
+    const [exchangeRate, setExchangeRate] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
@@ -14,8 +15,9 @@ export default function AdminSettingsPage() {
 
     const loadMargins = async () => {
         setLoading(true);
-        const data = await getGlobalMargins();
+        const [data, rate] = await Promise.all([getGlobalMargins(), getExchangeRate()]);
         setMargins(data);
+        setExchangeRate(rate);
         setLoading(false);
     };
 
@@ -24,9 +26,12 @@ export default function AdminSettingsPage() {
         setSaving(true);
         try {
             await updateGlobalMargins(margins);
-            alert('✅ Margins updated successfully!');
+            if (exchangeRate && exchangeRate > 0) {
+                await updateExchangeRate(exchangeRate);
+            }
+            alert('✅ Settings updated successfully!');
         } catch (error: any) {
-            alert('❌ Failed to update margins: ' + error.message);
+            alert('❌ Failed to update settings: ' + error.message);
         } finally {
             setSaving(false);
         }
@@ -178,29 +183,58 @@ export default function AdminSettingsPage() {
                         </div>
                     </div>
                 </div>
+            </div>
 
-                {/* Save Button */}
-                <div className="flex justify-end mt-8">
-                    <button
-                        onClick={handleSave}
-                        disabled={saving}
-                        className="bg-indigo-600 text-white px-8 py-3 rounded-lg hover:bg-indigo-700 font-bold disabled:opacity-50 flex items-center text-lg"
-                    >
-                        {saving ? (
-                            <>
-                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                                Saving...
-                            </>
-                        ) : (
-                            <>
-                                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
-                                Save Margins
-                            </>
-                        )}
-                    </button>
+            {/* Currency Exchange Rate */}
+            <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
+                <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
+                    <span className="mr-2">💱</span>
+                    Currency Exchange Rate
+                </h2>
+                <p className="text-sm text-gray-500 mb-6">
+                    Set the exchange rate for international (non-India) customers. All prices will be converted and shown in USD using this rate.
+                </p>
+
+                <div className="border-2 border-amber-200 rounded-xl p-6 bg-amber-50 max-w-md">
+                    <label className="block text-sm font-medium text-amber-800 mb-2">
+                        1 USD = ₹ (INR)
+                    </label>
+                    <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={exchangeRate || ''}
+                        onChange={(e) => setExchangeRate(parseFloat(e.target.value) || null)}
+                        className="w-full px-4 py-3 border-2 border-amber-300 rounded-lg focus:ring-amber-500 focus:border-amber-500 text-lg font-semibold"
+                        placeholder="e.g., 83.50"
+                    />
+                    <p className="text-xs text-amber-600 mt-2">
+                        This rate is used to convert INR prices to USD for all international customer quotes
+                    </p>
                 </div>
+            </div>
+
+            {/* Save Button */}
+            <div className="flex justify-end mb-8">
+                <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="bg-indigo-600 text-white px-8 py-3 rounded-lg hover:bg-indigo-700 font-bold disabled:opacity-50 flex items-center text-lg"
+                >
+                    {saving ? (
+                        <>
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                            Saving...
+                        </>
+                    ) : (
+                        <>
+                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            Save All Settings
+                        </>
+                    )}
+                </button>
             </div>
 
             {/* Info Box */}

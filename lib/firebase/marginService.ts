@@ -62,3 +62,29 @@ export async function getMarginsForMode(mode: 'standard' | 'project'): Promise<M
     const margins = await getGlobalMargins();
     return margins[mode];
 }
+
+/**
+ * Fetch the admin-set currency exchange rate (1 USD = ₹X).
+ * Returns null if not yet configured.
+ */
+export async function getExchangeRate(): Promise<number | null> {
+    try {
+        const docRef = doc(db, 'globalSettings', 'exchangeRate');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            return docSnap.data().rate || null;
+        }
+        return null;
+    } catch (error) {
+        console.error('Error fetching exchange rate:', error);
+        return null;
+    }
+}
+
+/**
+ * Update the currency exchange rate (admin only).
+ */
+export async function updateExchangeRate(rate: number): Promise<void> {
+    const docRef = doc(db, 'globalSettings', 'exchangeRate');
+    await setDoc(docRef, { rate, updatedAt: new Date().toISOString() });
+}

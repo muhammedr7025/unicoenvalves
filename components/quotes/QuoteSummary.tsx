@@ -43,10 +43,6 @@ export default function QuoteSummary({
                         <span className="font-semibold">+₹{freightPrice.toLocaleString('en-US')}</span>
                     </div>
                 )}
-                <div className="flex justify-between text-gray-700 font-medium border-t pt-2">
-                    <span>Total Before Discount:</span>
-                    <span className="font-semibold">₹{(productsSubtotal + packagePrice + (pricingType === 'F.O.R.' ? freightPrice : 0)).toLocaleString('en-US')}</span>
-                </div>
 
                 {discount > 0 && (
                     <div className="flex justify-between text-red-600">
