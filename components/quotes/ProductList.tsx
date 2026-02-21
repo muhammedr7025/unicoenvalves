@@ -26,9 +26,6 @@ export default function ProductList({ products, onEdit, onRemove, readOnly = fal
                 if (product.rating) descParts.push(`${product.rating}`);
                 if (product.bodyEndConnectType) descParts.push(`${product.bodyEndConnectType}`);
                 if (product.bodyBonnetMaterialName) descParts.push(`${product.bodyBonnetMaterialName}`);
-                if (product.stemMaterialName) descParts.push(`Stem: ${product.stemMaterialName}`);
-                if (product.bonnetType) descParts.push(`${product.bonnetType}`);
-                if (product.sealType) descParts.push(`${product.sealType}`);
                 if (product.hasActuator && product.actuatorSeries && product.actuatorModel) {
                     descParts.push(`Actuator: ${product.actuatorSeries}/${product.actuatorModel}`);
                 }
