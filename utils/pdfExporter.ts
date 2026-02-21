@@ -676,7 +676,7 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
         ['Prices', `${quote.pricingType || 'Ex-Works'} INR each net`],
         ['Validity', `${quote.validity || '30 days'} from the date of quotation`],
         // For F.O.R., show just "Delivery"; for Ex-Works, show "Delivery (Ex-Works)"
-        [isFOR ? 'Delivery' : 'Delivery\n(Ex-Works)', `${quote.deliveryDays || '4-6'} working weeks from the date of advance payment and approved technical documents (whichever comes later)`],
+        [isFOR ? 'Delivery' : 'Delivery\n(Ex-Works)', `${quote.deliveryDays || '4-6'} working weeks from the date of receipt of advance payment and approved technical documents (whichever comes later)`],
 
         ['Warranty', `UVPL Standard Warranty - ${quote.warrantyTerms?.shipmentDays || 18} months from shipping or ${quote.warrantyTerms?.installationDays || 12} months from installation, whichever is earlier (on material & workmanship)`],
         ['Payment Terms', formatPaymentTerms(quote.paymentTerms)],
@@ -1133,7 +1133,7 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
         ['Prices', `${quote.pricingType || 'Ex-Works'} INR each net`],
         ['Validity', `${quote.validity || '30 days'} from the date of quotation`],
         // For F.O.R., show just "Delivery"; for Ex-Works, show "Delivery (Ex-Works)"
-        [isFORCombined ? 'Delivery' : 'Delivery\n(Ex-Works)', `${quote.deliveryDays || '4-6'} working weeks from the date of advance payment and approved technical documents (whichever comes later)`],
+        [isFORCombined ? 'Delivery' : 'Delivery\n(Ex-Works)', `${quote.deliveryDays || '4-6'} working weeks from the date of receipt of advance payment and approved technical documents (whichever comes later)`],
 
         ['Warranty', `UVPL Standard Warranty - ${quote.warrantyTerms?.shipmentDays || 18} months from shipping or ${quote.warrantyTerms?.installationDays || 12} months from installation, whichever is earlier (on material & workmanship)`],
         ['Payment Terms', formatPaymentTerms(quote.paymentTerms)],
@@ -1453,7 +1453,7 @@ async function generateUnpricedSummaryPDF(quote: Quote, customerDetails: any) {
         ['Prices', `${quote.pricingType || 'Ex-Works'} INR each net`],
         ['Validity', `${quote.validity || '30 days'} from the date of quotation`],
         // For F.O.R., show just "Delivery"; for Ex-Works, show "Delivery (Ex-Works)"
-        [isFOR ? 'Delivery' : 'Delivery\\n(Ex-Works)', `${quote.deliveryDays || '4-6'} working weeks from the date of advance payment and approved technical documents (whichever comes later)`],
+        [isFOR ? 'Delivery' : 'Delivery\\n(Ex-Works)', `${quote.deliveryDays || '4-6'} working weeks from the date of receipt of advance payment and approved technical documents (whichever comes later)`],
 
         ['Warranty', `UVPL Standard Warranty - ${quote.warrantyTerms?.shipmentDays || 18} months from shipping or ${quote.warrantyTerms?.installationDays || 12} months from installation, whichever is earlier (on material & workmanship)`],
         ['Payment Terms', formatPaymentTerms(quote.paymentTerms)],
