@@ -148,6 +148,11 @@ export default function NewQuotePage() {
       return;
     }
 
+    if (!customPaymentTerms.trim() && (advancePercentage + approvalPercentage + beforeDespatchPercentage) > 100) {
+      alert('⚠️ Payment terms total exceeds 100%. Please adjust the values before saving.');
+      return;
+    }
+
     setLoading(true);
 
     try {
