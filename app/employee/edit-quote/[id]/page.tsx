@@ -221,6 +221,11 @@ export default function EditQuotePage() {
       return;
     }
 
+    if (pricingType === 'F.O.R.' && (!freightPrice || freightPrice <= 0)) {
+      alert('⚠️ Freight price is required for F.O.R. pricing and must be greater than 0.');
+      return;
+    }
+
     setSaving(true);
 
     try {

@@ -143,6 +143,11 @@ export default function NewQuotePage() {
       return;
     }
 
+    if (pricingType === 'F.O.R.' && (!freightPrice || freightPrice <= 0)) {
+      alert('⚠️ Freight price is required for F.O.R. pricing and must be greater than 0.');
+      return;
+    }
+
     setLoading(true);
 
     try {
