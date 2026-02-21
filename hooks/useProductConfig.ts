@@ -631,32 +631,40 @@ export function useProductConfig({ initialProduct, series, materials, pricingMod
                 (updatedProduct.tubingAndFittingTotal || 0) +
                 (updatedProduct.testingTotal || 0);
 
+            // --- MARGIN FORMULA: sellingPrice = cost / (1 - margin%/100) ---
+            // This ensures the margin% represents profit as a percentage of the SELLING PRICE
+            // Example: cost=100, margin=25% → selling = 100/(1-0.25) = 133.33 → profit=33.33 (25% of 133.33)
+
+            // Manufacturing Profit (margin on selling price)
             updatedProduct.manufacturingProfitPercentage = manufacturingProfit;
-            updatedProduct.manufacturingProfitAmount = (updatedProduct.manufacturingCost * manufacturingProfit) / 100;
-            updatedProduct.manufacturingCostWithProfit = updatedProduct.manufacturingCost + updatedProduct.manufacturingProfitAmount;
+            const mfgMarginFactor = manufacturingProfit >= 100 ? 1 : (1 - manufacturingProfit / 100);
+            updatedProduct.manufacturingCostWithProfit = updatedProduct.manufacturingCost / mfgMarginFactor;
+            updatedProduct.manufacturingProfitAmount = updatedProduct.manufacturingCostWithProfit - updatedProduct.manufacturingCost;
 
             // Bought-out Item Cost = Accessories Total ONLY
             updatedProduct.boughtoutItemCost = updatedProduct.accessoriesTotal || 0;
 
+            // Bought-out Profit (margin on selling price)
             updatedProduct.boughtoutProfitPercentage = boughtoutProfit;
-            updatedProduct.boughtoutProfitAmount = (updatedProduct.boughtoutItemCost * boughtoutProfit) / 100;
-            updatedProduct.boughtoutCostWithProfit = updatedProduct.boughtoutItemCost + updatedProduct.boughtoutProfitAmount;
+            const boMarginFactor = boughtoutProfit >= 100 ? 1 : (1 - boughtoutProfit / 100);
+            updatedProduct.boughtoutCostWithProfit = updatedProduct.boughtoutItemCost / boMarginFactor;
+            updatedProduct.boughtoutProfitAmount = updatedProduct.boughtoutCostWithProfit - updatedProduct.boughtoutItemCost;
 
             updatedProduct.unitCost = updatedProduct.manufacturingCostWithProfit + updatedProduct.boughtoutCostWithProfit;
 
-            // Negotiation Margin (buffer calculated on grand total after profits)
-            const grandTotalBeforeMargin = updatedProduct.unitCost;
+            // Negotiation Margin (margin on selling price)
             updatedProduct.negotiationMarginPercentage = negotiationMargin;
-            updatedProduct.negotiationMarginAmount = (grandTotalBeforeMargin * negotiationMargin) / 100;
+            const negMarginFactor = negotiationMargin >= 100 ? 1 : (1 - negotiationMargin / 100);
+            updatedProduct.productTotalCost = updatedProduct.unitCost / negMarginFactor;
+            updatedProduct.negotiationMarginAmount = updatedProduct.productTotalCost - updatedProduct.unitCost;
 
-            // Final product total = grand total + negotiation margin
-            updatedProduct.productTotalCost = grandTotalBeforeMargin + updatedProduct.negotiationMarginAmount;
-
-            // Dealer Margin (additional margin for dealer/agent customers)
+            // Dealer Margin (margin on selling price, for dealer/agent customers)
             if (dealerMarginPercentage && dealerMarginPercentage > 0) {
                 updatedProduct.dealerMarginPercentage = dealerMarginPercentage;
-                updatedProduct.dealerMarginAmount = (updatedProduct.productTotalCost * dealerMarginPercentage) / 100;
-                updatedProduct.productTotalCost = updatedProduct.productTotalCost + updatedProduct.dealerMarginAmount;
+                const dealerMarginFactor = dealerMarginPercentage >= 100 ? 1 : (1 - dealerMarginPercentage / 100);
+                const priceBeforeDealer = updatedProduct.productTotalCost;
+                updatedProduct.productTotalCost = priceBeforeDealer / dealerMarginFactor;
+                updatedProduct.dealerMarginAmount = updatedProduct.productTotalCost - priceBeforeDealer;
                 console.log(`🤝 Dealer margin applied: ${dealerMarginPercentage}% = ₹${updatedProduct.dealerMarginAmount}`);
             }
 
