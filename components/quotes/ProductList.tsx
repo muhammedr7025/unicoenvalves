@@ -22,13 +22,10 @@ export default function ProductList({ products, onEdit, onRemove, readOnly = fal
                 // Build rich description matching quote detail page
                 const descParts: string[] = [];
                 descParts.push(`${product.seriesNumber}`);
-                if (product.size) descParts.push(`${product.size}`);
+                if (product.size) descParts.push(`${product.size}"`);
                 if (product.rating) descParts.push(`${product.rating}`);
                 if (product.bodyEndConnectType) descParts.push(`${product.bodyEndConnectType}`);
                 if (product.bodyBonnetMaterialName) descParts.push(`${product.bodyBonnetMaterialName}`);
-                if (product.trimType) descParts.push(`Trim: ${product.trimType}`);
-                if (product.plugMaterialName) descParts.push(`Plug: ${product.plugMaterialName}`);
-                if (product.seatMaterialName) descParts.push(`Seat: ${product.seatMaterialName}`);
                 if (product.stemMaterialName) descParts.push(`Stem: ${product.stemMaterialName}`);
                 if (product.bonnetType) descParts.push(`${product.bonnetType}`);
                 if (product.sealType) descParts.push(`${product.sealType}`);
@@ -49,7 +46,7 @@ export default function ProductList({ products, onEdit, onRemove, readOnly = fal
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center space-x-2 mb-1">
                                     <h3 className="font-semibold text-lg">
-                                        {product.seriesNumber} - {product.size}/{product.rating}
+                                        {product.seriesNumber} - {product.size}"/{product.rating}
                                     </h3>
                                     {product.productTag && (
                                         <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-medium">
