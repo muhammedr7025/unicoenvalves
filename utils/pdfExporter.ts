@@ -43,50 +43,36 @@ const formatDate = (date: Date): string => {
 const formatPaymentTerms = (paymentTerms?: PaymentTerms): string => {
     // If no payment terms provided, use default
     if (!paymentTerms) {
-        return '100% payment before dispatch';
+        return '100% payment before despatch';
     }
 
-    const { advancePercentage, approvalPercentage, customTerms } = paymentTerms;
+    const { advancePercentage, approvalPercentage, beforeDespatchPercentage, customTerms } = paymentTerms;
 
     // Custom terms override everything (if provided and not empty)
     if (customTerms && customTerms.trim() !== '') {
         return customTerms.trim();
     }
 
-
     const advance = advancePercentage || 0;
     const approval = approvalPercentage || 0;
+    const beforeDespatch = beforeDespatchPercentage || 0;
 
-    // Both are zero
-    if (advance === 0 && approval === 0) {
-        return '100% payment before dispatch';
+    // All are zero
+    if (advance === 0 && approval === 0 && beforeDespatch === 0) {
+        return '100% payment before despatch';
     }
 
-    // Only advance is specified (approval is 0)
-    if (advance > 0 && approval === 0) {
-        const balance = 100 - advance;
-        if (balance > 0) {
-            return `${advance}% advance with purchase order\n${balance}% before dispatch`;
-        }
-        return `${advance}% advance with purchase order`;
+    const parts: string[] = [];
+    if (advance > 0) {
+        parts.push(`${advance}% advance against PO`);
     }
-
-    // Only approval is specified (advance is 0)
-    if (approval > 0 && advance === 0) {
-        const balance = 100 - approval;
-        if (balance > 0) {
-            return `${approval}% against approved drawings\n${balance}% before dispatch`;
-        }
-        return `${approval}% against approved drawings`;
+    if (approval > 0) {
+        parts.push(`${approval}% advance against approval`);
     }
-
-    // Both have values
-    const balance = 100 - advance - approval;
-    let terms = `${advance}% advance with purchase order\n${approval}% against approved drawings`;
-    if (balance > 0) {
-        terms += `\n${balance}% before dispatch`;
+    if (beforeDespatch > 0) {
+        parts.push(`${beforeDespatch}% before despatch`);
     }
-    return terms;
+    return parts.join('\n');
 
 };
 

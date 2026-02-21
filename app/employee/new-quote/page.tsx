@@ -57,7 +57,8 @@ export default function NewQuotePage() {
   const [warrantyInstallation, setWarrantyInstallation] = useState(12);
   const [deliveryDays, setDeliveryDays] = useState('');
   const [advancePercentage, setAdvancePercentage] = useState(30);
-  const [approvalPercentage, setApprovalPercentage] = useState(70);
+  const [approvalPercentage, setApprovalPercentage] = useState(0);
+  const [beforeDespatchPercentage, setBeforeDespatchPercentage] = useState(70);
   const [customPaymentTerms, setCustomPaymentTerms] = useState('');
   const [currencyExchangeRate, setCurrencyExchangeRate] = useState<number | null>(null);
   const [pricingType, setPricingType] = useState<PricingType>('Ex-Works');
@@ -211,6 +212,7 @@ export default function NewQuotePage() {
         paymentTerms: {
           advancePercentage: advancePercentage,
           approvalPercentage: approvalPercentage,
+          beforeDespatchPercentage: beforeDespatchPercentage,
           customTerms: customPaymentTerms || null,
         },
         currencyExchangeRate: currencyExchangeRate || null,
@@ -576,35 +578,39 @@ export default function NewQuotePage() {
             {/* Payment Terms Section */}
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 mb-6">
               <h3 className="text-md font-bold text-green-800 mb-3">💳 Payment Terms</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-green-700 mb-2">Advance Payment (%)</label>
+                  <label className="block text-sm font-medium text-green-700 mb-2">Advance against PO (%)</label>
                   <input
                     type="number"
                     min="0"
                     max="100"
                     value={advancePercentage}
-                    onChange={(e) => {
-                      const value = parseFloat(e.target.value) || 0;
-                      const maxAllowed = 100 - approvalPercentage;
-                      setAdvancePercentage(Math.min(value, maxAllowed));
-                    }}
+                    onChange={(e) => setAdvancePercentage(parseFloat(e.target.value) || 0)}
                     disabled={!!customPaymentTerms.trim()}
                     className={`w-full px-3 py-2 border rounded-lg border-green-300 focus:ring-green-500 focus:border-green-500 ${customPaymentTerms.trim() ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-green-700 mb-2">On Approval (%)</label>
+                  <label className="block text-sm font-medium text-green-700 mb-2">Advance against approval (%)</label>
                   <input
                     type="number"
                     min="0"
                     max="100"
                     value={approvalPercentage}
-                    onChange={(e) => {
-                      const value = parseFloat(e.target.value) || 0;
-                      const maxAllowed = 100 - advancePercentage;
-                      setApprovalPercentage(Math.min(value, maxAllowed));
-                    }}
+                    onChange={(e) => setApprovalPercentage(parseFloat(e.target.value) || 0)}
+                    disabled={!!customPaymentTerms.trim()}
+                    className={`w-full px-3 py-2 border rounded-lg border-green-300 focus:ring-green-500 focus:border-green-500 ${customPaymentTerms.trim() ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-green-700 mb-2">Before despatch (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={beforeDespatchPercentage}
+                    onChange={(e) => setBeforeDespatchPercentage(parseFloat(e.target.value) || 0)}
                     disabled={!!customPaymentTerms.trim()}
                     className={`w-full px-3 py-2 border rounded-lg border-green-300 focus:ring-green-500 focus:border-green-500 ${customPaymentTerms.trim() ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
                   />
@@ -622,12 +628,11 @@ export default function NewQuotePage() {
               </div>
               {!customPaymentTerms.trim() && (
                 <p className="text-xs text-green-600 mt-2">
-                  Total: {advancePercentage + approvalPercentage}%
-                  {advancePercentage + approvalPercentage < 100 && (
-                    <span className="text-blue-600 ml-2">📋 {100 - advancePercentage - approvalPercentage}% before dispatch</span>
-                  )}
-                  {advancePercentage + approvalPercentage > 100 && (
-                    <span className="text-red-600 ml-2">⚠️ Exceeds 100%</span>
+                  Total: {advancePercentage + approvalPercentage + beforeDespatchPercentage}%
+                  {advancePercentage + approvalPercentage + beforeDespatchPercentage !== 100 && (
+                    <span className={`ml-2 ${advancePercentage + approvalPercentage + beforeDespatchPercentage > 100 ? 'text-red-600' : 'text-amber-600'}`}>
+                      ⚠️ {advancePercentage + approvalPercentage + beforeDespatchPercentage > 100 ? 'Exceeds 100%' : `${100 - advancePercentage - approvalPercentage - beforeDespatchPercentage}% unallocated`}
+                    </span>
                   )}
                 </p>
               )}

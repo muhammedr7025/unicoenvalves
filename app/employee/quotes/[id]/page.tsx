@@ -280,22 +280,22 @@ export default function QuoteDetailsPage() {
                   {(() => {
                     const advance = quote.paymentTerms?.advancePercentage || 0;
                     const approval = quote.paymentTerms?.approvalPercentage || 0;
-                    const balance = 100 - advance - approval;
+                    const beforeDespatch = quote.paymentTerms?.beforeDespatchPercentage || 0;
 
-                    if (advance === 0 && approval === 0) {
-                      return <p className="font-semibold">100% payment before dispatch</p>;
+                    if (advance === 0 && approval === 0 && beforeDespatch === 0) {
+                      return <p className="font-semibold">100% payment before despatch</p>;
                     }
 
                     return (
                       <div className="space-y-1">
                         {advance > 0 && (
-                          <p><span className="font-semibold">{advance}%</span> advance with purchase order</p>
+                          <p><span className="font-semibold">{advance}%</span> advance against PO</p>
                         )}
                         {approval > 0 && (
-                          <p><span className="font-semibold">{approval}%</span> against approved drawings</p>
+                          <p><span className="font-semibold">{approval}%</span> advance against approval</p>
                         )}
-                        {balance > 0 && (
-                          <p><span className="font-semibold">{balance}%</span> before dispatch</p>
+                        {beforeDespatch > 0 && (
+                          <p><span className="font-semibold">{beforeDespatch}%</span> before despatch</p>
                         )}
                       </div>
                     );

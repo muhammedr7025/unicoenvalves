@@ -401,8 +401,9 @@ export type PricingType = 'Ex-Works' | 'F.O.R.';
 
 // Payment Terms Structure
 export interface PaymentTerms {
-  advancePercentage: number;      // Percentage for advance payment
-  approvalPercentage: number;     // Percentage on approval
+  advancePercentage: number;      // Advance against PO (%)
+  approvalPercentage: number;     // Advance against approval (%)
+  beforeDespatchPercentage: number; // Before despatch (%)
   customTerms?: string;           // Optional custom payment terms
 }
 
