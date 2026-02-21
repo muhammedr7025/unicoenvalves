@@ -358,7 +358,7 @@ export default function AdminQuotesPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-semibold text-gray-900">
-                        ₹{quote.total.toLocaleString('en-IN')}
+                        ₹{quote.total.toLocaleString('en-US')}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -427,13 +427,13 @@ export default function AdminQuotesPage() {
             <div>
               <p className="text-sm text-indigo-600 font-medium">Total Value (Filtered)</p>
               <p className="text-2xl font-bold text-indigo-900">
-                ₹{filteredQuotes.reduce((sum, q) => sum + q.total, 0).toLocaleString('en-IN')}
+                ₹{filteredQuotes.reduce((sum, q) => sum + q.total, 0).toLocaleString('en-US')}
               </p>
             </div>
             <div>
               <p className="text-sm text-indigo-600 font-medium">Approved Value (All)</p>
               <p className="text-2xl font-bold text-green-600">
-                ₹{approvedValue.toLocaleString('en-IN')}
+                ₹{approvedValue.toLocaleString('en-US')}
               </p>
             </div>
           </div>

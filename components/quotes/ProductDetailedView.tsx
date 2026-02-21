@@ -26,7 +26,7 @@ export default function ProductDetailedView({ product, index }: ProductDetailedV
                 </div>
                 <div className="text-right">
                     <p className="text-sm text-gray-500">Line Total</p>
-                    <p className="text-2xl font-bold text-green-600">₹{product.lineTotal.toLocaleString('en-IN')}</p>
+                    <p className="text-2xl font-bold text-green-600">₹{product.lineTotal.toLocaleString('en-US')}</p>
                 </div>
             </div>
 
@@ -127,12 +127,12 @@ export default function ProductDetailedView({ product, index }: ProductDetailedV
                     <div className="space-y-2">
                         <div className="flex justify-between font-bold text-blue-900 text-lg">
                             <span>Body Sub-Assembly Total:</span>
-                            <span>₹{(product.bodySubAssemblyTotal || 0).toLocaleString('en-IN')}</span>
+                            <span>₹{(product.bodySubAssemblyTotal || 0).toLocaleString('en-US')}</span>
                         </div>
                         {(product.actuatorSubAssemblyTotal || 0) > 0 && (
                             <div className="flex justify-between font-bold text-purple-900 text-lg">
                                 <span>Actuator Sub-Assembly Total:</span>
-                                <span>₹{(product.actuatorSubAssemblyTotal || 0).toLocaleString('en-IN')}</span>
+                                <span>₹{(product.actuatorSubAssemblyTotal || 0).toLocaleString('en-US')}</span>
                             </div>
                         )}
                     </div>
@@ -146,12 +146,12 @@ export default function ProductDetailedView({ product, index }: ProductDetailedV
                             {product.tubingAndFitting.map((item, idx) => (
                                 <div key={idx} className="flex justify-between">
                                     <span>{item.title}</span>
-                                    <span className="font-semibold">₹{item.price.toLocaleString('en-IN')}</span>
+                                    <span className="font-semibold">₹{item.price.toLocaleString('en-US')}</span>
                                 </div>
                             ))}
                             <div className="border-t pt-2 mt-2 flex justify-between font-bold text-orange-900">
                                 <span>Subtotal</span>
-                                <span>₹{(product.tubingAndFittingTotal || 0).toLocaleString('en-IN')}</span>
+                                <span>₹{(product.tubingAndFittingTotal || 0).toLocaleString('en-US')}</span>
                             </div>
                         </div>
                     </div>
@@ -165,12 +165,12 @@ export default function ProductDetailedView({ product, index }: ProductDetailedV
                             {product.testing.map((item, idx) => (
                                 <div key={idx} className="flex justify-between">
                                     <span>{item.title}</span>
-                                    <span className="font-semibold">₹{item.price.toLocaleString('en-IN')}</span>
+                                    <span className="font-semibold">₹{item.price.toLocaleString('en-US')}</span>
                                 </div>
                             ))}
                             <div className="border-t pt-2 mt-2 flex justify-between font-bold text-teal-900">
                                 <span>Subtotal</span>
-                                <span>₹{(product.testingTotal || 0).toLocaleString('en-IN')}</span>
+                                <span>₹{(product.testingTotal || 0).toLocaleString('en-US')}</span>
                             </div>
                         </div>
                     </div>
@@ -188,12 +188,12 @@ export default function ProductDetailedView({ product, index }: ProductDetailedV
                                         {item.isDefault && <span className="ml-2 text-xs bg-pink-200 px-2 py-0.5 rounded">Default</span>}
                                         <span className="ml-2 text-xs text-gray-500">×{item.quantity}</span>
                                     </span>
-                                    <span className="font-semibold">₹{item.price.toLocaleString('en-IN')} × {item.quantity} = ₹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
+                                    <span className="font-semibold">₹{item.price.toLocaleString('en-US')} × {item.quantity} = ₹{(item.price * item.quantity).toLocaleString('en-US')}</span>
                                 </div>
                             ))}
                             <div className="border-t pt-2 mt-2 flex justify-between font-bold text-pink-900">
                                 <span>Subtotal</span>
-                                <span>₹{(product.accessoriesTotal || 0).toLocaleString('en-IN')}</span>
+                                <span>₹{(product.accessoriesTotal || 0).toLocaleString('en-US')}</span>
                             </div>
                         </div>
                     </div>
@@ -202,7 +202,7 @@ export default function ProductDetailedView({ product, index }: ProductDetailedV
                 {/* Final Price */}
                 <div className="flex justify-between text-xl font-bold text-emerald-900 bg-emerald-200 px-4 py-3 rounded-lg">
                     <span>FINAL PRICE (Qty: {product.quantity || 1}):</span>
-                    <span>₹{(product.lineTotal || 0).toLocaleString('en-IN')}</span>
+                    <span>₹{(product.lineTotal || 0).toLocaleString('en-US')}</span>
                 </div>
             </div>
         </div>

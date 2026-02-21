@@ -22,7 +22,7 @@ const COMPANY = {
 // Helper function to format currency - no decimals for whole numbers
 // Using "Rs." because jsPDF default Helvetica font doesn't support ₹ symbol
 const formatINR = (amount: number): string => {
-    return `Rs. ${Math.round(amount).toLocaleString('en-IN')}`;
+    return `Rs. ${Math.round(amount).toLocaleString('en-US')}`;
 };
 
 // Helper function to format date

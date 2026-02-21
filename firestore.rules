@@ -177,5 +177,15 @@ service cloud.firestore {
       allow read: if isAdminOrEmployee();
       allow create, update, delete: if isAdmin();
     }
+    
+    // ========================================
+    // GLOBAL SETTINGS (Margins, etc.)
+    // ========================================
+    
+    // Global Settings collection - admin manages, employees can read
+    match /globalSettings/{settingId} {
+      allow read: if isAdminOrEmployee();
+      allow create, update, delete: if isAdmin();
+    }
   }
 }

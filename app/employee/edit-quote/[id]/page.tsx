@@ -19,6 +19,7 @@ import {
   QuoteProduct,
   ValidityPeriod,
   PricingType,
+  QuotePricingMode,
 } from '@/types';
 import { calculateQuoteTotals } from '@/utils/priceCalculator';
 import ProductList from '@/components/quotes/ProductList';
@@ -62,6 +63,7 @@ export default function EditQuotePage() {
   const [currencyExchangeRate, setCurrencyExchangeRate] = useState<number | null>(null);
   const [pricingType, setPricingType] = useState<PricingType>('Ex-Works');
   const [freightPrice, setFreightPrice] = useState(0);
+  const [pricingMode, setPricingMode] = useState<QuotePricingMode>('standard');
 
 
   useEffect(() => {
@@ -164,6 +166,7 @@ export default function EditQuotePage() {
         setCurrencyExchangeRate(loadedQuote.currencyExchangeRate || null);
         setPricingType(loadedQuote.pricingType || 'Ex-Works');
         setFreightPrice(loadedQuote.freightPrice || 0);
+        setPricingMode((data.pricingMode as QuotePricingMode) || 'standard');
       } else {
 
         alert('Quote not found');
@@ -259,6 +262,7 @@ export default function EditQuotePage() {
         currencyExchangeRate: currencyExchangeRate || null,
         pricingType: pricingType,
         freightPrice: pricingType === 'F.O.R.' ? freightPrice : null,
+        pricingMode: pricingMode,
         updatedAt: Timestamp.now(),
 
       });
@@ -367,6 +371,12 @@ export default function EditQuotePage() {
               setShowProductForm(false);
               setEditingProductIndex(null);
             }}
+            pricingMode={pricingMode}
+            dealerMarginPercentage={(() => {
+              const customer = customers.find(c => c.id === quote?.customerId);
+              return customer?.dealerMarginPercentage;
+            })()}
+            isAdmin={user?.role === 'admin'}
           />
         </div>
       )}
@@ -410,6 +420,33 @@ export default function EditQuotePage() {
                 className="w-full px-3 py-2 border rounded-lg"
                 placeholder="e.g., RFQ-2023-001"
               />
+            </div>
+
+            {/* Pricing Mode */}
+            <div>
+              <label className="block text-sm font-medium mb-2">📊 Pricing Mode</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPricingMode('standard')}
+                  className={`p-2 rounded-lg border-2 text-center text-sm font-medium transition-all ${pricingMode === 'standard'
+                      ? 'border-blue-500 bg-blue-50 text-blue-800'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300'
+                    }`}
+                >
+                  📦 Standard
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPricingMode('project')}
+                  className={`p-2 rounded-lg border-2 text-center text-sm font-medium transition-all ${pricingMode === 'project'
+                      ? 'border-purple-500 bg-purple-50 text-purple-800'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-purple-300'
+                    }`}
+                >
+                  🏗️ Project
+                </button>
+              </div>
             </div>
 
             {/* Validity Period Dropdown */}

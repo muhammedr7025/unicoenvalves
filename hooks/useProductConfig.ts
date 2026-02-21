@@ -6,7 +6,9 @@ import {
     TubingAndFittingItem,
     TestingItem,
     AccessoryItem,
+    QuotePricingMode,
 } from '@/types';
+import { getMarginsForMode, MarginSettings } from '@/lib/firebase/marginService';
 import {
     getAvailableSizes,
     getAvailableRatings,
@@ -46,9 +48,11 @@ interface UseProductConfigProps {
     initialProduct?: Partial<QuoteProduct>;
     series: Series[];
     materials: Material[];
+    pricingMode?: QuotePricingMode;
+    dealerMarginPercentage?: number;
 }
 
-export function useProductConfig({ initialProduct, series, materials }: UseProductConfigProps) {
+export function useProductConfig({ initialProduct, series, materials, pricingMode = 'standard', dealerMarginPercentage }: UseProductConfigProps) {
     // State for current product
     const [currentProduct, setCurrentProduct] = useState<Partial<QuoteProduct>>(initialProduct || {
         quantity: 1,
@@ -86,12 +90,35 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
     const [availableTestingPresets, setAvailableTestingPresets] = useState<any[]>([]);
     const [availableTubingPresets, setAvailableTubingPresets] = useState<any[]>([]);
 
-    // Profits
+    // Profits - loaded from global margins
     const [manufacturingProfit, setManufacturingProfit] = useState<number>(initialProduct?.manufacturingProfitPercentage || 0);
     const [boughtoutProfit, setBoughtoutProfit] = useState<number>(initialProduct?.boughtoutProfitPercentage || 0);
     const [negotiationMargin, setNegotiationMargin] = useState<number>(initialProduct?.negotiationMarginPercentage || 0);
+    const [marginsLoaded, setMarginsLoaded] = useState(false);
 
     const [calculating, setCalculating] = useState(false);
+
+    // Fetch global margins when pricingMode changes
+    useEffect(() => {
+        const loadMargins = async () => {
+            try {
+                const margins = await getMarginsForMode(pricingMode);
+                setManufacturingProfit(margins.manufacturingProfitPercentage);
+                setBoughtoutProfit(margins.boughtoutProfitPercentage);
+                setNegotiationMargin(margins.negotiationMarginPercentage);
+                setMarginsLoaded(true);
+                console.log(`📊 Loaded ${pricingMode} margins:`, margins);
+            } catch (error) {
+                console.error('Failed to load global margins:', error);
+            }
+        };
+        // Only load if not editing an existing product (preserve saved margins)
+        if (!initialProduct?.manufacturingProfitPercentage) {
+            loadMargins();
+        } else {
+            setMarginsLoaded(true);
+        }
+    }, [pricingMode]);
 
     // Filtered materials
     const bodyBonnetMaterials = materials.filter(m => m.materialGroup === 'BodyBonnet');
@@ -624,19 +651,28 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
 
             // Final product total = grand total + negotiation margin
             updatedProduct.productTotalCost = grandTotalBeforeMargin + updatedProduct.negotiationMarginAmount;
-            updatedProduct.lineTotal = updatedProduct.productTotalCost * (updatedProduct.quantity || 1);
 
-            console.log('✅ FINAL TOTAL COST:', updatedProduct.productTotalCost, `(includes ${negotiationMargin}% negotiation margin: ₹${updatedProduct.negotiationMarginAmount})`);
-
-            // Show results with any warnings
-            if (errors.length > 0) {
-                const warningMessage = `⚠️ Price calculated with MISSING DATA:\n\n${errors.map(e => `• ${e}`).join('\n')}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nCalculated Total: ₹${updatedProduct.productTotalCost.toLocaleString('en-IN')}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n⚠️ Some costs may be ₹0 due to missing data.\nPlease contact admin to add the missing pricing data.`;
-                alert(warningMessage);
-            } else {
-                alert(`✅ Price calculated successfully!\n\nTotal Cost: ₹${updatedProduct.productTotalCost.toLocaleString('en-IN')}`);
+            // Dealer Margin (additional margin for dealer/agent customers)
+            if (dealerMarginPercentage && dealerMarginPercentage > 0) {
+                updatedProduct.dealerMarginPercentage = dealerMarginPercentage;
+                updatedProduct.dealerMarginAmount = (updatedProduct.productTotalCost * dealerMarginPercentage) / 100;
+                updatedProduct.productTotalCost = updatedProduct.productTotalCost + updatedProduct.dealerMarginAmount;
+                console.log(`🤝 Dealer margin applied: ${dealerMarginPercentage}% = ₹${updatedProduct.dealerMarginAmount}`);
             }
 
-            setCurrentProduct(updatedProduct);
+            updatedProduct.lineTotal = updatedProduct.productTotalCost * (updatedProduct.quantity || 1);
+
+            console.log('✅ FINAL TOTAL COST:', updatedProduct.productTotalCost);
+
+            // Show results - BLOCK save if errors exist
+            if (errors.length > 0) {
+                const errorMessage = `❌ CANNOT SAVE — Missing pricing data:\n\n${errors.map(e => `• ${e}`).join('\n')}\n\n⚠️ Please contact admin to add the missing pricing data.\nProduct will NOT be saved until all pricing data is available.`;
+                alert(errorMessage);
+                // DO NOT set the product — block save
+            } else {
+                alert(`✅ Price calculated successfully!\n\nTotal Cost: ₹${updatedProduct.productTotalCost.toLocaleString('en-US')}`);
+                setCurrentProduct(updatedProduct);
+            }
         } catch (error: any) {
             console.error('❌ Critical error calculating price:', error);
             alert(`❌ Error calculating price: \n\n${error.message} \n\nPlease check the browser console for details.`);
@@ -713,6 +749,7 @@ export function useProductConfig({ initialProduct, series, materials }: UseProdu
         setBoughtoutProfit,
         negotiationMargin,
         setNegotiationMargin,
+        marginsLoaded,
         calculating,
         bodyBonnetMaterials,
         plugMaterials,

@@ -364,11 +364,11 @@ export default function QuoteDetailsPage() {
                     <td className="border border-gray-300 px-4 py-3">{product.productTag || `Item ${index + 1}`}</td>
                     <td className="border border-gray-300 px-4 py-3 text-sm">{descParts.join(', ')}</td>
                     <td className="border border-gray-300 px-4 py-3 text-right font-medium">
-                      ₹{(product.quantity > 0 ? (product.lineTotal || 0) / product.quantity : 0).toLocaleString('en-IN')}
+                      ₹{(product.quantity > 0 ? (product.lineTotal || 0) / product.quantity : 0).toLocaleString('en-US')}
                     </td>
                     <td className="border border-gray-300 px-4 py-3 text-center">{product.quantity}</td>
                     <td className="border border-gray-300 px-4 py-3 text-right font-bold text-green-700">
-                      ₹{(product.lineTotal || 0).toLocaleString('en-IN')}
+                      ₹{(product.lineTotal || 0).toLocaleString('en-US')}
                     </td>
                   </tr>
                 );
@@ -378,14 +378,14 @@ export default function QuoteDetailsPage() {
               <tr className="bg-gray-100 font-bold">
                 <td colSpan={5} className="border border-gray-300 px-4 py-3 text-right">Subtotal:</td>
                 <td className="border border-gray-300 px-4 py-3 text-right text-green-700">
-                  ₹{(quote.products.reduce((sum, p) => sum + (p.lineTotal || 0), 0)).toLocaleString('en-IN')}
+                  ₹{(quote.products.reduce((sum, p) => sum + (p.lineTotal || 0), 0)).toLocaleString('en-US')}
                 </td>
               </tr>
               {quote.packagePrice && quote.packagePrice > 0 && (
                 <tr className="bg-gray-50">
                   <td colSpan={5} className="border border-gray-300 px-4 py-3 text-right">Packing Charges:</td>
                   <td className="border border-gray-300 px-4 py-3 text-right">
-                    ₹{quote.packagePrice.toLocaleString('en-IN')}
+                    ₹{quote.packagePrice.toLocaleString('en-US')}
                   </td>
                 </tr>
               )}
@@ -393,7 +393,7 @@ export default function QuoteDetailsPage() {
                 <tr className="bg-cyan-50">
                   <td colSpan={5} className="border border-gray-300 px-4 py-3 text-right">🚛 Freight Charges:</td>
                   <td className="border border-gray-300 px-4 py-3 text-right text-cyan-700 font-medium">
-                    ₹{quote.freightPrice.toLocaleString('en-IN')}
+                    ₹{quote.freightPrice.toLocaleString('en-US')}
                   </td>
                 </tr>
               )}
@@ -401,20 +401,20 @@ export default function QuoteDetailsPage() {
                 <tr className="bg-gray-50">
                   <td colSpan={5} className="border border-gray-300 px-4 py-3 text-right">Discount ({quote.discount}%):</td>
                   <td className="border border-gray-300 px-4 py-3 text-right text-red-600">
-                    -₹{(quote.discountAmount || 0).toLocaleString('en-IN')}
+                    -₹{(quote.discountAmount || 0).toLocaleString('en-US')}
                   </td>
                 </tr>
               )}
               <tr className="bg-gray-50">
                 <td colSpan={5} className="border border-gray-300 px-4 py-3 text-right">IGST ({quote.tax || 18}%):</td>
                 <td className="border border-gray-300 px-4 py-3 text-right">
-                  ₹{(quote.taxAmount || 0).toLocaleString('en-IN')}
+                  ₹{(quote.taxAmount || 0).toLocaleString('en-US')}
                 </td>
               </tr>
               <tr className="bg-green-100 font-bold text-lg">
                 <td colSpan={5} className="border border-gray-300 px-4 py-4 text-right">Grand Total:</td>
                 <td className="border border-gray-300 px-4 py-4 text-right text-green-700">
-                  ₹{(quote.total || 0).toLocaleString('en-IN')}
+                  ₹{(quote.total || 0).toLocaleString('en-US')}
                 </td>
               </tr>
             </tfoot>

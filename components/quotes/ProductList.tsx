@@ -33,13 +33,13 @@ export default function ProductList({ products, onEdit, onRemove, readOnly = fal
                                 )}
                             </div>
                             <div className="text-sm text-gray-600 mt-2 space-y-1">
-    
+
                             </div>
                         </div>
                         <div className="flex items-center space-x-4 ml-4">
                             <div className="text-right">
                                 <p className="text-xs text-gray-500">Line Total</p>
-                                <p className="font-bold text-2xl text-green-600">₹{product.lineTotal.toLocaleString('en-IN')}</p>
+                                <p className="font-bold text-2xl text-green-600">₹{product.lineTotal.toLocaleString('en-US')}</p>
                             </div>
                             {!readOnly && (
                                 <div className="flex flex-col space-y-2">

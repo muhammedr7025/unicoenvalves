@@ -7,6 +7,7 @@ import {
     TestingItem,
     AccessoryItem,
     DEFAULT_ACCESSORIES,
+    QuotePricingMode,
 } from '@/types';
 import { useProductConfig } from '@/hooks/useProductConfig';
 import SearchableSelect from '@/components/ui/SearchableSelect';
@@ -18,6 +19,9 @@ interface ProductConfigurationFormProps {
     materials: Material[];
     onSave: (product: QuoteProduct) => void;
     onCancel: () => void;
+    pricingMode?: QuotePricingMode;
+    dealerMarginPercentage?: number;
+    isAdmin?: boolean;
 }
 
 export default function ProductConfigurationForm({
@@ -26,6 +30,9 @@ export default function ProductConfigurationForm({
     materials,
     onSave,
     onCancel,
+    pricingMode = 'standard',
+    dealerMarginPercentage,
+    isAdmin = false,
 }: ProductConfigurationFormProps) {
     const {
         currentProduct,
@@ -74,7 +81,8 @@ export default function ProductConfigurationForm({
         handleHandwheelTypeChange,
         handleHandwheelSeriesChange,
         calculateProductPrice,
-    } = useProductConfig({ initialProduct, series, materials });
+        marginsLoaded,
+    } = useProductConfig({ initialProduct, series, materials, pricingMode, dealerMarginPercentage });
 
     // Temporary states for adding items
     const [newTubingTitle, setNewTubingTitle] = useState('');
@@ -821,8 +829,8 @@ export default function ProductConfigurationForm({
                                                 onClick={() => addTubingPreset(preset)}
                                                 disabled={isAlreadyAdded}
                                                 className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${isAlreadyAdded
-                                                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                                        : 'bg-rose-600 text-white hover:bg-rose-700 shadow-sm hover:shadow'
+                                                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                                    : 'bg-rose-600 text-white hover:bg-rose-700 shadow-sm hover:shadow'
                                                     }`}
                                             >
                                                 <span>{isAlreadyAdded ? '✓' : '+'}</span>
@@ -880,7 +888,7 @@ export default function ProductConfigurationForm({
                                                     </span>
                                                 )}
                                             </p>
-                                            <p className="text-sm text-gray-600">₹{item.price.toLocaleString('en-IN')}</p>
+                                            <p className="text-sm text-gray-600">₹{item.price.toLocaleString('en-US')}</p>
                                         </div>
                                         <button
                                             onClick={() => removeTubingAndFittingItem(item.id)}
@@ -892,7 +900,7 @@ export default function ProductConfigurationForm({
                                 ))}
                                 <div className="bg-orange-100 p-3 rounded-lg">
                                     <p className="font-bold text-orange-900">
-                                        Miscellaneous Total: ₹{tubingAndFittingItems.reduce((sum, item) => sum + item.price, 0).toLocaleString('en-IN')}
+                                        Miscellaneous Total: ₹{tubingAndFittingItems.reduce((sum, item) => sum + item.price, 0).toLocaleString('en-US')}
                                     </p>
                                 </div>
                             </div>
@@ -985,7 +993,7 @@ export default function ProductConfigurationForm({
                                                     </span>
                                                 )}
                                             </p>
-                                            <p className="text-sm text-gray-600">₹{item.price.toLocaleString('en-IN')}</p>
+                                            <p className="text-sm text-gray-600">₹{item.price.toLocaleString('en-US')}</p>
                                         </div>
                                         <button
                                             onClick={() => removeTestingItem(item.id)}
@@ -997,7 +1005,7 @@ export default function ProductConfigurationForm({
                                 ))}
                                 <div className="bg-teal-100 p-3 rounded-lg">
                                     <p className="font-bold text-teal-900">
-                                        Testing Total: ₹{testingItems.reduce((sum, item) => sum + item.price, 0).toLocaleString('en-IN')}
+                                        Testing Total: ₹{testingItems.reduce((sum, item) => sum + item.price, 0).toLocaleString('en-US')}
                                     </p>
                                 </div>
                             </div>
@@ -1131,7 +1139,7 @@ export default function ProductConfigurationForm({
                                                 {item.isDefault && <span className="ml-2 text-xs bg-pink-200 px-2 py-1 rounded">Default</span>}
                                             </p>
                                             <p className="text-sm text-gray-600">
-                                                ₹{item.price.toLocaleString('en-IN')} × {item.quantity} = ₹{(item.price * item.quantity).toLocaleString('en-IN')}
+                                                ₹{item.price.toLocaleString('en-US')} × {item.quantity} = ₹{(item.price * item.quantity).toLocaleString('en-US')}
                                             </p>
                                         </div>
                                         <div className="flex items-center gap-3">
@@ -1156,7 +1164,7 @@ export default function ProductConfigurationForm({
                                 ))}
                                 <div className="bg-pink-100 p-3 rounded-lg">
                                     <p className="font-bold text-pink-900">
-                                        Accessories Total: ₹{accessoryItems.reduce((sum, item) => sum + (item.price * item.quantity), 0).toLocaleString('en-IN')}
+                                        Accessories Total: ₹{accessoryItems.reduce((sum, item) => sum + (item.price * item.quantity), 0).toLocaleString('en-US')}
                                     </p>
                                 </div>
                             </div>
@@ -1174,42 +1182,62 @@ export default function ProductConfigurationForm({
             {/* PROFIT & QUANTITY */}
             <div className="border-2 border-yellow-200 rounded-lg p-6 mb-6 bg-yellow-50">
                 <h3 className="text-xl font-bold mb-4 text-yellow-900">💰 Profit, Margin & Quantity</h3>
+                {!isAdmin && (
+                    <p className="text-xs text-yellow-700 mb-3 bg-yellow-100 p-2 rounded">⚙️ Margins are set by admin in Settings. Contact admin to change.</p>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div>
                         <label className="block text-sm font-medium mb-2">Manufacturing Profit (%)</label>
-                        <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            value={manufacturingProfit}
-                            onChange={(e) => setManufacturingProfit(parseFloat(e.target.value) || 0)}
-                            className="w-full px-3 py-2 border rounded-lg"
-                        />
+                        {isAdmin ? (
+                            <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                value={manufacturingProfit}
+                                onChange={(e) => setManufacturingProfit(parseFloat(e.target.value) || 0)}
+                                className="w-full px-3 py-2 border rounded-lg"
+                            />
+                        ) : (
+                            <div className="w-full px-3 py-2 border rounded-lg bg-gray-100 text-gray-700 font-semibold">
+                                {manufacturingProfit}%
+                            </div>
+                        )}
                     </div>
                     <div>
                         <label className="block text-sm font-medium mb-2">Bought-out Profit (%)</label>
-                        <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            value={boughtoutProfit}
-                            onChange={(e) => setBoughtoutProfit(parseFloat(e.target.value) || 0)}
-                            className="w-full px-3 py-2 border rounded-lg"
-                        />
+                        {isAdmin ? (
+                            <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                value={boughtoutProfit}
+                                onChange={(e) => setBoughtoutProfit(parseFloat(e.target.value) || 0)}
+                                className="w-full px-3 py-2 border rounded-lg"
+                            />
+                        ) : (
+                            <div className="w-full px-3 py-2 border rounded-lg bg-gray-100 text-gray-700 font-semibold">
+                                {boughtoutProfit}%
+                            </div>
+                        )}
                     </div>
                     <div>
                         <label className="block text-sm font-medium mb-2 text-purple-700">Negotiation Margin (%)</label>
-                        <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            value={negotiationMargin}
-                            onChange={(e) => setNegotiationMargin(parseFloat(e.target.value) || 0)}
-                            className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
-                            placeholder="0"
-                        />
-
+                        {isAdmin ? (
+                            <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                value={negotiationMargin}
+                                onChange={(e) => setNegotiationMargin(parseFloat(e.target.value) || 0)}
+                                className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                                placeholder="0"
+                            />
+                        ) : (
+                            <div className="w-full px-3 py-2 border border-purple-300 rounded-lg bg-purple-50 text-purple-700 font-semibold">
+                                {negotiationMargin}%
+                            </div>
+                        )}
                     </div>
                     <div>
                         <label className="block text-sm font-medium mb-2">Quantity *</label>
@@ -1339,13 +1367,13 @@ export default function ProductConfigurationForm({
                             <div className="space-y-1 text-sm">
                                 <div className="flex justify-between font-bold text-blue-900 text-lg">
                                     <span>Body Sub-Assembly Total:</span>
-                                    <span>₹{(currentProduct.bodySubAssemblyTotal || 0).toLocaleString('en-IN')}</span>
+                                    <span>₹{(currentProduct.bodySubAssemblyTotal || 0).toLocaleString('en-US')}</span>
                                 </div>
                             </div>
                             <div className="space-y-2 text-sm">
                                 <div className="flex justify-between font-bold text-purple-900 text-lg">
                                     <span>Actuator Sub-Assembly Total:</span>
-                                    <span>₹{(currentProduct.actuatorSubAssemblyTotal || 0).toLocaleString('en-IN')}</span>
+                                    <span>₹{(currentProduct.actuatorSubAssemblyTotal || 0).toLocaleString('en-US')}</span>
                                 </div>
                             </div>
                         </div>
@@ -1360,12 +1388,12 @@ export default function ProductConfigurationForm({
                                     {currentProduct.tubingAndFitting?.map((item, idx) => (
                                         <div key={idx} className="flex justify-between">
                                             <span>{item.title}</span>
-                                            <span className="font-semibold">₹{item.price.toLocaleString('en-IN')}</span>
+                                            <span className="font-semibold">₹{item.price.toLocaleString('en-US')}</span>
                                         </div>
                                     ))}
                                     <div className="border-t pt-2 mt-2 flex justify-between font-bold text-orange-900">
                                         <span>Subtotal</span>
-                                        <span>₹{(currentProduct.tubingAndFittingTotal || 0).toLocaleString('en-IN')}</span>
+                                        <span>₹{(currentProduct.tubingAndFittingTotal || 0).toLocaleString('en-US')}</span>
                                     </div>
                                 </div>
                             </div>
@@ -1379,12 +1407,12 @@ export default function ProductConfigurationForm({
                                     {currentProduct.testing?.map((item, idx) => (
                                         <div key={idx} className="flex justify-between">
                                             <span>{item.title}</span>
-                                            <span className="font-semibold">₹{item.price.toLocaleString('en-IN')}</span>
+                                            <span className="font-semibold">₹{item.price.toLocaleString('en-US')}</span>
                                         </div>
                                     ))}
                                     <div className="border-t pt-2 mt-2 flex justify-between font-bold text-teal-900">
                                         <span>Subtotal</span>
-                                        <span>₹{(currentProduct.testingTotal || 0).toLocaleString('en-IN')}</span>
+                                        <span>₹{(currentProduct.testingTotal || 0).toLocaleString('en-US')}</span>
                                     </div>
                                 </div>
                             </div>
@@ -1402,12 +1430,12 @@ export default function ProductConfigurationForm({
                                                 {item.isDefault && <span className="ml-2 text-xs bg-pink-200 px-2 py-0.5 rounded">Default</span>}
                                                 <span className="ml-2 text-xs text-gray-500">×{item.quantity}</span>
                                             </span>
-                                            <span className="font-semibold">₹{item.price.toLocaleString('en-IN')} × {item.quantity} = ₹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
+                                            <span className="font-semibold">₹{item.price.toLocaleString('en-US')} × {item.quantity} = ₹{(item.price * item.quantity).toLocaleString('en-US')}</span>
                                         </div>
                                     ))}
                                     <div className="border-t pt-2 mt-2 flex justify-between font-bold text-pink-900">
                                         <span>Subtotal</span>
-                                        <span>₹{(currentProduct.accessoriesTotal || 0).toLocaleString('en-IN')}</span>
+                                        <span>₹{(currentProduct.accessoriesTotal || 0).toLocaleString('en-US')}</span>
                                     </div>
                                 </div>
                             </div>
@@ -1418,7 +1446,7 @@ export default function ProductConfigurationForm({
                             <div className="space-y-3">
                                 <div className="flex justify-between text-xl font-bold text-emerald-900 bg-emerald-200 px-4 py-3 rounded-lg">
                                     <span>FINAL PRICE (Qty: {currentProduct.quantity || 1}):</span>
-                                    <span>₹{(currentProduct.lineTotal || 0).toLocaleString('en-IN')}</span>
+                                    <span>₹{(currentProduct.lineTotal || 0).toLocaleString('en-US')}</span>
                                 </div>
                             </div>
 

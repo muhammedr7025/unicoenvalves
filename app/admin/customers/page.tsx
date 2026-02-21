@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { getAllCustomers, createCustomer, updateCustomer, deleteCustomer } from '@/lib/firebase/customerService';
-import { Customer } from '@/types';
+import { Customer, CustomerType } from '@/types';
 import { formatDate } from '@/utils/dateFormat';
 import { useAuth } from '@/lib/firebase/authContext';
 import BulkImportCustomers from '@/components/BulkImportCustomers';
@@ -25,6 +25,8 @@ export default function CustomersPage() {
     address: '',
     country: 'India',
     gst: '',
+    customerType: 'normal' as CustomerType,
+    dealerMarginPercentage: undefined as number | undefined,
   });
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState('');
@@ -67,6 +69,8 @@ export default function CustomersPage() {
         address: customer.address,
         country: customer.country,
         gst: customer.gst || '',
+        customerType: customer.customerType || 'normal',
+        dealerMarginPercentage: customer.dealerMarginPercentage,
       });
     } else {
       setEditingCustomer(null);
@@ -77,6 +81,8 @@ export default function CustomersPage() {
         address: '',
         country: 'India',
         gst: '',
+        customerType: 'normal',
+        dealerMarginPercentage: undefined,
       });
     }
     setFormError('');
@@ -93,6 +99,8 @@ export default function CustomersPage() {
       address: '',
       country: 'India',
       gst: '',
+      customerType: 'normal',
+      dealerMarginPercentage: undefined,
     });
     setFormError('');
   };
@@ -122,7 +130,7 @@ export default function CustomersPage() {
         }
         await createCustomer(formData, user.id);
       }
-      
+
       await fetchCustomers();
       handleCloseModal();
     } catch (error: any) {
@@ -159,18 +167,18 @@ export default function CustomersPage() {
           <p className="text-gray-600">Manage your customer database</p>
         </div>
         <button
-  onClick={() => setShowBulkImport(!showBulkImport)}
-  className="bg-purple-600 text-white px-6 py-2 rounded-lg"
->
-  Bulk Import
-</button>
+          onClick={() => setShowBulkImport(!showBulkImport)}
+          className="bg-purple-600 text-white px-6 py-2 rounded-lg"
+        >
+          Bulk Import
+        </button>
 
-{showBulkImport && (
-  <BulkImportCustomers onImportComplete={() => { 
-    setShowBulkImport(false); 
-    fetchCustomers(); 
-  }} />
-)}
+        {showBulkImport && (
+          <BulkImportCustomers onImportComplete={() => {
+            setShowBulkImport(false);
+            fetchCustomers();
+          }} />
+        )}
         <button
           onClick={() => handleOpenModal()}
           className="bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center"
@@ -289,12 +297,19 @@ export default function CustomersPage() {
                   <tr key={customer.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                          <span className="text-green-600 font-semibold">
+                        <div className={`w-10 h-10 ${customer.customerType === 'dealer' ? 'bg-amber-100' : 'bg-green-100'} rounded-full flex items-center justify-center mr-3`}>
+                          <span className={`${customer.customerType === 'dealer' ? 'text-amber-600' : 'text-green-600'} font-semibold`}>
                             {customer.name.charAt(0).toUpperCase()}
                           </span>
                         </div>
-                        <div className="font-medium text-gray-900">{customer.name}</div>
+                        <div>
+                          <div className="font-medium text-gray-900">{customer.name}</div>
+                          {customer.customerType === 'dealer' && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 mt-0.5">
+                              🤝 Dealer/Agent {customer.dealerMarginPercentage ? `(${customer.dealerMarginPercentage}%)` : ''}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -454,6 +469,45 @@ export default function CustomersPage() {
                   </p>
                 </div>
               )}
+
+              {/* Customer Type */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Customer Type *
+                  </label>
+                  <select
+                    required
+                    value={formData.customerType}
+                    onChange={(e) => setFormData({ ...formData, customerType: e.target.value as CustomerType, dealerMarginPercentage: e.target.value === 'normal' ? undefined : formData.dealerMarginPercentage })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  >
+                    <option value="normal">Normal Customer</option>
+                    <option value="dealer">Dealer / Agent</option>
+                  </select>
+                </div>
+
+                {formData.customerType === 'dealer' && (
+                  <div>
+                    <label className="block text-sm font-medium text-amber-700 mb-2">
+                      🤝 Dealer Margin (%)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.5"
+                      value={formData.dealerMarginPercentage || ''}
+                      onChange={(e) => setFormData({ ...formData, dealerMarginPercentage: parseFloat(e.target.value) || undefined })}
+                      className="w-full px-4 py-2 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      placeholder="e.g., 5"
+                    />
+                    <p className="text-xs text-amber-600 mt-1">
+                      Additional margin applied on top of final price for this dealer
+                    </p>
+                  </div>
+                )}
+              </div>
 
               <div className="flex space-x-3 pt-4">
                 <button

@@ -17,6 +17,7 @@ import {
   PricingType,
   PaymentTerms,
   WarrantyTerms,
+  QuotePricingMode,
 } from '@/types';
 import { calculateQuoteTotals } from '@/utils/priceCalculator';
 import ProductList from '@/components/quotes/ProductList';
@@ -60,6 +61,9 @@ export default function NewQuotePage() {
   const [currencyExchangeRate, setCurrencyExchangeRate] = useState<number | null>(null);
   const [pricingType, setPricingType] = useState<PricingType>('Ex-Works');
   const [freightPrice, setFreightPrice] = useState(0);
+
+  // Pricing Mode (Standard vs Project)
+  const [pricingMode, setPricingMode] = useState<QuotePricingMode>('standard');
 
 
   useEffect(() => {
@@ -206,6 +210,7 @@ export default function NewQuotePage() {
         currencyExchangeRate: currencyExchangeRate || null,
         pricingType: pricingType,
         freightPrice: pricingType === 'F.O.R.' ? freightPrice : null,
+        pricingMode: pricingMode,
         createdAt: Timestamp.now(),
 
         updatedAt: Timestamp.now(),
@@ -298,8 +303,39 @@ export default function NewQuotePage() {
                   <p className="text-sm text-green-700">{selectedCustomer.email}</p>
                   <p className="text-sm text-green-600">{selectedCustomer.country}</p>
                   {selectedCustomer.phone && <p className="text-sm text-green-600">📞 {selectedCustomer.phone}</p>}
+                  {selectedCustomer.customerType === 'dealer' && (
+                    <p className="text-sm text-amber-600 font-medium mt-1">🤝 Dealer/Agent {selectedCustomer.dealerMarginPercentage ? `(+${selectedCustomer.dealerMarginPercentage}% margin)` : ''}</p>
+                  )}
                 </div>
               )}
+
+              {/* Pricing Mode Selector */}
+              <div>
+                <label className="block text-sm font-medium mb-2">📊 Pricing Mode *</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setPricingMode('standard')}
+                    className={`p-3 rounded-lg border-2 text-center font-medium transition-all ${pricingMode === 'standard'
+                        ? 'border-blue-500 bg-blue-50 text-blue-800'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300'
+                      }`}
+                  >
+                    📦 Standard
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPricingMode('project')}
+                    className={`p-3 rounded-lg border-2 text-center font-medium transition-all ${pricingMode === 'project'
+                        ? 'border-purple-500 bg-purple-50 text-purple-800'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-purple-300'
+                      }`}
+                  >
+                    🏗️ Project
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Different margin settings apply for each mode</p>
+              </div>
             </div>
 
             {/* Right Column - Quote Details */}
@@ -407,6 +443,9 @@ export default function NewQuotePage() {
                 setShowProductConfig(false);
                 setEditingProductIndex(null);
               }}
+              pricingMode={pricingMode}
+              dealerMarginPercentage={selectedCustomer?.dealerMarginPercentage}
+              isAdmin={user?.role === 'admin'}
             />
           )}
 

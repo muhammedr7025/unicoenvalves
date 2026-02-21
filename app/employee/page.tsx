@@ -345,7 +345,7 @@ export default function EmployeeDashboard() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-semibold text-gray-900">
-                        ₹{quote.total.toLocaleString('en-IN')}
+                        ₹{quote.total.toLocaleString('en-US')}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

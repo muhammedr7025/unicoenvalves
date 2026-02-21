@@ -21,8 +21,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: 'Employees', href: '/admin/employees', icon: '👥' },
     { name: 'Customers', href: '/admin/customers', icon: '🏢' },
     { name: 'Pricing Data', href: '/admin/pricing', icon: '💰' },
-    { name: 'Machine Pricing', href: '/admin/machine-pricing', icon: '⚙️' },
+    { name: 'Machine Pricing', href: '/admin/machine-pricing', icon: '🔧' },
     { name: 'All Quotes', href: '/admin/quotes', icon: '📄' },
+    { name: 'Settings', href: '/admin/settings', icon: '⚙️' },
   ];
 
   return (

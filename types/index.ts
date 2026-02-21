@@ -9,6 +9,8 @@ export interface User {
   isActive: boolean;
 }
 
+export type CustomerType = 'normal' | 'dealer';
+
 export interface Customer {
   id: string;
   name: string;
@@ -17,6 +19,8 @@ export interface Customer {
   address: string;
   country: string;
   gst?: string;
+  customerType: CustomerType; // Normal customer or Dealer/Agent
+  dealerMarginPercentage?: number; // Admin-set margin for dealers only
   createdAt: Date;
   createdBy: string;
 }
@@ -375,12 +379,19 @@ export interface QuoteProduct {
   negotiationMarginPercentage?: number;
   negotiationMarginAmount?: number;
 
+  // Dealer Margin (additional margin for dealer/agent customers)
+  dealerMarginPercentage?: number;
+  dealerMarginAmount?: number;
+
   // Product Totals
   productTotalCost: number; // Grand total before negotiation margin
   lineTotal: number; // Final total including negotiation margin × quantity
 }
 
 export type QuoteStatus = 'draft' | 'sent' | 'approved' | 'rejected';
+
+// Quote Pricing Mode (determines which global margins to apply)
+export type QuotePricingMode = 'standard' | 'project';
 
 // Validity Period Options
 export type ValidityPeriod = '15 days' | '30 days' | '45 days' | '50 days' | '60 days' | '90 days';
@@ -409,6 +420,9 @@ export interface Quote {
   customerName: string;
   projectName?: string;
   enquiryId?: string;
+
+  // Pricing Mode: Standard or Project (determines which global margins apply)
+  pricingMode?: QuotePricingMode;
 
   // NEW: Quote Settings for PDF Generation
   validity?: ValidityPeriod;      // Quote validity period dropdown

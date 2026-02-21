@@ -13,7 +13,7 @@ export default function EmployeeCustomersPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -21,6 +21,7 @@ export default function EmployeeCustomersPage() {
     address: '',
     country: 'India',
     gst: '',
+    customerType: 'normal' as const,
   });
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState('');
@@ -59,6 +60,7 @@ export default function EmployeeCustomersPage() {
       address: '',
       country: 'India',
       gst: '',
+      customerType: 'normal' as const,
     });
     setFormError('');
     setShowModal(true);
@@ -73,6 +75,7 @@ export default function EmployeeCustomersPage() {
       address: '',
       country: 'India',
       gst: '',
+      customerType: 'normal' as const,
     });
     setFormError('');
   };
@@ -94,7 +97,7 @@ export default function EmployeeCustomersPage() {
         setFormLoading(false);
         return;
       }
-      
+
       await createCustomer(formData, user.id);
       await fetchCustomers();
       handleCloseModal();
