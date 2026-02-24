@@ -66,6 +66,8 @@ export default function ProductConfigurationForm({
         setBoughtoutProfit,
         negotiationMargin,
         setNegotiationMargin,
+        productDiscount,
+        setProductDiscount,
         calculating,
         bodyBonnetMaterials,
         plugMaterials,
@@ -1238,6 +1240,18 @@ export default function ProductConfigurationForm({
                                 {negotiationMargin}%
                             </div>
                         )}
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-2 text-orange-700">Discount (%)</label>
+                        <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={productDiscount}
+                            onChange={(e) => setProductDiscount(parseFloat(e.target.value) || 0)}
+                            className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:ring-orange-500 focus:border-orange-500"
+                            placeholder="0"
+                        />
                     </div>
                     <div>
                         <label className="block text-sm font-medium mb-2">Quantity *</label>

@@ -53,6 +53,11 @@ export default function ProductList({ products, onEdit, onRemove, readOnly = fal
                                     <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded font-medium">
                                         Qty: {product.quantity || 1}
                                     </span>
+                                    {(product.discountPercentage || 0) > 0 && (
+                                        <span className="bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded font-medium">
+                                            🏷️ {product.discountPercentage}% off
+                                        </span>
+                                    )}
                                 </div>
                                 <p className="text-sm text-gray-600 leading-relaxed">
                                     {descParts.join(', ')}

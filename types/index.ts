@@ -383,9 +383,13 @@ export interface QuoteProduct {
   dealerMarginPercentage?: number;
   dealerMarginAmount?: number;
 
+  // Per-product discount (applied after all margins)
+  discountPercentage?: number;
+  discountAmount?: number;
+
   // Product Totals
-  productTotalCost: number; // Grand total before negotiation margin
-  lineTotal: number; // Final total including negotiation margin × quantity
+  productTotalCost: number; // Grand total after all margins and discount
+  lineTotal: number; // productTotalCost × quantity
 }
 
 export type QuoteStatus = 'draft' | 'sent' | 'approved' | 'rejected';

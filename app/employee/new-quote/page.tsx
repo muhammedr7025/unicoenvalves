@@ -67,6 +67,9 @@ export default function NewQuotePage() {
   // Pricing Mode (Standard vs Project)
   const [pricingMode, setPricingMode] = useState<QuotePricingMode>('standard');
 
+  // Agent/Dealer Commission (editable per-quote, defaults to customer setting)
+  const [agentCommission, setAgentCommission] = useState(0);
+
 
   useEffect(() => {
     fetchInitialData();
@@ -229,6 +232,7 @@ export default function NewQuotePage() {
         pricingType: pricingType,
         freightPrice: pricingType === 'F.O.R.' ? freightPrice : null,
         pricingMode: pricingMode,
+        agentCommission: agentCommission || 0,
         createdAt: Timestamp.now(),
 
         updatedAt: Timestamp.now(),
@@ -304,6 +308,7 @@ export default function NewQuotePage() {
                   onChange={(value) => {
                     const customer = customers.find(c => c.id === value);
                     setSelectedCustomer(customer || null);
+                    setAgentCommission(customer?.dealerMarginPercentage || 0);
                   }}
                   options={customers.map((customer) => ({
                     value: customer.id,
@@ -462,7 +467,7 @@ export default function NewQuotePage() {
                 setEditingProductIndex(null);
               }}
               pricingMode={pricingMode}
-              dealerMarginPercentage={selectedCustomer?.dealerMarginPercentage}
+              dealerMarginPercentage={agentCommission || selectedCustomer?.dealerMarginPercentage}
               isAdmin={user?.role === 'admin'}
             />
           )}
@@ -550,6 +555,20 @@ export default function NewQuotePage() {
                   onChange={(e) => setDeliveryDays(e.target.value)}
                   className="w-full px-3 py-2 border rounded-lg border-teal-300 focus:ring-teal-500 focus:border-teal-500"
                   placeholder="e.g., 4"
+                />
+              </div>
+
+              {/* Agent/Dealer Commission */}
+              <div>
+                <label className="block text-sm font-medium mb-2">🤝 Agent Commission (%)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={agentCommission}
+                  onChange={(e) => setAgentCommission(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-2 border rounded-lg border-amber-300 focus:ring-amber-500 focus:border-amber-500"
+                  placeholder="0"
                 />
               </div>
 

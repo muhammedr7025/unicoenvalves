@@ -67,6 +67,9 @@ export default function EditQuotePage() {
   const [freightPrice, setFreightPrice] = useState(0);
   const [pricingMode, setPricingMode] = useState<QuotePricingMode>('standard');
 
+  // Agent/Dealer Commission (editable per-quote)
+  const [agentCommission, setAgentCommission] = useState(0);
+
 
   useEffect(() => {
     fetchInitialData();
@@ -174,6 +177,7 @@ export default function EditQuotePage() {
         setPricingType(loadedQuote.pricingType || 'Ex-Works');
         setFreightPrice(loadedQuote.freightPrice || 0);
         setPricingMode((data.pricingMode as QuotePricingMode) || 'standard');
+        setAgentCommission(data.agentCommission || 0);
       } else {
 
         alert('Quote not found');
@@ -281,6 +285,7 @@ export default function EditQuotePage() {
         pricingType: pricingType,
         freightPrice: pricingType === 'F.O.R.' ? freightPrice : null,
         pricingMode: pricingMode,
+        agentCommission: agentCommission || 0,
         updatedAt: Timestamp.now(),
 
       });
@@ -390,7 +395,7 @@ export default function EditQuotePage() {
               setEditingProductIndex(null);
             }}
             pricingMode={pricingMode}
-            dealerMarginPercentage={(() => {
+            dealerMarginPercentage={agentCommission || (() => {
               const customer = customers.find(c => c.id === quote?.customerId);
               return customer?.dealerMarginPercentage;
             })()}
@@ -514,6 +519,20 @@ export default function EditQuotePage() {
                 onChange={(e) => setDeliveryDays(e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg border-teal-300 focus:ring-teal-500 focus:border-teal-500"
                 placeholder="e.g., 4"
+              />
+            </div>
+
+            {/* Agent/Dealer Commission */}
+            <div>
+              <label className="block text-sm font-medium mb-2">🤝 Agent Commission (%)</label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={agentCommission}
+                onChange={(e) => setAgentCommission(parseFloat(e.target.value) || 0)}
+                className="w-full px-3 py-2 border rounded-lg border-amber-300 focus:ring-amber-500 focus:border-amber-500"
+                placeholder="0"
               />
             </div>
 

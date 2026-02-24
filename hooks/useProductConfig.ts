@@ -94,9 +94,14 @@ export function useProductConfig({ initialProduct, series, materials, pricingMod
     const [manufacturingProfit, setManufacturingProfit] = useState<number>(initialProduct?.manufacturingProfitPercentage || 0);
     const [boughtoutProfit, setBoughtoutProfit] = useState<number>(initialProduct?.boughtoutProfitPercentage || 0);
     const [negotiationMargin, setNegotiationMargin] = useState<number>(initialProduct?.negotiationMarginPercentage || 0);
+    const [productDiscount, setProductDiscount] = useState<number>(initialProduct?.discountPercentage || 0);
     const [marginsLoaded, setMarginsLoaded] = useState(false);
 
     const [calculating, setCalculating] = useState(false);
+
+    // Round up to nearest 10 (last digit always 0)
+    // e.g. 1234 → 1240, 1231 → 1240, 1240 → 1240
+    const roundToTen = (n: number): number => Math.ceil(n / 10) * 10;
 
     // Fetch global margins when pricingMode changes
     useEffect(() => {
@@ -668,7 +673,21 @@ export function useProductConfig({ initialProduct, series, materials, pricingMod
                 console.log(`🤝 Dealer margin applied: ${dealerMarginPercentage}% = ₹${updatedProduct.dealerMarginAmount}`);
             }
 
-            updatedProduct.lineTotal = updatedProduct.productTotalCost * (updatedProduct.quantity || 1);
+            // Per-product discount (applied after all margins)
+            if (productDiscount > 0) {
+                updatedProduct.discountPercentage = productDiscount;
+                const priceBeforeDiscount = updatedProduct.productTotalCost;
+                updatedProduct.discountAmount = (priceBeforeDiscount * productDiscount) / 100;
+                updatedProduct.productTotalCost = priceBeforeDiscount - updatedProduct.discountAmount;
+                console.log(`🏷️ Product discount applied: ${productDiscount}% = ₹${updatedProduct.discountAmount}`);
+            } else {
+                updatedProduct.discountPercentage = 0;
+                updatedProduct.discountAmount = 0;
+            }
+
+            // Round to nearest 10 (last digit = 0, rounded up)
+            updatedProduct.productTotalCost = roundToTen(updatedProduct.productTotalCost);
+            updatedProduct.lineTotal = roundToTen(updatedProduct.productTotalCost * (updatedProduct.quantity || 1));
 
             console.log('✅ FINAL TOTAL COST:', updatedProduct.productTotalCost);
 
@@ -757,6 +776,8 @@ export function useProductConfig({ initialProduct, series, materials, pricingMod
         setBoughtoutProfit,
         negotiationMargin,
         setNegotiationMargin,
+        productDiscount,
+        setProductDiscount,
         marginsLoaded,
         calculating,
         bodyBonnetMaterials,
