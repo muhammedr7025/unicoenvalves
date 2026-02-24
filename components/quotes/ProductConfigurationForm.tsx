@@ -1196,7 +1196,7 @@ export default function ProductConfigurationForm({
                                 type="number"
                                 min="0"
                                 max="100"
-                                value={manufacturingProfit}
+                                value={manufacturingProfit || ''}
                                 onChange={(e) => setManufacturingProfit(parseFloat(e.target.value) || 0)}
                                 className="w-full px-3 py-2 border rounded-lg"
                             />
@@ -1213,7 +1213,7 @@ export default function ProductConfigurationForm({
                                 type="number"
                                 min="0"
                                 max="100"
-                                value={boughtoutProfit}
+                                value={boughtoutProfit || ''}
                                 onChange={(e) => setBoughtoutProfit(parseFloat(e.target.value) || 0)}
                                 className="w-full px-3 py-2 border rounded-lg"
                             />
@@ -1230,7 +1230,7 @@ export default function ProductConfigurationForm({
                                 type="number"
                                 min="0"
                                 max="100"
-                                value={negotiationMargin}
+                                value={negotiationMargin || ''}
                                 onChange={(e) => setNegotiationMargin(parseFloat(e.target.value) || 0)}
                                 className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
                                 placeholder="0"
@@ -1247,7 +1247,7 @@ export default function ProductConfigurationForm({
                             type="number"
                             min="0"
                             max="100"
-                            value={productDiscount}
+                            value={productDiscount || ''}
                             onChange={(e) => setProductDiscount(parseFloat(e.target.value) || 0)}
                             className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:ring-orange-500 focus:border-orange-500"
                             placeholder="0"

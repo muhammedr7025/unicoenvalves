@@ -565,7 +565,7 @@ export default function NewQuotePage() {
                   type="number"
                   min="0"
                   max="100"
-                  value={agentCommission}
+                  value={agentCommission || ''}
                   onChange={(e) => setAgentCommission(parseFloat(e.target.value) || 0)}
                   className="w-full px-3 py-2 border rounded-lg border-amber-300 focus:ring-amber-500 focus:border-amber-500"
                   placeholder="0"
@@ -584,7 +584,7 @@ export default function NewQuotePage() {
                   <input
                     type="number"
                     min="0"
-                    value={warrantyShipment}
+                    value={warrantyShipment || ''}
                     onChange={(e) => setWarrantyShipment(parseInt(e.target.value) || 0)}
                     className="w-full px-3 py-2 border rounded-lg border-blue-300 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="e.g., 12"
@@ -595,7 +595,7 @@ export default function NewQuotePage() {
                   <input
                     type="number"
                     min="0"
-                    value={warrantyInstallation}
+                    value={warrantyInstallation || ''}
                     onChange={(e) => setWarrantyInstallation(parseInt(e.target.value) || 0)}
                     className="w-full px-3 py-2 border rounded-lg border-blue-300 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="e.g., 12"
@@ -614,7 +614,7 @@ export default function NewQuotePage() {
                     type="number"
                     min="0"
                     max="100"
-                    value={advancePercentage}
+                    value={advancePercentage || ''}
                     onChange={(e) => {
                       const val = parseFloat(e.target.value) || 0;
                       const max = 100 - approvalPercentage - beforeDespatchPercentage;
@@ -630,7 +630,7 @@ export default function NewQuotePage() {
                     type="number"
                     min="0"
                     max="100"
-                    value={approvalPercentage}
+                    value={approvalPercentage || ''}
                     onChange={(e) => {
                       const val = parseFloat(e.target.value) || 0;
                       const max = 100 - advancePercentage - beforeDespatchPercentage;
@@ -646,7 +646,7 @@ export default function NewQuotePage() {
                     type="number"
                     min="0"
                     max="100"
-                    value={beforeDespatchPercentage}
+                    value={beforeDespatchPercentage || ''}
                     onChange={(e) => {
                       const val = parseFloat(e.target.value) || 0;
                       const max = 100 - advancePercentage - approvalPercentage;
@@ -719,7 +719,7 @@ export default function NewQuotePage() {
                   type="number"
                   min="0"
                   max="100"
-                  value={discount}
+                  value={discount || ''}
                   onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
                   className="w-full px-3 py-2 border rounded-lg"
                 />
@@ -730,7 +730,7 @@ export default function NewQuotePage() {
                   type="number"
                   min="0"
                   max="100"
-                  value={tax}
+                  value={tax || ''}
                   onChange={(e) => setTax(parseFloat(e.target.value) || 0)}
                   className="w-full px-3 py-2 border rounded-lg"
                 />
@@ -740,7 +740,7 @@ export default function NewQuotePage() {
                 <input
                   type="number"
                   min="0"
-                  value={packagePrice}
+                  value={packagePrice || ''}
                   onChange={(e) => setPackagePrice(parseFloat(e.target.value) || 0)}
                   className="w-full px-3 py-2 border rounded-lg border-orange-300 focus:ring-orange-500 focus:border-orange-500"
                   placeholder="Enter packaging cost"
@@ -753,7 +753,7 @@ export default function NewQuotePage() {
                   <input
                     type="number"
                     min="0"
-                    value={freightPrice}
+                    value={freightPrice || ''}
                     onChange={(e) => setFreightPrice(parseFloat(e.target.value) || 0)}
                     className="w-full px-3 py-2 border rounded-lg border-cyan-300 focus:ring-cyan-500 focus:border-cyan-500"
                     placeholder="Enter freight charges"
