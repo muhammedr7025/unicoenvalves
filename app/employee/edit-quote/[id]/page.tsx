@@ -135,14 +135,14 @@ export default function EditQuotePage() {
           currencyExchangeRate: data.currencyExchangeRate || null,
           pricingType: data.pricingType || 'Ex-Works',
           products: loadedProducts, // Use products from subcollection or legacy
-          subtotal: data.subtotal || 0,
-          discount: data.discount || 0,
-          discountAmount: data.discountAmount || 0,
-          tax: data.tax || 0,
-          taxAmount: data.taxAmount || 0,
-          total: data.total || 0,
-          packagePrice: data.packagePrice || 0,
-          freightPrice: data.freightPrice || 0,
+          subtotal: data.subtotal ?? 0,
+          discount: data.discount ?? 0,
+          discountAmount: data.discountAmount ?? 0,
+          tax: data.tax ?? 18,
+          taxAmount: data.taxAmount ?? 0,
+          total: data.total ?? 0,
+          packagePrice: data.packagePrice ?? 0,
+          freightPrice: data.freightPrice ?? 0,
           status: data.status || 'draft',
           createdBy: data.createdBy,
           createdByName: data.createdByName,
@@ -155,9 +155,9 @@ export default function EditQuotePage() {
 
         setQuote(loadedQuote);
         setProducts(loadedProducts);
-        setDiscount(loadedQuote.discount);
-        setTax(loadedQuote.tax);
-        setPackagePrice(loadedQuote.packagePrice || 0);
+        setDiscount(loadedQuote.discount ?? 0);
+        setTax(loadedQuote.tax ?? 18);
+        setPackagePrice(loadedQuote.packagePrice ?? 0);
         setNotes(loadedQuote.notes || '');
         setProjectName(loadedQuote.projectName || '');
         setEnquiryId(loadedQuote.enquiryId || '');
@@ -166,18 +166,18 @@ export default function EditQuotePage() {
         // NEW: Load additional quote settings
         setCustomQuoteNumber(loadedQuote.customQuoteNumber || '');
         setValidity(loadedQuote.validity || '30 days');
-        setWarrantyShipment(loadedQuote.warrantyTerms?.shipmentDays || 12);
-        setWarrantyInstallation(loadedQuote.warrantyTerms?.installationDays || 12);
+        setWarrantyShipment(loadedQuote.warrantyTerms?.shipmentDays ?? 12);
+        setWarrantyInstallation(loadedQuote.warrantyTerms?.installationDays ?? 12);
         setDeliveryDays(loadedQuote.deliveryDays || '');
-        setAdvancePercentage(loadedQuote.paymentTerms?.advancePercentage || 30);
-        setApprovalPercentage(loadedQuote.paymentTerms?.approvalPercentage || 0);
-        setBeforeDespatchPercentage(loadedQuote.paymentTerms?.beforeDespatchPercentage || 70);
+        setAdvancePercentage(loadedQuote.paymentTerms?.advancePercentage ?? 30);
+        setApprovalPercentage(loadedQuote.paymentTerms?.approvalPercentage ?? 0);
+        setBeforeDespatchPercentage(loadedQuote.paymentTerms?.beforeDespatchPercentage ?? 70);
         setCustomPaymentTerms(loadedQuote.paymentTerms?.customTerms || '');
-        setCurrencyExchangeRate(loadedQuote.currencyExchangeRate || null);
+        setCurrencyExchangeRate(loadedQuote.currencyExchangeRate ?? null);
         setPricingType(loadedQuote.pricingType || 'Ex-Works');
-        setFreightPrice(loadedQuote.freightPrice || 0);
+        setFreightPrice(loadedQuote.freightPrice ?? 0);
         setPricingMode((data.pricingMode as QuotePricingMode) || 'standard');
-        setAgentCommission(data.agentCommission || 0);
+        setAgentCommission(data.agentCommission ?? 0);
       } else {
 
         alert('Quote not found');

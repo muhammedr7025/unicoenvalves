@@ -5,6 +5,7 @@ import {
     updateDoc,
     deleteDoc,
     getDocs,
+    getDocsFromServer,
     writeBatch,
     query,
     orderBy,
@@ -40,13 +41,22 @@ export async function saveProductsToSubcollection(
     console.log(`Saved ${products.length} products to subcollection for quote ${quoteId}`);
 }
 
-// Get products from subcollection
+// Get products from subcollection (always fetch from server to avoid stale cache)
 export async function getProductsFromSubcollection(
     quoteId: string
 ): Promise<QuoteProduct[]> {
     const productsRef = collection(db, 'quotes', quoteId, 'products');
     const q = query(productsRef, orderBy('sortOrder', 'asc'));
-    const snapshot = await getDocs(q);
+
+    // Use server fetch to avoid stale cache after delete-then-add updates
+    let snapshot;
+    try {
+        snapshot = await getDocsFromServer(q);
+    } catch (e) {
+        // Fallback to cached data if offline
+        console.log('Server fetch failed, using cached data');
+        snapshot = await getDocs(q);
+    }
 
     const products = snapshot.docs.map((doc) => {
         const data = doc.data();
