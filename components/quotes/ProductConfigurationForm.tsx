@@ -1183,64 +1183,47 @@ export default function ProductConfigurationForm({
 
             {/* PROFIT & QUANTITY */}
             <div className="border-2 border-yellow-200 rounded-lg p-6 mb-6 bg-yellow-50">
-                <h3 className="text-xl font-bold mb-4 text-yellow-900">💰 Profit, Margin & Quantity</h3>
-                {!isAdmin && (
-                    <p className="text-xs text-yellow-700 mb-3 bg-yellow-100 p-2 rounded">⚙️ Margins are set by admin in Settings. Contact admin to change.</p>
-                )}
+                <h3 className="text-xl font-bold mb-4 text-yellow-900">{isAdmin ? '💰 Profit, Margin & Quantity' : '🏷️ Discount & Quantity'}</h3>
 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <div>
-                        <label className="block text-sm font-medium mb-2">Manufacturing Profit (%)</label>
-                        {isAdmin ? (
-                            <input
-                                type="number"
-                                min="0"
-                                max="100"
-                                value={manufacturingProfit || ''}
-                                onChange={(e) => setManufacturingProfit(parseFloat(e.target.value) || 0)}
-                                className="w-full px-3 py-2 border rounded-lg"
-                            />
-                        ) : (
-                            <div className="w-full px-3 py-2 border rounded-lg bg-gray-100 text-gray-700 font-semibold">
-                                {manufacturingProfit}%
+                <div className={`grid grid-cols-1 ${isAdmin ? 'md:grid-cols-6' : 'md:grid-cols-2'} gap-6`}>
+                    {isAdmin && (
+                        <>
+                            <div>
+                                <label className="block text-sm font-medium mb-2">Manufacturing Profit (%)</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    value={manufacturingProfit || ''}
+                                    onChange={(e) => setManufacturingProfit(parseFloat(e.target.value) || 0)}
+                                    className="w-full px-3 py-2 border rounded-lg"
+                                />
                             </div>
-                        )}
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-2">Bought-out Profit (%)</label>
-                        {isAdmin ? (
-                            <input
-                                type="number"
-                                min="0"
-                                max="100"
-                                value={boughtoutProfit || ''}
-                                onChange={(e) => setBoughtoutProfit(parseFloat(e.target.value) || 0)}
-                                className="w-full px-3 py-2 border rounded-lg"
-                            />
-                        ) : (
-                            <div className="w-full px-3 py-2 border rounded-lg bg-gray-100 text-gray-700 font-semibold">
-                                {boughtoutProfit}%
+                            <div>
+                                <label className="block text-sm font-medium mb-2">Bought-out Profit (%)</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    value={boughtoutProfit || ''}
+                                    onChange={(e) => setBoughtoutProfit(parseFloat(e.target.value) || 0)}
+                                    className="w-full px-3 py-2 border rounded-lg"
+                                />
                             </div>
-                        )}
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-2 text-purple-700">Negotiation Margin (%)</label>
-                        {isAdmin ? (
-                            <input
-                                type="number"
-                                min="0"
-                                max="100"
-                                value={negotiationMargin || ''}
-                                onChange={(e) => setNegotiationMargin(parseFloat(e.target.value) || 0)}
-                                className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
-                                placeholder="0"
-                            />
-                        ) : (
-                            <div className="w-full px-3 py-2 border border-purple-300 rounded-lg bg-purple-50 text-purple-700 font-semibold">
-                                {negotiationMargin}%
+                            <div>
+                                <label className="block text-sm font-medium mb-2 text-purple-700">Negotiation Margin (%)</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    value={negotiationMargin || ''}
+                                    onChange={(e) => setNegotiationMargin(parseFloat(e.target.value) || 0)}
+                                    className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                                    placeholder="0"
+                                />
                             </div>
-                        )}
-                    </div>
+                        </>
+                    )}
                     <div>
                         <label className="block text-sm font-medium mb-2 text-orange-700">Discount (%)</label>
                         <input
