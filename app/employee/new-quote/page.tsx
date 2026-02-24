@@ -73,6 +73,7 @@ export default function NewQuotePage() {
 
   // Custom pricing charges (for Custom pricing type, up to 3 items)
   const [customPricingCharges, setCustomPricingCharges] = useState<CustomPricingCharge[]>([]);
+  const [customPricingLabel, setCustomPricingLabel] = useState('');
 
 
   useEffect(() => {
@@ -237,6 +238,7 @@ export default function NewQuotePage() {
         pricingType: pricingType,
         freightPrice: pricingType === 'F.O.R.' ? freightPrice : null,
         customPricingCharges: pricingType === 'Custom' ? customPricingCharges : [],
+        customPricingLabel: pricingType === 'Custom' ? customPricingLabel : null,
         pricingMode: pricingMode,
         agentCommission: agentCommission || 0,
         createdAt: Timestamp.now(),
@@ -559,6 +561,19 @@ export default function NewQuotePage() {
                   <option value="Custom">Custom</option>
                 </select>
               </div>
+              {/* Custom Pricing Label - shown for Custom pricing type */}
+              {pricingType === 'Custom' && (
+                <div>
+                  <label className="block text-sm font-medium mb-2">🏷️ Custom Pricing Label</label>
+                  <input
+                    type="text"
+                    value={customPricingLabel}
+                    onChange={(e) => setCustomPricingLabel(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg border-violet-300 focus:ring-violet-500 focus:border-violet-500"
+                    placeholder="e.g., C.I.F., F.O.B., DDP"
+                  />
+                </div>
+              )}
 
               {/* Delivery Days */}
               <div>

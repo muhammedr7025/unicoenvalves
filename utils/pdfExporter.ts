@@ -575,6 +575,7 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
     const isCustom = quote.pricingType === 'Custom';
     const freightCharges = quote.freightPrice || 0;
     const customCharges: CustomPricingCharge[] = (quote as any).customPricingCharges || [];
+    const customLabel = (quote as any).customPricingLabel || 'Custom';
 
     // Build summary rows based on pricing type
     const summaryRows: string[][] = [];
@@ -583,7 +584,7 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
     const productsSubtotal = quote.products.reduce((sum, p) => sum + (p.lineTotal || 0), 0);
 
     // Show price label based on pricing type
-    const priceLabel = isFOR ? 'F.O.R. Price' : isCustom ? 'Custom Price' : 'Ex-Works Price Coimbatore';
+    const priceLabel = isFOR ? 'F.O.R. Price' : isCustom ? `${customLabel} Price` : 'Ex-Works Price Coimbatore';
 
     summaryRows.push([priceLabel, formatINR(productsSubtotal)]);
 
@@ -635,7 +636,7 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
     const grandTotalLabel = isFOR
         ? 'Total F.O.R. Price (Excluding Insurance)'
         : isCustom
-            ? 'Total Custom Price (Excluding Insurance)'
+            ? `Total ${customLabel} Price (Excluding Insurance)`
             : 'Total Ex-works Price(Excluding Freight/Insurance)';
     const grandTotalValue = quote.total;
 
@@ -681,7 +682,7 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
 
     // Build terms data based on pricing type
     const termsData: string[][] = [
-        ['Prices', `${quote.pricingType || 'Ex-Works'} INR each net`],
+        ['Prices', `${quote.pricingType === 'Custom' ? ((quote as any).customPricingLabel || 'Custom') : (quote.pricingType || 'Ex-Works')} INR each net`],
         ['Validity', `${quote.validity || '30 days'} from the date of quotation`],
         // For F.O.R., show just "Delivery"; for Ex-Works, show "Delivery (Ex-Works)"
         [isFOR ? 'Delivery' : 'Delivery\n(Ex-Works)', `${quote.deliveryDays || '4-6'} working weeks from the date of receipt of advance payment and approved technical documents (whichever comes later)`],
@@ -1045,6 +1046,7 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
     const isCustomCombined = quote.pricingType === 'Custom';
     const freightChargesCombined = quote.freightPrice || 0;
     const customChargesCombined: CustomPricingCharge[] = (quote as any).customPricingCharges || [];
+    const customLabelCombined = (quote as any).customPricingLabel || 'Custom';
 
     const summaryRowsCombined: string[][] = [];
 
@@ -1052,7 +1054,7 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
     const productsSubtotalCombined = quote.products.reduce((sum, p) => sum + (p.lineTotal || 0), 0);
 
     // Show price label based on pricing type
-    const priceLabelCombined = isFORCombined ? 'F.O.R. Price' : isCustomCombined ? 'Custom Price' : 'Ex-Works Price Coimbatore';
+    const priceLabelCombined = isFORCombined ? 'F.O.R. Price' : isCustomCombined ? `${customLabelCombined} Price` : 'Ex-Works Price Coimbatore';
     summaryRowsCombined.push([priceLabelCombined, formatINR(productsSubtotalCombined)]);
 
 
@@ -1103,7 +1105,7 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
     const grandTotalLabelCombined = isFORCombined
         ? 'Total F.O.R. Price (Excluding Insurance)'
         : isCustomCombined
-            ? 'Total Custom Price (Excluding Insurance)'
+            ? `Total ${customLabelCombined} Price (Excluding Insurance)`
             : 'Total Ex-works Price(Excluding Freight/Insurance)';
     const grandTotalValueCombined = quote.total;
 
@@ -1146,7 +1148,7 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
 
     // Build terms data based on pricing type
     const termsDataCombined: string[][] = [
-        ['Prices', `${quote.pricingType || 'Ex-Works'} INR each net`],
+        ['Prices', `${quote.pricingType === 'Custom' ? ((quote as any).customPricingLabel || 'Custom') : (quote.pricingType || 'Ex-Works')} INR each net`],
         ['Validity', `${quote.validity || '30 days'} from the date of quotation`],
         // For F.O.R., show just "Delivery"; for Ex-Works, show "Delivery (Ex-Works)"
         [isFORCombined ? 'Delivery' : 'Delivery\n(Ex-Works)', `${quote.deliveryDays || '4-6'} working weeks from the date of receipt of advance payment and approved technical documents (whichever comes later)`],
@@ -1395,7 +1397,8 @@ async function generateUnpricedSummaryPDF(quote: Quote, customerDetails: any) {
     const isFOR = quote.pricingType === 'F.O.R.';
     const isCustom = quote.pricingType === 'Custom';
     const customChargesUnpriced: CustomPricingCharge[] = (quote as any).customPricingCharges || [];
-    const priceLabel = isFOR ? 'F.O.R. Price' : isCustom ? 'Custom Price' : 'Ex-Works Price Coimbatore';
+    const customLabelUnpriced = (quote as any).customPricingLabel || 'Custom';
+    const priceLabel = isFOR ? 'F.O.R. Price' : isCustom ? `${customLabelUnpriced} Price` : 'Ex-Works Price Coimbatore';
     const summaryRows: string[][] = [
         [priceLabel, 'Quoted'],
     ];
@@ -1442,7 +1445,7 @@ async function generateUnpricedSummaryPDF(quote: Quote, customerDetails: any) {
     const grandTotalLabel = isFOR
         ? 'Total F.O.R. Price (Excluding Insurance)'
         : isCustom
-            ? 'Total Custom Price (Excluding Insurance)'
+            ? `Total ${customLabelUnpriced} Price (Excluding Insurance)`
             : 'Total Ex-works Price(Excluding Freight/Insurance)';
 
     autoTable(doc, {
@@ -1476,7 +1479,7 @@ async function generateUnpricedSummaryPDF(quote: Quote, customerDetails: any) {
 
     // Build terms data based on pricing type
     const unpricedTermsData: string[][] = [
-        ['Prices', `${quote.pricingType || 'Ex-Works'} INR each net`],
+        ['Prices', `${quote.pricingType === 'Custom' ? ((quote as any).customPricingLabel || 'Custom') : (quote.pricingType || 'Ex-Works')} INR each net`],
         ['Validity', `${quote.validity || '30 days'} from the date of quotation`],
         // For F.O.R., show just "Delivery"; for Ex-Works, show "Delivery (Ex-Works)"
         [isFOR ? 'Delivery' : 'Delivery\\n(Ex-Works)', `${quote.deliveryDays || '4-6'} working weeks from the date of receipt of advance payment and approved technical documents (whichever comes later)`],
