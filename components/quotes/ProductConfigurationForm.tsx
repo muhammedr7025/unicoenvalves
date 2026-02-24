@@ -863,7 +863,7 @@ export default function ProductConfigurationForm({
                                     <input
                                         type="number"
                                         min="0"
-                                        value={newTubingPrice}
+                                        value={newTubingPrice || ''}
                                         onChange={(e) => setNewTubingPrice(parseFloat(e.target.value) || 0)}
                                         className="w-full px-3 py-2 border rounded-lg"
                                     />
@@ -968,7 +968,7 @@ export default function ProductConfigurationForm({
                                     <input
                                         type="number"
                                         min="0"
-                                        value={newTestingPrice}
+                                        value={newTestingPrice || ''}
                                         onChange={(e) => setNewTestingPrice(parseFloat(e.target.value) || 0)}
                                         className="w-full px-3 py-2 border rounded-lg"
                                     />
@@ -1107,7 +1107,7 @@ export default function ProductConfigurationForm({
                                     <input
                                         type="number"
                                         min="0"
-                                        value={newAccessoryPrice}
+                                        value={newAccessoryPrice || ''}
                                         onChange={(e) => setNewAccessoryPrice(parseFloat(e.target.value) || 0)}
                                         className="w-full px-3 py-2 border rounded-lg"
                                     />
@@ -1117,7 +1117,7 @@ export default function ProductConfigurationForm({
                                     <input
                                         type="number"
                                         min="1"
-                                        value={newAccessoryQuantity}
+                                        value={newAccessoryQuantity || ''}
                                         onChange={(e) => setNewAccessoryQuantity(parseInt(e.target.value) || 1)}
                                         className="w-full px-3 py-2 border rounded-lg"
                                     />
