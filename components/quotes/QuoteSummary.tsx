@@ -1,3 +1,5 @@
+import { CustomPricingCharge } from '@/types';
+
 interface QuoteSummaryProps {
     subtotal: number;
     productsSubtotal: number; // Raw product subtotal before discount/package/freight
@@ -8,7 +10,8 @@ interface QuoteSummaryProps {
     total: number;
     packagePrice?: number;
     freightPrice?: number;
-    pricingType?: 'Ex-Works' | 'F.O.R.';
+    pricingType?: string;
+    customPricingCharges?: CustomPricingCharge[];
 }
 
 export default function QuoteSummary({
@@ -22,6 +25,7 @@ export default function QuoteSummary({
     packagePrice = 0,
     freightPrice = 0,
     pricingType = 'Ex-Works',
+    customPricingCharges = [],
 }: QuoteSummaryProps) {
     return (
         <div className="flex justify-end">
@@ -43,6 +47,14 @@ export default function QuoteSummary({
                         <span className="font-semibold">+₹{freightPrice.toLocaleString('en-US')}</span>
                     </div>
                 )}
+                {pricingType === 'Custom' && customPricingCharges.map((charge, idx) => (
+                    charge.price > 0 && (
+                        <div key={idx} className="flex justify-between text-violet-600">
+                            <span>📋 {charge.title || `Charge ${idx + 1}`}:</span>
+                            <span className="font-semibold">+₹{charge.price.toLocaleString('en-US')}</span>
+                        </div>
+                    )
+                ))}
 
                 {discount > 0 && (
                     <div className="flex justify-between text-red-600">

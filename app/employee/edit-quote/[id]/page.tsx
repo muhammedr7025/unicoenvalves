@@ -20,6 +20,7 @@ import {
   QuoteProduct,
   ValidityPeriod,
   PricingType,
+  CustomPricingCharge,
   QuotePricingMode,
 } from '@/types';
 import { calculateQuoteTotals } from '@/utils/priceCalculator';
@@ -69,6 +70,9 @@ export default function EditQuotePage() {
 
   // Agent/Dealer Commission (editable per-quote)
   const [agentCommission, setAgentCommission] = useState(0);
+
+  // Custom pricing charges (for Custom pricing type, up to 3 items)
+  const [customPricingCharges, setCustomPricingCharges] = useState<CustomPricingCharge[]>([]);
 
 
   useEffect(() => {
@@ -178,6 +182,7 @@ export default function EditQuotePage() {
         setFreightPrice(loadedQuote.freightPrice ?? 0);
         setPricingMode((data.pricingMode as QuotePricingMode) || 'standard');
         setAgentCommission(data.agentCommission ?? 0);
+        setCustomPricingCharges(data.customPricingCharges || []);
       } else {
 
         alert('Quote not found');
@@ -243,9 +248,10 @@ export default function EditQuotePage() {
       const productSubtotal = baseTotals.subtotal;
       const discountAmount = (productSubtotal * discount) / 100;
       const discountedProductTotal = productSubtotal - discountAmount;
-      // Freight is included in taxable amount only for F.O.R. pricing
+      // Additional charges based on pricing type
       const freightToIncludeCalc = pricingType === 'F.O.R.' ? freightPrice : 0;
-      const subtotalWithPackageAndFreight = discountedProductTotal + packagePrice + freightToIncludeCalc;
+      const customChargesToInclude = pricingType === 'Custom' ? customPricingCharges.reduce((sum, c) => sum + (c.price || 0), 0) : 0;
+      const subtotalWithPackageAndFreight = discountedProductTotal + packagePrice + freightToIncludeCalc + customChargesToInclude;
       const taxAmountWithPackageAndFreight = (subtotalWithPackageAndFreight * tax) / 100;
       const totalWithPackageAndFreight = subtotalWithPackageAndFreight + taxAmountWithPackageAndFreight;
 
@@ -284,6 +290,7 @@ export default function EditQuotePage() {
         currencyExchangeRate: currencyExchangeRate || null,
         pricingType: pricingType,
         freightPrice: pricingType === 'F.O.R.' ? freightPrice : null,
+        customPricingCharges: pricingType === 'Custom' ? customPricingCharges : [],
         pricingMode: pricingMode,
         agentCommission: agentCommission || 0,
         updatedAt: Timestamp.now(),
@@ -314,7 +321,8 @@ export default function EditQuotePage() {
   const displayDiscountAmount = (productSubtotalForDisplay * discount) / 100;
   const discountedProductTotal = productSubtotalForDisplay - displayDiscountAmount;
   const freightToInclude = pricingType === 'F.O.R.' ? freightPrice : 0;
-  const displaySubtotal = discountedProductTotal + packagePrice + freightToInclude;
+  const displayCustomCharges = pricingType === 'Custom' ? customPricingCharges.reduce((sum, c) => sum + (c.price || 0), 0) : 0;
+  const displaySubtotal = discountedProductTotal + packagePrice + freightToInclude + displayCustomCharges;
   const displayTaxAmount = (displaySubtotal * tax) / 100;
   const displayTotal = displaySubtotal + displayTaxAmount;
 
@@ -497,15 +505,23 @@ export default function EditQuotePage() {
                 onChange={(e) => {
                   const newType = e.target.value as PricingType;
                   setPricingType(newType);
-                  // Reset freight price when switching to Ex-Works
                   if (newType === 'Ex-Works') {
                     setFreightPrice(0);
+                    setCustomPricingCharges([]);
+                  } else if (newType === 'F.O.R.') {
+                    setCustomPricingCharges([]);
+                  } else if (newType === 'Custom') {
+                    setFreightPrice(0);
+                    if (customPricingCharges.length === 0) {
+                      setCustomPricingCharges([{ title: '', price: 0 }]);
+                    }
                   }
                 }}
                 className="w-full px-3 py-2 border rounded-lg border-green-300 focus:ring-green-500 focus:border-green-500"
               >
                 <option value="Ex-Works">Ex-Works</option>
                 <option value="F.O.R.">F.O.R.</option>
+                <option value="Custom">Custom</option>
               </select>
             </div>
 
@@ -729,6 +745,53 @@ export default function EditQuotePage() {
                 />
               </div>
             )}
+            {/* Custom Pricing Charges - shown for Custom pricing type */}
+            {pricingType === 'Custom' && (
+              <div className="md:col-span-3">
+                <label className="block text-sm font-medium mb-2">📋 Custom Charges</label>
+                <div className="space-y-2">
+                  {customPricingCharges.map((charge, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={charge.title}
+                        onChange={(e) => {
+                          const updated = [...customPricingCharges];
+                          updated[idx] = { ...updated[idx], title: e.target.value };
+                          setCustomPricingCharges(updated);
+                        }}
+                        className="flex-1 px-3 py-2 border rounded-lg border-violet-300 focus:ring-violet-500 focus:border-violet-500"
+                        placeholder={`Charge ${idx + 1} title (e.g., Freight, Insurance)`}
+                      />
+                      <input
+                        type="number"
+                        min="0"
+                        value={charge.price || ''}
+                        onChange={(e) => {
+                          const updated = [...customPricingCharges];
+                          updated[idx] = { ...updated[idx], price: parseFloat(e.target.value) || 0 };
+                          setCustomPricingCharges(updated);
+                        }}
+                        className="w-40 px-3 py-2 border rounded-lg border-violet-300 focus:ring-violet-500 focus:border-violet-500"
+                        placeholder="₹ Price"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setCustomPricingCharges(customPricingCharges.filter((_, i) => i !== idx))}
+                        className="text-red-500 hover:text-red-700 px-2 py-1"
+                      >✕</button>
+                    </div>
+                  ))}
+                  {customPricingCharges.length < 3 && (
+                    <button
+                      type="button"
+                      onClick={() => setCustomPricingCharges([...customPricingCharges, { title: '', price: 0 }])}
+                      className="text-sm text-violet-600 hover:text-violet-800 font-medium"
+                    >+ Add Charge</button>
+                  )}
+                </div>
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium mb-2">Status</label>
               <select
@@ -769,6 +832,7 @@ export default function EditQuotePage() {
               packagePrice={packagePrice}
               freightPrice={freightPrice}
               pricingType={pricingType}
+              customPricingCharges={customPricingCharges}
             />
 
 

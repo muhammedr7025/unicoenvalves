@@ -401,7 +401,13 @@ export type QuotePricingMode = 'standard' | 'project';
 export type ValidityPeriod = '15 days' | '30 days' | '45 days' | '50 days' | '60 days' | '90 days';
 
 // Pricing Type Options
-export type PricingType = 'Ex-Works' | 'F.O.R.';
+export type PricingType = 'Ex-Works' | 'F.O.R.' | 'Custom';
+
+// Custom pricing charge item (for Custom pricing type)
+export interface CustomPricingCharge {
+  title: string;
+  price: number;
+}
 
 // Payment Terms Structure
 export interface PaymentTerms {
