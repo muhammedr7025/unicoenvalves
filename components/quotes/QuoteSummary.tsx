@@ -12,6 +12,7 @@ interface QuoteSummaryProps {
     freightPrice?: number;
     pricingType?: string;
     customPricingCharges?: CustomPricingCharge[];
+    showDiscount?: boolean;
 }
 
 export default function QuoteSummary({
@@ -26,6 +27,7 @@ export default function QuoteSummary({
     freightPrice = 0,
     pricingType = 'Ex-Works',
     customPricingCharges = [],
+    showDiscount = true,
 }: QuoteSummaryProps) {
     return (
         <div className="flex justify-end">
@@ -56,7 +58,7 @@ export default function QuoteSummary({
                     )
                 ))}
 
-                {discount > 0 && (
+                {showDiscount && discount > 0 && (
                     <div className="flex justify-between text-red-600">
                         <span>Discount ({discount}%):</span>
                         <span className="font-semibold">-₹{discountAmount.toLocaleString('en-US')}</span>

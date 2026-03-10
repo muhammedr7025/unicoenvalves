@@ -409,14 +409,7 @@ export default function QuoteDetailsPage() {
                         </td>
                       </tr>
                     )}
-                    {quote.discount && quote.discount > 0 && (
-                      <tr className="bg-gray-50">
-                        <td colSpan={5} className="border border-gray-300 px-4 py-3 text-right">Discount ({quote.discount}%):</td>
-                        <td className="border border-gray-300 px-4 py-3 text-right text-red-600">
-                          -{sym}{convert(quote.discountAmount || 0).toLocaleString('en-US')}
-                        </td>
-                      </tr>
-                    )}
+                    {/* Discount hidden from employees */}
                     <tr className="bg-gray-50">
                       <td colSpan={5} className="border border-gray-300 px-4 py-3 text-right">{rate ? 'Tax' : 'IGST'} ({quote.tax || 18}%):</td>
                       <td className="border border-gray-300 px-4 py-3 text-right">

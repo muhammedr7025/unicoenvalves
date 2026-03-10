@@ -56,7 +56,7 @@ export default function EditQuotePage() {
   // NEW: Additional quote settings
   const [customQuoteNumber, setCustomQuoteNumber] = useState('');
   const [validity, setValidity] = useState<ValidityPeriod>('30 days');
-  const [warrantyShipment, setWarrantyShipment] = useState(12);
+  const [warrantyShipment, setWarrantyShipment] = useState(18);
   const [warrantyInstallation, setWarrantyInstallation] = useState(12);
   const [deliveryDays, setDeliveryDays] = useState('');
   const [advancePercentage, setAdvancePercentage] = useState(30);
@@ -237,8 +237,8 @@ export default function EditQuotePage() {
       return;
     }
 
-    if (!customPaymentTerms.trim() && (advancePercentage + approvalPercentage + beforeDespatchPercentage) > 100) {
-      alert('⚠️ Payment terms total exceeds 100%. Please adjust the values before saving.');
+    if (!customPaymentTerms.trim() && (advancePercentage + approvalPercentage + beforeDespatchPercentage) !== 100) {
+      alert(`⚠️ Payment terms must total exactly 100%. Currently: ${advancePercentage + approvalPercentage + beforeDespatchPercentage}%. Please adjust before saving.`);
       return;
     }
 
@@ -714,17 +714,19 @@ export default function EditQuotePage() {
 
           {/* Pricing & Tax Section */}
           <div className={`grid grid-cols-1 md:grid-cols-2 ${pricingType === 'F.O.R.' ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-6 mb-6`}>
-            <div>
-              <label className="block text-sm font-medium mb-2">Discount (%)</label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={discount || ''}
-                onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-                className="w-full px-3 py-2 border rounded-lg"
-              />
-            </div>
+            {user?.role === 'admin' && (
+              <div>
+                <label className="block text-sm font-medium mb-2">Discount (%)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={discount || ''}
+                  onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium mb-2">Tax/GST (%)</label>
               <input
@@ -849,6 +851,7 @@ export default function EditQuotePage() {
               freightPrice={freightPrice}
               pricingType={pricingType}
               customPricingCharges={customPricingCharges}
+              showDiscount={user?.role === 'admin'}
             />
 
 
