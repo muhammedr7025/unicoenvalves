@@ -151,6 +151,11 @@ export default function NewQuotePage() {
       return;
     }
 
+    if (!packagePrice || packagePrice <= 0) {
+      alert('⚠️ Packing price is required and must be greater than 0.');
+      return;
+    }
+
     if (pricingType === 'F.O.R.' && (!freightPrice || freightPrice <= 0)) {
       alert('⚠️ Freight price is required for F.O.R. pricing and must be greater than 0.');
       return;
