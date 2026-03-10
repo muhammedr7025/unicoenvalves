@@ -456,7 +456,7 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
     const infoData = [
         ['Customer:', customerDetails.name || quote.customerName, 'Unicorn Ref:', quote.quoteNumber],
         ['Enquiry Ref:', quote.enquiryId || 'N/A', 'Date:', formatDate(quote.createdAt)],
-        ['Project:', quote.projectName || '-', 'Revision:', '00'],
+        ['Project:', quote.projectName || '-', '', ''],
     ];
 
     autoTable(doc, {
@@ -930,7 +930,7 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
     const infoData = [
         ['Customer:', customerDetails.name || quote.customerName, 'Unicorn Ref:', quote.quoteNumber],
         ['Enquiry Ref:', quote.enquiryId || 'N/A', 'Date:', formatDate(quote.createdAt)],
-        ['Project:', quote.projectName || '-', 'Revision:', '00'],
+        ['Project:', quote.projectName || '-', '', ''],
     ];
 
     autoTable(priceSummaryDoc, {
