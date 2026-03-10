@@ -25,6 +25,30 @@ const formatINR = (amount: number): string => {
     return `Rs. ${Math.round(amount).toLocaleString('en-US')}`;
 };
 
+// Helper: check if quote is for international (non-Indian) customer
+const isInternationalQuote = (quote: Quote): boolean => {
+    return !!(quote.currencyExchangeRate && quote.currencyExchangeRate > 0);
+};
+
+// Currency-aware format: shows $ (converted) for international, Rs. for Indian
+const formatCurrency = (amount: number, quote: Quote): string => {
+    if (isInternationalQuote(quote)) {
+        const converted = Math.round(amount / quote.currencyExchangeRate!);
+        return `$ ${converted.toLocaleString('en-US')}`;
+    }
+    return formatINR(amount);
+};
+
+// Tax label: IGST for Indian, Tax for international
+const taxLabel = (quote: Quote): string => {
+    return isInternationalQuote(quote) ? 'Tax' : 'IGST';
+};
+
+// Currency code: INR or USD
+const currencyCode = (quote: Quote): string => {
+    return isInternationalQuote(quote) ? 'USD' : 'INR';
+};
+
 // Helper function to format date
 const formatDate = (date: Date): string => {
     const day = date.getDate().toString().padStart(2, '0');
@@ -487,16 +511,16 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
             (index + 1).toString(),
             product.productTag || `Item ${index + 1}`,
             descParts.join(', '),
-            formatINR(unitPrice),
+            formatCurrency(unitPrice, quote),
             product.quantity.toString(),
-            formatINR(product.lineTotal),
+            formatCurrency(product.lineTotal, quote),
         ];
 
     });
 
     autoTable(doc, {
         startY: yPos,
-        head: [['S.No', 'Tag No.', 'Item Description', 'Unit Price\n(INR)', 'Qty', 'Total Price\n(INR)']],
+        head: [['S.No', 'Tag No.', 'Item Description', `Unit Price\n(${currencyCode(quote)})`, 'Qty', `Total Price\n(${currencyCode(quote)})`]],
         body: productsTableData,
         theme: 'grid',
         headStyles: {
@@ -586,28 +610,27 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
     // Show price label based on pricing type
     const priceLabel = isFOR ? 'F.O.R. Price' : isCustom ? `${customLabel} Price` : 'Ex-Works Price Coimbatore';
 
-    summaryRows.push([priceLabel, formatINR(productsSubtotal)]);
+    summaryRows.push([priceLabel, formatCurrency(productsSubtotal, quote)]);
 
 
     // For F.O.R., add freight charges as a separate row
     if (isFOR && freightCharges > 0) {
-        summaryRows.push(['Freight Charges', formatINR(freightCharges)]);
+        summaryRows.push(['Freight Charges', formatCurrency(freightCharges, quote)]);
     }
 
     // For Custom, add each custom charge as a separate row
     if (isCustom) {
         customCharges.forEach(c => {
-            if (c.price > 0) summaryRows.push([c.title || 'Custom Charge', formatINR(c.price)]);
+            if (c.price > 0) summaryRows.push([c.title || 'Custom Charge', formatCurrency(c.price, quote)]);
         });
     }
 
-    summaryRows.push(['Packing Charges', formatINR(packingCharges)]);
+    summaryRows.push(['Packing Charges', formatCurrency(packingCharges, quote)]);
 
     // Discount row removed as per request
 
 
-    // IGST
-    summaryRows.push([`IGST(${quote.tax || 18} %)`, formatINR(quote.taxAmount)]);
+    summaryRows.push([`${taxLabel(quote)}(${quote.tax || 18} %)`, formatCurrency(quote.taxAmount, quote)]);
 
 
     autoTable(doc, {
@@ -643,7 +666,7 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
 
     autoTable(doc, {
         startY: yPos,
-        body: [[grandTotalLabel, formatINR(grandTotalValue)]],
+        body: [[grandTotalLabel, formatCurrency(grandTotalValue, quote)]],
         theme: 'grid',
         tableWidth: 515, // Explicit width
         styles: {
@@ -682,7 +705,7 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
 
     // Build terms data based on pricing type
     const termsData: string[][] = [
-        ['Prices', `${quote.pricingType === 'Custom' ? ((quote as any).customPricingLabel || 'Custom') : (quote.pricingType || 'Ex-Works')} INR each net`],
+        ['Prices', `${quote.pricingType === 'Custom' ? ((quote as any).customPricingLabel || 'Custom') : (quote.pricingType || 'Ex-Works')} ${currencyCode(quote)} each net`],
         ['Validity', `${quote.validity || '30 days'} from the date of quotation`],
         // For F.O.R., show just "Delivery"; for Ex-Works, show "Delivery (Ex-Works)"
         [isFOR ? 'Delivery' : 'Delivery\n(Ex-Works)', `${quote.deliveryDays || '4-6'} working weeks from the date of receipt of advance payment and approved technical documents (whichever comes later)`],
@@ -962,16 +985,16 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
             (index + 1).toString(),
             product.productTag || `Item ${index + 1}`,
             descParts.join(', '),
-            formatINR(unitPrice),
+            formatCurrency(unitPrice, quote),
             product.quantity.toString(),
-            formatINR(product.lineTotal),
+            formatCurrency(product.lineTotal, quote),
         ];
 
     });
 
     autoTable(priceSummaryDoc, {
         startY: yPos,
-        head: [['S.No', 'Tag No.', 'Item Description', 'Unit Price\n(INR)', 'Qty', 'Total Price\n(INR)']],
+        head: [['S.No', 'Tag No.', 'Item Description', `Unit Price\n(${currencyCode(quote)})`, 'Qty', `Total Price\n(${currencyCode(quote)})`]],
         body: productsTableData,
         theme: 'grid',
         headStyles: {
@@ -1055,27 +1078,27 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
 
     // Show price label based on pricing type
     const priceLabelCombined = isFORCombined ? 'F.O.R. Price' : isCustomCombined ? `${customLabelCombined} Price` : 'Ex-Works Price Coimbatore';
-    summaryRowsCombined.push([priceLabelCombined, formatINR(productsSubtotalCombined)]);
+    summaryRowsCombined.push([priceLabelCombined, formatCurrency(productsSubtotalCombined, quote)]);
 
 
     // For F.O.R., add freight charges as a separate row
     if (isFORCombined && freightChargesCombined > 0) {
-        summaryRowsCombined.push(['Freight Charges', formatINR(freightChargesCombined)]);
+        summaryRowsCombined.push(['Freight Charges', formatCurrency(freightChargesCombined, quote)]);
     }
 
     // For Custom, add each custom charge as a separate row
     if (isCustomCombined) {
         customChargesCombined.forEach(c => {
-            if (c.price > 0) summaryRowsCombined.push([c.title || 'Custom Charge', formatINR(c.price)]);
+            if (c.price > 0) summaryRowsCombined.push([c.title || 'Custom Charge', formatCurrency(c.price, quote)]);
         });
     }
 
-    summaryRowsCombined.push(['Packing Charges', formatINR(packingCharges)]);
+    summaryRowsCombined.push(['Packing Charges', formatCurrency(packingCharges, quote)]);
 
     // Discount row removed as per request
 
 
-    summaryRowsCombined.push([`IGST(${quote.tax || 18} %)`, formatINR(quote.taxAmount)]);
+    summaryRowsCombined.push([`${taxLabel(quote)}(${quote.tax || 18} %)`, formatCurrency(quote.taxAmount, quote)]);
 
 
 
@@ -1111,7 +1134,7 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
 
     autoTable(priceSummaryDoc, {
         startY: yPos,
-        body: [[grandTotalLabelCombined, formatINR(grandTotalValueCombined)]],
+        body: [[grandTotalLabelCombined, formatCurrency(grandTotalValueCombined, quote)]],
         theme: 'grid',
         tableWidth: 515,
         styles: {
@@ -1148,7 +1171,7 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
 
     // Build terms data based on pricing type
     const termsDataCombined: string[][] = [
-        ['Prices', `${quote.pricingType === 'Custom' ? ((quote as any).customPricingLabel || 'Custom') : (quote.pricingType || 'Ex-Works')} INR each net`],
+        ['Prices', `${quote.pricingType === 'Custom' ? ((quote as any).customPricingLabel || 'Custom') : (quote.pricingType || 'Ex-Works')} ${currencyCode(quote)} each net`],
         ['Validity', `${quote.validity || '30 days'} from the date of quotation`],
         // For F.O.R., show just "Delivery"; for Ex-Works, show "Delivery (Ex-Works)"
         [isFORCombined ? 'Delivery' : 'Delivery\n(Ex-Works)', `${quote.deliveryDays || '4-6'} working weeks from the date of receipt of advance payment and approved technical documents (whichever comes later)`],
@@ -1330,7 +1353,7 @@ async function generateUnpricedSummaryPDF(quote: Quote, customerDetails: any) {
 
     autoTable(doc, {
         startY: yPos,
-        head: [['S.No', 'Tag No.', 'Item Description', 'Unit Price\n(INR)', 'Qty', 'Total Price\n(INR)']],
+        head: [['S.No', 'Tag No.', 'Item Description', `Unit Price\n(${currencyCode(quote)})`, 'Qty', `Total Price\n(${currencyCode(quote)})`]],
         body: productsTableData,
         theme: 'grid',
         headStyles: {
@@ -1419,7 +1442,7 @@ async function generateUnpricedSummaryPDF(quote: Quote, customerDetails: any) {
         summaryRows.push([`Discount (${quote.discount}%)`, 'Quoted']);
     }
 
-    summaryRows.push([`IGST(${quote.tax || 18} %)`, 'Quoted']);
+    summaryRows.push([`${taxLabel(quote)}(${quote.tax || 18} %)`, 'Quoted']);
 
     autoTable(doc, {
         startY: yPos,
@@ -1479,10 +1502,10 @@ async function generateUnpricedSummaryPDF(quote: Quote, customerDetails: any) {
 
     // Build terms data based on pricing type
     const unpricedTermsData: string[][] = [
-        ['Prices', `${quote.pricingType === 'Custom' ? ((quote as any).customPricingLabel || 'Custom') : (quote.pricingType || 'Ex-Works')} INR each net`],
+        ['Prices', `${quote.pricingType === 'Custom' ? ((quote as any).customPricingLabel || 'Custom') : (quote.pricingType || 'Ex-Works')} ${currencyCode(quote)} each net`],
         ['Validity', `${quote.validity || '30 days'} from the date of quotation`],
         // For F.O.R., show just "Delivery"; for Ex-Works, show "Delivery (Ex-Works)"
-        [isFOR ? 'Delivery' : 'Delivery\\n(Ex-Works)', `${quote.deliveryDays || '4-6'} working weeks from the date of receipt of advance payment and approved technical documents (whichever comes later)`],
+        [isFOR ? 'Delivery' : 'Delivery\n(Ex-Works)', `${quote.deliveryDays || '4-6'} working weeks from the date of receipt of advance payment and approved technical documents (whichever comes later)`],
 
         ['Warranty', `UVPL Standard Warranty - ${quote.warrantyTerms?.shipmentDays || 18} months from shipping or ${quote.warrantyTerms?.installationDays || 12} months from installation, whichever is earlier (on material & workmanship)`],
         ['Payment Terms', formatPaymentTerms(quote.paymentTerms)],

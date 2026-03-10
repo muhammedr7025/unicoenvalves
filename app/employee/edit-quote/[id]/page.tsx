@@ -294,7 +294,10 @@ export default function EditQuotePage() {
           beforeDespatchPercentage: beforeDespatchPercentage,
           customTerms: customPaymentTerms || null,
         },
-        currencyExchangeRate: currencyExchangeRate || null,
+        currencyExchangeRate: (() => {
+          const customer = customers.find(c => c.id === quote?.customerId);
+          return (customer?.country && customer.country !== 'India' && currencyExchangeRate) ? currencyExchangeRate : null;
+        })(),
         pricingType: pricingType,
         freightPrice: pricingType === 'F.O.R.' ? freightPrice : null,
         customPricingCharges: pricingType === 'Custom' ? customPricingCharges : [],

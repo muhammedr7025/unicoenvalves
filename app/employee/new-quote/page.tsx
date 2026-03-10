@@ -239,7 +239,7 @@ export default function NewQuotePage() {
           beforeDespatchPercentage: beforeDespatchPercentage,
           customTerms: customPaymentTerms || null,
         },
-        currencyExchangeRate: currencyExchangeRate || null,
+        currencyExchangeRate: (selectedCustomer.country && selectedCustomer.country !== 'India' && currencyExchangeRate) ? currencyExchangeRate : null,
         pricingType: pricingType,
         freightPrice: pricingType === 'F.O.R.' ? freightPrice : null,
         customPricingCharges: pricingType === 'Custom' ? customPricingCharges : [],
