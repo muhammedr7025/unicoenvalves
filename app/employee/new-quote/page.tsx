@@ -156,7 +156,7 @@ export default function NewQuotePage() {
       return;
     }
 
-    if (pricingType === 'F.O.R.' && (!freightPrice || freightPrice <= 0)) {
+    if (pricingType === 'F.O.R. Site' && (!freightPrice || freightPrice <= 0)) {
       alert('⚠️ Freight price is required for F.O.R. pricing and must be greater than 0.');
       return;
     }
@@ -204,7 +204,7 @@ export default function NewQuotePage() {
       const discountAmount = (productSubtotal * discount) / 100;
       const discountedProductTotal = productSubtotal - discountAmount;
       // Additional charges based on pricing type
-      const freightToInclude = pricingType === 'F.O.R.' ? freightPrice : 0;
+      const freightToInclude = pricingType === 'F.O.R. Site' ? freightPrice : 0;
       const customChargesToInclude = pricingType === 'Custom' ? customPricingCharges.reduce((sum, c) => sum + (c.price || 0), 0) : 0;
       const subtotalWithPackageAndFreight = discountedProductTotal + packagePrice + freightToInclude + customChargesToInclude;
       const taxAmountWithPackageAndFreight = (subtotalWithPackageAndFreight * tax) / 100;
@@ -270,7 +270,7 @@ export default function NewQuotePage() {
         },
         currencyExchangeRate: (selectedCustomer.country && selectedCustomer.country !== 'India' && currencyExchangeRate) ? currencyExchangeRate : null,
         pricingType: pricingType,
-        freightPrice: pricingType === 'F.O.R.' ? freightPrice : null,
+        freightPrice: pricingType === 'F.O.R. Site' ? freightPrice : null,
         customPricingCharges: pricingType === 'Custom' ? customPricingCharges : [],
         customPricingLabel: pricingType === 'Custom' ? customPricingLabel : null,
         pricingMode: pricingMode,
@@ -303,7 +303,7 @@ export default function NewQuotePage() {
   const displayDiscountAmount = (productSubtotalForDisplay * discount) / 100;
   const discountedProductTotal = productSubtotalForDisplay - displayDiscountAmount;
   // Additional charges based on pricing type
-  const displayFreightToInclude = pricingType === 'F.O.R.' ? freightPrice : 0;
+  const displayFreightToInclude = pricingType === 'F.O.R. Site' ? freightPrice : 0;
   const displayCustomCharges = pricingType === 'Custom' ? customPricingCharges.reduce((sum, c) => sum + (c.price || 0), 0) : 0;
   const displaySubtotal = discountedProductTotal + packagePrice + displayFreightToInclude + displayCustomCharges;
   const displayTaxAmount = (displaySubtotal * tax) / 100;
@@ -585,7 +585,7 @@ export default function NewQuotePage() {
                     if (newType === 'Ex-Works') {
                       setFreightPrice(0);
                       setCustomPricingCharges([]);
-                    } else if (newType === 'F.O.R.') {
+                    } else if (newType === 'F.O.R. Site') {
                       setCustomPricingCharges([]);
                     } else if (newType === 'Custom') {
                       setFreightPrice(0);
@@ -597,7 +597,7 @@ export default function NewQuotePage() {
                   className="w-full px-3 py-2 border rounded-lg border-green-300 focus:ring-green-500 focus:border-green-500"
                 >
                   <option value="Ex-Works">Ex-Works</option>
-                  <option value="F.O.R.">F.O.R.</option>
+                  <option value="F.O.R. Site">F.O.R. Site</option>
                   <option value="Custom">Custom</option>
                 </select>
               </div>
@@ -782,7 +782,7 @@ export default function NewQuotePage() {
             )}
 
             {/* Pricing & Tax Section */}
-            <div className={`grid grid-cols-1 md:grid-cols-2 ${pricingType === 'F.O.R.' ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-6 mb-6`}>
+            <div className={`grid grid-cols-1 md:grid-cols-2 ${pricingType === 'F.O.R. Site' ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-6 mb-6`}>
               {user?.role === 'admin' && (
                 <div>
                   <label className="block text-sm font-medium mb-2">Discount (%)</label>
@@ -825,7 +825,7 @@ export default function NewQuotePage() {
                 />
               </div>
               {/* Freight Price - only shown for F.O.R. pricing */}
-              {pricingType === 'F.O.R.' && (
+              {pricingType === 'F.O.R. Site' && (
                 <div>
                   <label className="block text-sm font-medium mb-2">🚛 Freight Price (₹)</label>
                   <input

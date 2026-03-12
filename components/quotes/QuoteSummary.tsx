@@ -64,7 +64,7 @@ export default function QuoteSummary({
                         <span className="font-semibold">{dualAmount(packagePrice, '+')}</span>
                     </div>
                 )}
-                {pricingType === 'F.O.R.' && freightPrice > 0 && (
+                {(pricingType === 'F.O.R. Site' || pricingType === 'F.O.R.') && freightPrice > 0 && (
                     <div className="flex justify-between text-cyan-600">
                         <span>🚛 Freight Price:</span>
                         <span className="font-semibold">{dualAmount(freightPrice, '+')}</span>

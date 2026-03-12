@@ -595,7 +595,7 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
     // Col 0: 420pt (matches first 5 product cols: 35+70+200+85+30)
     // Col 1: 95pt (matches Total Price column)
     // Total: 515pt
-    const isFOR = quote.pricingType === 'F.O.R.';
+    const isFOR = quote.pricingType === 'F.O.R. Site' || (quote.pricingType as string) === 'F.O.R.';
     const isCustom = quote.pricingType === 'Custom';
     const freightCharges = quote.freightPrice || 0;
     const customCharges: CustomPricingCharge[] = (quote as any).customPricingCharges || [];
@@ -608,7 +608,7 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
     const productsSubtotal = quote.products.reduce((sum, p) => sum + (p.lineTotal || 0), 0);
 
     // Show price label based on pricing type
-    const priceLabel = isFOR ? 'F.O.R. Price' : isCustom ? `${customLabel} Price` : 'Ex-Works Price Coimbatore';
+    const priceLabel = isFOR ? 'F.O.R. Site Price' : isCustom ? `${customLabel} Price` : 'Ex-Works Price Coimbatore';
 
     summaryRows.push([priceLabel, formatCurrency(productsSubtotal, quote)]);
 
@@ -657,7 +657,7 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
 
     // Grand Total row - highlighted
     const grandTotalLabel = isFOR
-        ? 'Total F.O.R. Price (Excluding Insurance)'
+        ? 'Total F.O.R. Site Price (Excluding Insurance)'
         : isCustom
             ? `Total ${customLabel} Price (Excluding Insurance)`
             : 'Total Ex-works Price(Excluding Freight/Insurance)';
@@ -1065,7 +1065,7 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
     yPos = (priceSummaryDoc as any).lastAutoTable.finalY;
 
     // Summary rows - F.O.R. vs Ex-Works vs Custom pricing
-    const isFORCombined = quote.pricingType === 'F.O.R.';
+    const isFORCombined = quote.pricingType === 'F.O.R. Site' || (quote.pricingType as string) === 'F.O.R.';
     const isCustomCombined = quote.pricingType === 'Custom';
     const freightChargesCombined = quote.freightPrice || 0;
     const customChargesCombined: CustomPricingCharge[] = (quote as any).customPricingCharges || [];
@@ -1077,7 +1077,7 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
     const productsSubtotalCombined = quote.products.reduce((sum, p) => sum + (p.lineTotal || 0), 0);
 
     // Show price label based on pricing type
-    const priceLabelCombined = isFORCombined ? 'F.O.R. Price' : isCustomCombined ? `${customLabelCombined} Price` : 'Ex-Works Price Coimbatore';
+    const priceLabelCombined = isFORCombined ? 'F.O.R. Site Price' : isCustomCombined ? `${customLabelCombined} Price` : 'Ex-Works Price Coimbatore';
     summaryRowsCombined.push([priceLabelCombined, formatCurrency(productsSubtotalCombined, quote)]);
 
 
@@ -1126,7 +1126,7 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
 
     // Grand Total row - highlighted
     const grandTotalLabelCombined = isFORCombined
-        ? 'Total F.O.R. Price (Excluding Insurance)'
+        ? 'Total F.O.R. Site Price (Excluding Insurance)'
         : isCustomCombined
             ? `Total ${customLabelCombined} Price (Excluding Insurance)`
             : 'Total Ex-works Price(Excluding Freight/Insurance)';
@@ -1417,11 +1417,11 @@ async function generateUnpricedSummaryPDF(quote: Quote, customerDetails: any) {
     yPos = (doc as any).lastAutoTable.finalY;
 
     // Summary rows - unpriced
-    const isFOR = quote.pricingType === 'F.O.R.';
+    const isFOR = quote.pricingType === 'F.O.R. Site' || (quote.pricingType as string) === 'F.O.R.';
     const isCustom = quote.pricingType === 'Custom';
     const customChargesUnpriced: CustomPricingCharge[] = (quote as any).customPricingCharges || [];
     const customLabelUnpriced = (quote as any).customPricingLabel || 'Custom';
-    const priceLabel = isFOR ? 'F.O.R. Price' : isCustom ? `${customLabelUnpriced} Price` : 'Ex-Works Price Coimbatore';
+    const priceLabel = isFOR ? 'F.O.R. Site Price' : isCustom ? `${customLabelUnpriced} Price` : 'Ex-Works Price Coimbatore';
     const summaryRows: string[][] = [
         [priceLabel, 'Quoted'],
     ];
@@ -1466,7 +1466,7 @@ async function generateUnpricedSummaryPDF(quote: Quote, customerDetails: any) {
 
     // Grand Total row
     const grandTotalLabel = isFOR
-        ? 'Total F.O.R. Price (Excluding Insurance)'
+        ? 'Total F.O.R. Site Price (Excluding Insurance)'
         : isCustom
             ? `Total ${customLabelUnpriced} Price (Excluding Insurance)`
             : 'Total Ex-works Price(Excluding Freight/Insurance)';

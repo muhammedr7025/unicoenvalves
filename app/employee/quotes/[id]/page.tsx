@@ -422,7 +422,7 @@ export default function QuoteDetailsPage() {
                         </td>
                       </tr>
                     )}
-                    {quote.pricingType === 'F.O.R.' && quote.freightPrice && quote.freightPrice > 0 && (
+                    {(quote.pricingType === 'F.O.R. Site' || (quote.pricingType as string) === 'F.O.R.') && quote.freightPrice && quote.freightPrice > 0 && (
                       <tr className="bg-cyan-50">
                         <td colSpan={5} className="border border-gray-300 px-4 py-3 text-right">🚛 Freight Charges:</td>
                         <td className="border border-gray-300 px-4 py-3 text-right text-cyan-700 font-medium">
