@@ -310,6 +310,7 @@ export function useProductConfig({ initialProduct, series, materials, pricingMod
             if (!currentProduct.actuatorType) missingFields.push('Actuator Type');
             if (!currentProduct.actuatorSeries) missingFields.push('Actuator Series');
             if (!currentProduct.actuatorModel) missingFields.push('Actuator Model');
+            if (!currentProduct.actuatorStandard) missingFields.push('Actuator Material (Standard/Special)');
         }
 
         if (missingFields.length > 0) {

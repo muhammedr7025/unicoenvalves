@@ -162,6 +162,11 @@ export default function EditQuotePage() {
         setProducts(loadedProducts);
         setDiscount(loadedQuote.discount ?? 0);
         setTax(loadedQuote.tax ?? 18);
+        // Force tax to 0 for international customers
+        const loadedCustomer = customers.find((c: Customer) => c.id === loadedQuote.customerId);
+        if (loadedCustomer && loadedCustomer.country && loadedCustomer.country !== 'India') {
+          setTax(0);
+        }
         setPackagePrice(loadedQuote.packagePrice ?? 0);
         setNotes(loadedQuote.notes || '');
         setProjectName(loadedQuote.projectName || '');
@@ -239,6 +244,12 @@ export default function EditQuotePage() {
 
     if (pricingType === 'F.O.R.' && (!freightPrice || freightPrice <= 0)) {
       alert('⚠️ Freight price is required for F.O.R. pricing and must be greater than 0.');
+      return;
+    }
+
+    // Delivery timeline validation
+    if (!deliveryDays || deliveryDays.trim() === '') {
+      alert('⚠️ Delivery timeline is required. Please specify delivery days.');
       return;
     }
 
@@ -760,14 +771,24 @@ export default function EditQuotePage() {
             )}
             <div>
               <label className="block text-sm font-medium mb-2">Tax/GST (%)</label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={tax || ''}
-                onChange={(e) => setTax(parseFloat(e.target.value) || 0)}
-                className="w-full px-3 py-2 border rounded-lg"
-              />
+              {(() => {
+                const customer = customers.find(c => c.id === quote?.customerId);
+                const isInternational = customer && customer.country && customer.country !== 'India';
+                return isInternational ? (
+                  <div className="w-full px-3 py-2 border rounded-lg bg-gray-100 text-gray-500">
+                    0% (Not applicable for international customers)
+                  </div>
+                ) : (
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={tax || ''}
+                    onChange={(e) => setTax(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                );
+              })()}
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">📦 Packing Price (₹)</label>
