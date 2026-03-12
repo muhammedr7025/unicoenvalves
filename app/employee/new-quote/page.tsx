@@ -557,7 +557,7 @@ export default function NewQuotePage() {
                   };
                   setProducts(updatedProducts);
                 }}
-                showDiscount={user?.role === 'admin'}
+                showDiscount={true}
               />
             </div>
           )}

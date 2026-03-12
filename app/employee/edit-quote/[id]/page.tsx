@@ -488,7 +488,7 @@ export default function EditQuotePage() {
               };
               setProducts(updatedProducts);
             }}
-            showDiscount={user?.role === 'admin'}
+            showDiscount={true}
           />
         </div>
       )}
