@@ -15,8 +15,12 @@ export async function createCustomer(
   userId: string
 ): Promise<void> {
   try {
+    // Filter out undefined values — Firebase does not support them
+    const cleanData = Object.fromEntries(
+      Object.entries(customer).filter(([_, v]) => v !== undefined)
+    );
     await addDoc(collection(db, 'customers'), {
-      ...customer,
+      ...cleanData,
       createdBy: userId,
       createdAt: Timestamp.now(),
     });
@@ -135,7 +139,7 @@ export async function getAllCustomers(): Promise<Customer[]> {
         country: data.country,
         gst: data.gst,
         customerType: data.customerType || 'normal',
-        dealerMarginPercentage: data.dealerMarginPercentage || undefined,
+        dealerMarginPercentage: data.dealerMarginPercentage || null,
         createdAt: data.createdAt?.toDate() || new Date(),
         createdBy: data.createdBy,
       };
@@ -151,8 +155,12 @@ export async function updateCustomer(
   customer: Omit<Customer, 'id' | 'createdAt' | 'createdBy'>
 ): Promise<void> {
   try {
+    // Filter out undefined values — Firebase does not support them
+    const cleanData = Object.fromEntries(
+      Object.entries(customer).filter(([_, v]) => v !== undefined)
+    );
     const customerRef = doc(db, 'customers', customerId);
-    await updateDoc(customerRef, { ...customer });
+    await updateDoc(customerRef, cleanData);
   } catch (error: any) {
     throw new Error(error.message || 'Failed to update customer');
   }

@@ -242,6 +242,29 @@ export default function EditQuotePage() {
       return;
     }
 
+    // Custom pricing validation
+    if (pricingType === 'Custom') {
+      if (!customPricingLabel.trim()) {
+        alert('⚠️ Custom pricing label is required when using Custom pricing type.');
+        return;
+      }
+      const validCharges = customPricingCharges.filter(c => c.title.trim() && c.price > 0);
+      if (validCharges.length === 0) {
+        alert('⚠️ At least one custom charge with a title and price greater than 0 is required.');
+        return;
+      }
+      const invalidCharges = customPricingCharges.filter(c => c.title.trim() && c.price <= 0);
+      if (invalidCharges.length > 0) {
+        alert(`⚠️ All custom charges must have a price greater than 0. Check: ${invalidCharges.map(c => c.title).join(', ')}`);
+        return;
+      }
+      const missingTitles = customPricingCharges.filter(c => !c.title.trim() && c.price > 0);
+      if (missingTitles.length > 0) {
+        alert('⚠️ All custom charges must have a title.');
+        return;
+      }
+    }
+
     if (!customPaymentTerms.trim() && (advancePercentage + approvalPercentage + beforeDespatchPercentage) !== 100) {
       alert(`⚠️ Payment terms must total exactly 100%. Currently: ${advancePercentage + approvalPercentage + beforeDespatchPercentage}%. Please adjust before saving.`);
       return;
