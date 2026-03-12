@@ -285,6 +285,33 @@ export function useProductConfig({ initialProduct, series, materials, pricingMod
         if (!currentProduct.stemMaterialId) missingFields.push('Stem Material');
         if (!currentProduct.trimType) missingFields.push('Trim Type');
 
+        // Conditional validators: only required when the feature is available/enabled
+        // Cage: when series has cage, cage material must be selected
+        if (currentProduct.hasCage && !currentProduct.cageMaterialId) {
+            missingFields.push('Cage Material (Cage is available for this series)');
+        }
+        // Seal Ring: when series has seal ring, seal type must be selected
+        if (currentProduct.hasSealRing && !currentProduct.sealType) {
+            missingFields.push('Seal Ring Type (Seal Ring is available for this series)');
+        }
+        // Pilot Plug: when enabled, material must be selected
+        if (currentProduct.hasPilotPlug && !currentProduct.pilotPlugMaterialId) {
+            missingFields.push('Pilot Plug Material (Pilot Plug is enabled)');
+        }
+        // Handwheel: when enabled, all handwheel fields must be selected
+        if (currentProduct.hasHandwheel) {
+            if (!currentProduct.handwheelType) missingFields.push('Handwheel Type');
+            if (!currentProduct.handwheelSeries) missingFields.push('Handwheel Series');
+            if (!currentProduct.handwheelModel) missingFields.push('Handwheel Model');
+            if (!currentProduct.handwheelStandard) missingFields.push('Handwheel Material (Standard/Special)');
+        }
+        // Actuator: when enabled, all actuator fields must be selected
+        if (currentProduct.hasActuator) {
+            if (!currentProduct.actuatorType) missingFields.push('Actuator Type');
+            if (!currentProduct.actuatorSeries) missingFields.push('Actuator Series');
+            if (!currentProduct.actuatorModel) missingFields.push('Actuator Model');
+        }
+
         if (missingFields.length > 0) {
             alert(`❌ Please fill in the following required fields:\n\n${missingFields.map(f => `• ${f}`).join('\n')}`);
             return;
