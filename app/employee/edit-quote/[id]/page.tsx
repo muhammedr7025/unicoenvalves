@@ -286,11 +286,13 @@ export default function EditQuotePage() {
     setSaving(true);
 
     try {
-      // Calculate totals - discount applies only to product subtotal (not package/freight)
-      const baseTotals = calculateQuoteTotals(products, discount, tax);
-      const productSubtotal = baseTotals.subtotal;
-      const discountAmount = (productSubtotal * discount) / 100;
-      const discountedProductTotal = productSubtotal - discountAmount;
+      // Calculate totals using per-product discounts
+      const productSubtotal = products.reduce((sum, p) => sum + (p.lineTotal || 0), 0);
+      const totalDiscount = products.reduce((sum, p) => {
+        const pDiscount = p.discountPercentage || 0;
+        return sum + ((p.lineTotal || 0) * pDiscount / 100);
+      }, 0);
+      const discountedProductTotal = productSubtotal - totalDiscount;
       // Additional charges based on pricing type
       const freightToIncludeCalc = pricingType === 'F.O.R. Site' ? freightPrice : 0;
       const customChargesToInclude = pricingType === 'Custom' ? customPricingCharges.reduce((sum, c) => sum + (c.price || 0), 0) : 0;
@@ -307,8 +309,8 @@ export default function EditQuotePage() {
         // Products stored in subcollection - only keep count here
         productCount: products.length,
         subtotal: subtotalWithPackageAndFreight,
-        discount,
-        discountAmount: discountAmount,
+        discount: discount, // Common discount for reference
+        discountAmount: totalDiscount,
         tax,
         taxAmount: taxAmountWithPackageAndFreight,
         total: totalWithPackageAndFreight,
@@ -357,15 +359,12 @@ export default function EditQuotePage() {
     }
   };
 
-  // Calculate totals including package price and freight (for F.O.R.) for display
-  const baseTotals = products.length > 0
-    ? calculateQuoteTotals(products, discount, tax)
-    : { subtotal: 0, discountAmount: 0, taxableAmount: 0, taxAmount: 0, total: 0 };
-
-  // Discount applies only to product subtotal (not package price or freight)
-  // Freight is included in total only for F.O.R. pricing
-  const productSubtotalForDisplay = baseTotals.subtotal;
-  const displayDiscountAmount = (productSubtotalForDisplay * discount) / 100;
+  // Calculate totals using per-product discounts for display
+  const productSubtotalForDisplay = products.reduce((sum, p) => sum + (p.lineTotal || 0), 0);
+  const displayDiscountAmount = products.reduce((sum, p) => {
+    const pDiscount = p.discountPercentage || 0;
+    return sum + ((p.lineTotal || 0) * pDiscount / 100);
+  }, 0);
   const discountedProductTotal = productSubtotalForDisplay - displayDiscountAmount;
   const freightToInclude = pricingType === 'F.O.R. Site' ? freightPrice : 0;
   const displayCustomCharges = pricingType === 'Custom' ? customPricingCharges.reduce((sum, c) => sum + (c.price || 0), 0) : 0;
@@ -429,10 +428,67 @@ export default function EditQuotePage() {
             </button>
           </div>
 
+          {/* Common Discount - Apply All */}
+          {products.length > 0 && (
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm font-medium text-orange-800">🏷️ Common Discount (%):</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={discount || ''}
+                    onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                    className="w-20 px-2 py-1 border rounded-lg text-center text-sm border-orange-300 focus:ring-orange-500 focus:border-orange-500"
+                    placeholder="0"
+                  />
+                </div>
+                <button
+                  onClick={() => {
+                    const updatedProducts = products.map(p => ({
+                      ...p,
+                      discountPercentage: discount,
+                    }));
+                    setProducts(updatedProducts);
+                  }}
+                  className="bg-orange-500 text-white px-4 py-1.5 rounded-lg hover:bg-orange-600 text-sm font-medium"
+                >
+                  Apply to All
+                </button>
+                {discount > 0 && (
+                  <button
+                    onClick={() => {
+                      setDiscount(0);
+                      const updatedProducts = products.map(p => ({
+                        ...p,
+                        discountPercentage: 0,
+                      }));
+                      setProducts(updatedProducts);
+                    }}
+                    className="text-red-600 hover:text-red-800 text-sm underline"
+                  >
+                    Clear All Discounts
+                  </button>
+                )}
+              </div>
+              <p className="text-xs text-orange-600 mt-2">Set a common discount and click &quot;Apply to All&quot;, or adjust each product individually below.</p>
+            </div>
+          )}
+
           <ProductList
             products={products}
             onEdit={handleEditProduct}
             onRemove={handleRemoveProduct}
+            onDiscountChange={(index, discountPct) => {
+              const updatedProducts = [...products];
+              updatedProducts[index] = {
+                ...updatedProducts[index],
+                discountPercentage: discountPct,
+              };
+              setProducts(updatedProducts);
+            }}
+            showDiscount={user?.role === 'admin'}
           />
         </div>
       )}
@@ -895,7 +951,7 @@ export default function EditQuotePage() {
           <div className="border-t-4 border-gray-300 pt-6">
             <QuoteSummary
               subtotal={displaySubtotal}
-              productsSubtotal={baseTotals.subtotal}
+              productsSubtotal={productSubtotalForDisplay}
               discount={discount}
               discountAmount={displayDiscountAmount}
               tax={tax}
