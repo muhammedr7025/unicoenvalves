@@ -336,13 +336,15 @@ export default function QuoteDetailsPage() {
                 <th className="border border-gray-300 px-4 py-3 text-center font-semibold">S.No</th>
                 <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Tag No.</th>
                 <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Item Description</th>
-                <th className="border border-gray-300 px-4 py-3 text-right font-semibold">
-                  Unit Price (INR){quote.currencyExchangeRate ? ' / (USD)' : ''}
-                </th>
+                {quote.currencyExchangeRate && (
+                  <th className="border border-gray-300 px-4 py-3 text-right font-semibold">Unit Price (USD)</th>
+                )}
+                <th className="border border-gray-300 px-4 py-3 text-right font-semibold">Unit Price (INR)</th>
                 <th className="border border-gray-300 px-4 py-3 text-center font-semibold">Qty</th>
-                <th className="border border-gray-300 px-4 py-3 text-right font-semibold">
-                  Total Price (INR){quote.currencyExchangeRate ? ' / (USD)' : ''}
-                </th>
+                {quote.currencyExchangeRate && (
+                  <th className="border border-gray-300 px-4 py-3 text-right font-semibold">Total Price (USD)</th>
+                )}
+                <th className="border border-gray-300 px-4 py-3 text-right font-semibold">Total Price (INR)</th>
               </tr>
             </thead>
             <tbody>
@@ -365,28 +367,29 @@ export default function QuoteDetailsPage() {
                 const rate = quote.currencyExchangeRate;
                 const unitPrice = product.quantity > 0 ? (product.lineTotal || 0) / product.quantity : 0;
                 const lineTotal = product.lineTotal || 0;
+                const colSpanBase = rate ? 8 : 6;
 
                 return (
                   <tr key={index} className="hover:bg-gray-50">
                     <td className="border border-gray-300 px-4 py-3 text-center">{index + 1}</td>
                     <td className="border border-gray-300 px-4 py-3">{product.productTag || `Item ${index + 1}`}</td>
                     <td className="border border-gray-300 px-4 py-3 text-sm">{descParts.join(', ')}</td>
+                    {rate && (
+                      <td className="border border-gray-300 px-4 py-3 text-right font-medium text-blue-700">
+                        ${Math.round(unitPrice / rate).toLocaleString('en-US')}
+                      </td>
+                    )}
                     <td className="border border-gray-300 px-4 py-3 text-right font-medium">
-                      <div>₹{Math.round(unitPrice).toLocaleString('en-US')}</div>
-                      {rate && (
-                        <div className="text-xs text-blue-600 mt-0.5">
-                          ≈ ${Math.round(unitPrice / rate).toLocaleString('en-US')}
-                        </div>
-                      )}
+                      ₹{Math.round(unitPrice).toLocaleString('en-US')}
                     </td>
                     <td className="border border-gray-300 px-4 py-3 text-center">{product.quantity}</td>
+                    {rate && (
+                      <td className="border border-gray-300 px-4 py-3 text-right font-bold text-blue-700">
+                        ${Math.round(lineTotal / rate).toLocaleString('en-US')}
+                      </td>
+                    )}
                     <td className="border border-gray-300 px-4 py-3 text-right font-bold text-green-700">
-                      <div>₹{Math.round(lineTotal).toLocaleString('en-US')}</div>
-                      {rate && (
-                        <div className="text-xs text-blue-600 font-medium mt-0.5">
-                          ≈ ${Math.round(lineTotal / rate).toLocaleString('en-US')}
-                        </div>
-                      )}
+                      ₹{Math.round(lineTotal).toLocaleString('en-US')}
                     </td>
                   </tr>
                 );
@@ -395,52 +398,45 @@ export default function QuoteDetailsPage() {
             <tfoot>
               {(() => {
                 const rate = quote.currencyExchangeRate;
-                const dualPrice = (inrValue: number) => (
-                  <>
-                    <div>₹{Math.round(inrValue).toLocaleString('en-US')}</div>
-                    {rate && (
-                      <div className="text-xs text-blue-600 mt-0.5">
-                        ≈ ${Math.round(inrValue / rate).toLocaleString('en-US')}
-                      </div>
-                    )}
-                  </>
-                );
+                const colSpanLabel = rate ? 6 : 5;
                 const subtotalINR = quote.products.reduce((sum, p) => sum + (p.lineTotal || 0), 0);
+
+                const FooterRow = ({ label, inrVal, className: rowClass = 'bg-gray-50', valClass = '' }: {
+                  label: string; inrVal: number; className?: string; valClass?: string;
+                }) => (
+                  <tr className={rowClass}>
+                    <td colSpan={colSpanLabel} className="border border-gray-300 px-4 py-3 text-right">{label}</td>
+                    {rate && (
+                      <td className={`border border-gray-300 px-4 py-3 text-right text-blue-700 font-medium ${valClass}`}>
+                        ${Math.round(inrVal / rate).toLocaleString('en-US')}
+                      </td>
+                    )}
+                    <td className={`border border-gray-300 px-4 py-3 text-right ${valClass}`}>
+                      ₹{Math.round(inrVal).toLocaleString('en-US')}
+                    </td>
+                  </tr>
+                );
+
                 return (
                   <>
-                    <tr className="bg-gray-100 font-bold">
-                      <td colSpan={5} className="border border-gray-300 px-4 py-3 text-right">Subtotal:</td>
-                      <td className="border border-gray-300 px-4 py-3 text-right text-green-700">
-                        {dualPrice(subtotalINR)}
-                      </td>
-                    </tr>
+                    <FooterRow label="Subtotal:" inrVal={subtotalINR} className="bg-gray-100 font-bold" valClass="text-green-700 font-bold" />
                     {quote.packagePrice && quote.packagePrice > 0 && (
-                      <tr className="bg-gray-50">
-                        <td colSpan={5} className="border border-gray-300 px-4 py-3 text-right">Packing Charges:</td>
-                        <td className="border border-gray-300 px-4 py-3 text-right">
-                          {dualPrice(quote.packagePrice)}
-                        </td>
-                      </tr>
+                      <FooterRow label="Packing Charges:" inrVal={quote.packagePrice} />
                     )}
                     {(quote.pricingType === 'F.O.R. Site' || (quote.pricingType as string) === 'F.O.R.') && quote.freightPrice && quote.freightPrice > 0 && (
-                      <tr className="bg-cyan-50">
-                        <td colSpan={5} className="border border-gray-300 px-4 py-3 text-right">🚛 Freight Charges:</td>
-                        <td className="border border-gray-300 px-4 py-3 text-right text-cyan-700 font-medium">
-                          {dualPrice(quote.freightPrice)}
-                        </td>
-                      </tr>
+                      <FooterRow label="🚛 Freight Charges:" inrVal={quote.freightPrice} className="bg-cyan-50" valClass="text-cyan-700 font-medium" />
                     )}
                     {/* Discount hidden from employees */}
-                    <tr className="bg-gray-50">
-                      <td colSpan={5} className="border border-gray-300 px-4 py-3 text-right">{rate ? 'Tax' : 'IGST'} ({quote.tax || 0}%):</td>
-                      <td className="border border-gray-300 px-4 py-3 text-right">
-                        {dualPrice(quote.taxAmount || 0)}
-                      </td>
-                    </tr>
+                    <FooterRow label={`${rate ? 'Tax' : 'IGST'} (${quote.tax || 0}%):`} inrVal={quote.taxAmount || 0} />
                     <tr className="bg-green-100 font-bold text-lg">
-                      <td colSpan={5} className="border border-gray-300 px-4 py-4 text-right">Grand Total:</td>
+                      <td colSpan={colSpanLabel} className="border border-gray-300 px-4 py-4 text-right">Grand Total:</td>
+                      {rate && (
+                        <td className="border border-gray-300 px-4 py-4 text-right text-green-700 font-bold">
+                          ${Math.round((quote.total || 0) / rate).toLocaleString('en-US')}
+                        </td>
+                      )}
                       <td className="border border-gray-300 px-4 py-4 text-right text-green-700">
-                        {dualPrice(quote.total || 0)}
+                        ₹{Math.round(quote.total || 0).toLocaleString('en-US')}
                       </td>
                     </tr>
                   </>
