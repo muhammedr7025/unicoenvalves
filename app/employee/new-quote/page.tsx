@@ -932,6 +932,7 @@ export default function NewQuotePage() {
                 pricingType={pricingType}
                 customPricingCharges={customPricingCharges}
                 showDiscount={user?.role === 'admin'}
+                currencyExchangeRate={selectedCustomer && selectedCustomer.country !== 'India' ? currencyExchangeRate : null}
               />
 
 

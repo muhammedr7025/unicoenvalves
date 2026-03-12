@@ -904,6 +904,10 @@ export default function EditQuotePage() {
               pricingType={pricingType}
               customPricingCharges={customPricingCharges}
               showDiscount={user?.role === 'admin'}
+              currencyExchangeRate={(() => {
+                const customer = customers.find(c => c.id === quote?.customerId);
+                return customer && customer.country !== 'India' ? currencyExchangeRate : null;
+              })()}
             />
 
 
