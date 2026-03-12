@@ -122,12 +122,12 @@ const addHeader = async (doc: jsPDF, pageWidth: number, logoBase64?: string, sho
     if (showTitle) {
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(0, 0, 139); // Dark blue
+        doc.setTextColor(0, 0, 0); // Black
         doc.text('Price Summary for Control Valves & Accessories', pageWidth / 2, 35, { align: 'center' });
     }
 
     // Horizontal line under header
-    doc.setDrawColor(0, 0, 139);
+    doc.setDrawColor(0, 0, 0);
     doc.setLineWidth(0.5);
     doc.line(40, 55, pageWidth - 40, 55);
 };
@@ -138,11 +138,11 @@ const addHeaderSync = (doc: jsPDF, pageWidth: number) => {
     // Title - centered
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 139); // Dark blue
+    doc.setTextColor(0, 0, 0); // Black
     doc.text('Price Summary for Control Valves & Accessories', pageWidth / 2, 35, { align: 'center' });
 
     // Horizontal line under header
-    doc.setDrawColor(0, 0, 139);
+    doc.setDrawColor(0, 0, 0);
     doc.setLineWidth(0.5);
     doc.line(40, 55, pageWidth - 40, 55);
 };
@@ -151,10 +151,10 @@ const addHeaderSync = (doc: jsPDF, pageWidth: number) => {
 const addFooter = (doc: jsPDF, pageWidth: number, pageHeight: number) => {
     const footerY = pageHeight - 40;
 
-    // Company name and address in red/dark red
+    // Company name and address
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(139, 0, 0); // Dark red
+    doc.setTextColor(0, 0, 0); // Black
     doc.text('Unicorn Valves Private Limited', pageWidth / 2, footerY, { align: 'center' });
 
     doc.setFont('helvetica', 'normal');
@@ -170,10 +170,6 @@ const addFooter = (doc: jsPDF, pageWidth: number, pageHeight: number) => {
         footerY + 18,
         { align: 'center' }
     );
-
-    // Website
-    doc.setTextColor(0, 0, 139); // Blue for website
-    doc.text('www.unicorn-valves.com', pageWidth / 2, footerY + 26, { align: 'center' });
 };
 
 // Helper function to load logo as base64
@@ -453,31 +449,43 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(9);
 
-    const infoData = [
-        ['Customer:', customerDetails.name || quote.customerName, 'Unicorn Ref:', quote.quoteNumber],
-        ['Enquiry Ref:', quote.enquiryId || 'N/A', 'Date:', formatDate(quote.createdAt)],
-        ['Project:', quote.projectName || '-', '', ''],
-    ];
+    // Customer info - clean text layout (no table)
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(0, 0, 0);
+    const leftX = 50;
+    const rightX = pageWidth / 2 + 20;
+    const labelOffset = 75;
+    const rightLabelOffset = 80;
 
-    autoTable(doc, {
-        startY: yPos,
-        body: infoData,
-        theme: 'plain',
-        styles: {
-            fontSize: 9,
-            cellPadding: 6,
-            lineColor: [200, 200, 200],
-            lineWidth: 0.5,
-        },
-        columnStyles: {
-            0: { fontStyle: 'bold', cellWidth: 90, fillColor: [240, 240, 240] },
-            1: { cellWidth: 190 },
-            2: { fontStyle: 'bold', cellWidth: 90, fillColor: [240, 240, 240] },
-            3: { cellWidth: 130 },
-        },
-    });
+    // Row 1: Customer + Unicorn Ref
+    doc.setFont('helvetica', 'bold');
+    doc.text('Customer:', leftX, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text(customerDetails.name || quote.customerName, leftX + labelOffset, yPos);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Unicorn Ref:', rightX, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text(quote.quoteNumber, rightX + rightLabelOffset, yPos);
+    yPos += 15;
 
-    yPos = (doc as any).lastAutoTable.finalY + 25;
+    // Row 2: Enquiry Ref + Date
+    doc.setFont('helvetica', 'bold');
+    doc.text('Enquiry Ref:', leftX, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text(quote.enquiryId || 'N/A', leftX + labelOffset, yPos);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Date:', rightX, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text(formatDate(quote.createdAt), rightX + rightLabelOffset, yPos);
+    yPos += 15;
+
+    // Row 3: Project
+    doc.setFont('helvetica', 'bold');
+    doc.text('Project:', leftX, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text(quote.projectName || '-', leftX + labelOffset, yPos);
+    yPos += 25;
 
     // Products Table Header
     doc.setFontSize(11);
@@ -630,7 +638,10 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
     // Discount row removed as per request
 
 
-    summaryRows.push([`${taxLabel(quote)}(${quote.tax || 18} %)`, formatCurrency(quote.taxAmount, quote)]);
+    // Only show tax for Indian customers
+    if (!isInternationalQuote(quote)) {
+        summaryRows.push([`${taxLabel(quote)}(${quote.tax || 18} %)`, formatCurrency(quote.taxAmount, quote)]);
+    }
 
 
     autoTable(doc, {
@@ -698,7 +709,7 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
     // Commercial Terms & Conditions
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 139);
+    doc.setTextColor(0, 0, 0);
     doc.text('COMMERCIAL TERMS & CONDITIONS', 50, yPos);
 
     yPos += 20;
@@ -714,12 +725,15 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
         ['Payment Terms', formatPaymentTerms(quote.paymentTerms)],
     ];
 
-    // Only show Freight row if NOT F.O.R. (since freight is included in F.O.R.)
-    if (!isFOR) {
+    // Only show Freight row if NOT F.O.R. and NOT Custom (freight is included for F.O.R., not applicable for Custom)
+    if (!isFOR && !isCustom) {
         termsData.push(['Freight', 'To be borne by buyer']);
     }
 
-    termsData.push(['Insurance', 'To be arranged by buyer']);
+    // Only show Insurance if NOT Custom pricing
+    if (!isCustom) {
+        termsData.push(['Insurance', 'To be arranged by buyer']);
+    }
     termsData.push(['Manufacturer', 'Unicorn Valves Private Limited']);
 
 
@@ -927,31 +941,43 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
     priceSummaryDoc.setTextColor(0, 0, 0);
     priceSummaryDoc.setFontSize(9);
 
-    const infoData = [
-        ['Customer:', customerDetails.name || quote.customerName, 'Unicorn Ref:', quote.quoteNumber],
-        ['Enquiry Ref:', quote.enquiryId || 'N/A', 'Date:', formatDate(quote.createdAt)],
-        ['Project:', quote.projectName || '-', '', ''],
-    ];
+    // Customer info - clean text layout (no table)
+    priceSummaryDoc.setFont('helvetica', 'normal');
+    priceSummaryDoc.setFontSize(9);
+    priceSummaryDoc.setTextColor(0, 0, 0);
+    const leftXCombined = 50;
+    const rightXCombined = pricePageWidth / 2 + 20;
+    const labelOffsetCombined = 75;
+    const rightLabelOffsetCombined = 80;
 
-    autoTable(priceSummaryDoc, {
-        startY: yPos,
-        body: infoData,
-        theme: 'plain',
-        styles: {
-            fontSize: 9,
-            cellPadding: 6,
-            lineColor: [200, 200, 200],
-            lineWidth: 0.5,
-        },
-        columnStyles: {
-            0: { fontStyle: 'bold', cellWidth: 90, fillColor: [240, 240, 240] },
-            1: { cellWidth: 190 },
-            2: { fontStyle: 'bold', cellWidth: 90, fillColor: [240, 240, 240] },
-            3: { cellWidth: 130 },
-        },
-    });
+    // Row 1: Customer + Unicorn Ref
+    priceSummaryDoc.setFont('helvetica', 'bold');
+    priceSummaryDoc.text('Customer:', leftXCombined, yPos);
+    priceSummaryDoc.setFont('helvetica', 'normal');
+    priceSummaryDoc.text(customerDetails.name || quote.customerName, leftXCombined + labelOffsetCombined, yPos);
+    priceSummaryDoc.setFont('helvetica', 'bold');
+    priceSummaryDoc.text('Unicorn Ref:', rightXCombined, yPos);
+    priceSummaryDoc.setFont('helvetica', 'normal');
+    priceSummaryDoc.text(quote.quoteNumber, rightXCombined + rightLabelOffsetCombined, yPos);
+    yPos += 15;
 
-    yPos = (priceSummaryDoc as any).lastAutoTable.finalY + 25;
+    // Row 2: Enquiry Ref + Date
+    priceSummaryDoc.setFont('helvetica', 'bold');
+    priceSummaryDoc.text('Enquiry Ref:', leftXCombined, yPos);
+    priceSummaryDoc.setFont('helvetica', 'normal');
+    priceSummaryDoc.text(quote.enquiryId || 'N/A', leftXCombined + labelOffsetCombined, yPos);
+    priceSummaryDoc.setFont('helvetica', 'bold');
+    priceSummaryDoc.text('Date:', rightXCombined, yPos);
+    priceSummaryDoc.setFont('helvetica', 'normal');
+    priceSummaryDoc.text(formatDate(quote.createdAt), rightXCombined + rightLabelOffsetCombined, yPos);
+    yPos += 15;
+
+    // Row 3: Project
+    priceSummaryDoc.setFont('helvetica', 'bold');
+    priceSummaryDoc.text('Project:', leftXCombined, yPos);
+    priceSummaryDoc.setFont('helvetica', 'normal');
+    priceSummaryDoc.text(quote.projectName || '-', leftXCombined + labelOffsetCombined, yPos);
+    yPos += 25;
 
     // Products Table Header
     priceSummaryDoc.setFontSize(11);
@@ -1098,7 +1124,10 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
     // Discount row removed as per request
 
 
-    summaryRowsCombined.push([`${taxLabel(quote)}(${quote.tax || 18} %)`, formatCurrency(quote.taxAmount, quote)]);
+    // Only show tax for Indian customers
+    if (!isInternationalQuote(quote)) {
+        summaryRowsCombined.push([`${taxLabel(quote)}(${quote.tax || 18} %)`, formatCurrency(quote.taxAmount, quote)]);
+    }
 
 
 
@@ -1164,7 +1193,7 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
     // Commercial Terms & Conditions
     priceSummaryDoc.setFontSize(12);
     priceSummaryDoc.setFont('helvetica', 'bold');
-    priceSummaryDoc.setTextColor(0, 0, 139);
+    priceSummaryDoc.setTextColor(0, 0, 0);
     priceSummaryDoc.text('COMMERCIAL TERMS & CONDITIONS', 50, yPos);
 
     yPos += 20;
@@ -1180,12 +1209,15 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
         ['Payment Terms', formatPaymentTerms(quote.paymentTerms)],
     ];
 
-    // Only show Freight row if NOT F.O.R. (since freight is included in F.O.R.)
-    if (!isFORCombined) {
+    // Only show Freight row if NOT F.O.R. and NOT Custom
+    if (!isFORCombined && !isCustomCombined) {
         termsDataCombined.push(['Freight', 'To be borne by buyer']);
     }
 
-    termsDataCombined.push(['Insurance', 'To be arranged by buyer']);
+    // Only show Insurance if NOT Custom pricing
+    if (!isCustomCombined) {
+        termsDataCombined.push(['Insurance', 'To be arranged by buyer']);
+    }
     termsDataCombined.push(['Manufacturer', 'Unicorn Valves Private Limited']);
 
 
@@ -1285,7 +1317,7 @@ async function generateUnpricedSummaryPDF(quote: Quote, customerDetails: any) {
     // Title
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 139);
+    doc.setTextColor(0, 0, 0);
     doc.text('PRICE SUMMARY (UNPRICED)', pageWidth / 2, yPos, { align: 'center' });
 
     yPos += 30;
@@ -1320,7 +1352,7 @@ async function generateUnpricedSummaryPDF(quote: Quote, customerDetails: any) {
     // ITEM DETAILS Header
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 139);
+    doc.setTextColor(0, 0, 0);
     doc.text('ITEM DETAILS', 50, yPos);
 
     yPos += 15;
@@ -1442,7 +1474,10 @@ async function generateUnpricedSummaryPDF(quote: Quote, customerDetails: any) {
         summaryRows.push([`Discount (${quote.discount}%)`, 'Quoted']);
     }
 
-    summaryRows.push([`${taxLabel(quote)}(${quote.tax || 18} %)`, 'Quoted']);
+    // Only show tax for Indian customers
+    if (!isInternationalQuote(quote)) {
+        summaryRows.push([`${taxLabel(quote)}(${quote.tax || 18} %)`, 'Quoted']);
+    }
 
     autoTable(doc, {
         startY: yPos,
@@ -1495,7 +1530,7 @@ async function generateUnpricedSummaryPDF(quote: Quote, customerDetails: any) {
     // Commercial Terms & Conditions - same as priced
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 139);
+    doc.setTextColor(0, 0, 0);
     doc.text('COMMERCIAL TERMS & CONDITIONS', 50, yPos);
 
     yPos += 20;
@@ -1511,12 +1546,15 @@ async function generateUnpricedSummaryPDF(quote: Quote, customerDetails: any) {
         ['Payment Terms', formatPaymentTerms(quote.paymentTerms)],
     ];
 
-    // Only show Freight row if NOT F.O.R. (since freight is included in F.O.R.)
-    if (!isFOR) {
+    // Only show Freight row if NOT F.O.R. and NOT Custom
+    if (!isFOR && !isCustom) {
         unpricedTermsData.push(['Freight', 'To be borne by buyer']);
     }
 
-    unpricedTermsData.push(['Insurance', 'To be arranged by buyer']);
+    // Only show Insurance if NOT Custom pricing
+    if (!isCustom) {
+        unpricedTermsData.push(['Insurance', 'To be arranged by buyer']);
+    }
     unpricedTermsData.push(['Manufacturer', 'Unicorn Valves Private Limited']);
 
     autoTable(doc, {

@@ -854,13 +854,10 @@ export default function NewQuotePage() {
                   />
                 </div>
               )}
-              <div>
-                <label className="block text-sm font-medium mb-2">Tax/GST (%)</label>
-                {selectedCustomer && selectedCustomer.country && selectedCustomer.country !== 'India' ? (
-                  <div className="w-full px-3 py-2 border rounded-lg bg-gray-100 text-gray-500">
-                    0% (Not applicable for international customers)
-                  </div>
-                ) : (
+              {/* Tax field - hidden for international customers */}
+              {!(selectedCustomer && selectedCustomer.country && selectedCustomer.country !== 'India') && (
+                <div>
+                  <label className="block text-sm font-medium mb-2">Tax/GST (%)</label>
                   <input
                     type="number"
                     min="0"
@@ -869,8 +866,8 @@ export default function NewQuotePage() {
                     onChange={(e) => setTax(parseFloat(e.target.value) || 0)}
                     className="w-full px-3 py-2 border rounded-lg"
                   />
-                )}
-              </div>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium mb-2">📦 Packing Price (₹)</label>
                 <input

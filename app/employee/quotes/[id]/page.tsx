@@ -427,7 +427,10 @@ export default function QuoteDetailsPage() {
                       <FooterRow label="🚛 Freight Charges:" inrVal={quote.freightPrice} className="bg-cyan-50" valClass="text-cyan-700 font-medium" />
                     )}
                     {/* Discount hidden from employees */}
-                    <FooterRow label={`${rate ? 'Tax' : 'IGST'} (${quote.tax || 0}%):`} inrVal={quote.taxAmount || 0} />
+                    {/* Tax hidden for international customers */}
+                    {!rate && (
+                      <FooterRow label={`IGST (${quote.tax || 0}%):`} inrVal={quote.taxAmount || 0} />
+                    )}
                     <tr className="bg-green-100 font-bold text-lg">
                       <td colSpan={colSpanLabel} className="border border-gray-300 px-4 py-4 text-right">Grand Total:</td>
                       {rate && (

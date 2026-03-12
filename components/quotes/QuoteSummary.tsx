@@ -88,7 +88,10 @@ export default function QuoteSummary({
                     <SummaryRow label={`Discount:`} inrVal={discountAmount} prefix="-" color="text-red-600" />
                 )}
 
-                <SummaryRow label={`${isInternational ? 'Tax' : 'IGST'} (${tax}%):`} inrVal={taxAmount} />
+                {/* Tax hidden for international customers */}
+                {!isInternational && (
+                    <SummaryRow label={`IGST (${tax}%):`} inrVal={taxAmount} />
+                )}
 
                 {/* Grand Total */}
                 <div className="flex justify-between items-baseline text-2xl font-bold text-gray-900 pt-4 border-t-4 border-green-600">

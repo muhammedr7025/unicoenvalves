@@ -827,16 +827,12 @@ export default function EditQuotePage() {
                 />
               </div>
             )}
-            <div>
-              <label className="block text-sm font-medium mb-2">Tax/GST (%)</label>
-              {(() => {
-                const customer = customers.find(c => c.id === quote?.customerId);
-                const isInternational = customer && customer.country && customer.country !== 'India';
-                return isInternational ? (
-                  <div className="w-full px-3 py-2 border rounded-lg bg-gray-100 text-gray-500">
-                    0% (Not applicable for international customers)
-                  </div>
-                ) : (
+            {(() => {
+              const customer = customers.find(c => c.id === quote?.customerId);
+              const isInternational = customer && customer.country && customer.country !== 'India';
+              return !isInternational ? (
+                <div>
+                  <label className="block text-sm font-medium mb-2">Tax/GST (%)</label>
                   <input
                     type="number"
                     min="0"
@@ -845,9 +841,9 @@ export default function EditQuotePage() {
                     onChange={(e) => setTax(parseFloat(e.target.value) || 0)}
                     className="w-full px-3 py-2 border rounded-lg"
                   />
-                );
-              })()}
-            </div>
+                </div>
+              ) : null;
+            })()}
             <div>
               <label className="block text-sm font-medium mb-2">📦 Packing Price (₹)</label>
               <input
