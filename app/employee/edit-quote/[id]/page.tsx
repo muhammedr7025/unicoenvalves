@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
@@ -85,6 +85,55 @@ export default function EditQuotePage() {
       fetchQuote(params.id as string);
     }
   }, [params.id]);
+
+  // Recalculate all products when agentCommission changes
+  const initialLoadDone = useRef(false);
+  useEffect(() => {
+    if (!initialLoadDone.current) {
+      // Skip first render — products will be loaded with correct values
+      initialLoadDone.current = true;
+      return;
+    }
+    if (products.length === 0) return;
+
+    const roundToTen = (n: number): number => Math.ceil(n / 10) * 10;
+
+    const recalculated = products.map(p => {
+      // Start from unitCost and reapply negotiation margin → agent commission → discount
+      const unitCost = p.unitCost || 0;
+      const negMargin = p.negotiationMarginPercentage || 0;
+      const negFactor = negMargin >= 100 ? 1 : (1 - negMargin / 100);
+      let totalCost = unitCost / negFactor;
+
+      // Agent commission: Price * (1 - AgentCommission%)
+      if (agentCommission > 0) {
+        const commissionAmount = (totalCost * agentCommission) / 100;
+        totalCost = totalCost - commissionAmount;
+      }
+
+      // Per-product discount
+      const discPct = p.discountPercentage || 0;
+      let discountAmount = 0;
+      if (discPct > 0) {
+        discountAmount = (totalCost * discPct) / 100;
+        totalCost = totalCost - discountAmount;
+      }
+
+      totalCost = roundToTen(totalCost);
+      const lineTotal = roundToTen(totalCost * (p.quantity || 1));
+
+      return {
+        ...p,
+        dealerMarginPercentage: agentCommission,
+        dealerMarginAmount: agentCommission > 0 ? (unitCost / negFactor) * agentCommission / 100 : 0,
+        discountAmount,
+        productTotalCost: totalCost,
+        lineTotal,
+      };
+    });
+
+    setProducts(recalculated);
+  }, [agentCommission]);
 
   const fetchInitialData = async () => {
     const [customersData, allMaterials, seriesData, adminExchangeRate] = await Promise.all([

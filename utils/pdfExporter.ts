@@ -19,27 +19,9 @@ const COMPANY = {
     cin: 'CIN: U29199TN2015PTC099699',
 };
 
-// Helper function to format currency with ₹ symbol
+// Helper function to format currency - Rs. for Helvetica compatibility in jsPDF
 const formatINR = (amount: number): string => {
-    return `\u20B9${Math.round(amount).toLocaleString('en-US')}`;
-};
-
-// Helper function to load NotoSans font for ₹ symbol support
-const loadNotoSansFont = async (doc: jsPDF): Promise<void> => {
-    try {
-        const response = await fetch('/fonts/NotoSans-Regular.ttf');
-        const arrayBuffer = await response.arrayBuffer();
-        const fontBase64 = btoa(
-            new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-        );
-        doc.addFileToVFS('NotoSans-Regular.ttf', fontBase64);
-        doc.addFont('NotoSans-Regular.ttf', 'NotoSans', 'normal');
-        doc.addFont('NotoSans-Regular.ttf', 'NotoSans', 'bold');
-        doc.setFont('NotoSans');
-    } catch (error) {
-        console.error('Error loading NotoSans font:', error);
-        // Fallback to helvetica if font fails to load
-    }
+    return `Rs. ${Math.round(amount).toLocaleString('en-US')}`;
 };
 
 // Helper: check if quote is for international (non-Indian) customer
@@ -120,7 +102,7 @@ const formatPaymentTerms = (paymentTerms?: PaymentTerms): string => {
 
 // Function to add header with logo on top right
 // showTitle: if false, only shows logo and line (for cover letter)
-const addHeader = async (doc: jsPDF, pageWidth: number, logoBase64?: string, showTitle: boolean = true, fontName: string = 'NotoSans') => {
+const addHeader = async (doc: jsPDF, pageWidth: number, logoBase64?: string, showTitle: boolean = true) => {
     // Add logo on top right if available
     if (logoBase64) {
         try {
@@ -138,7 +120,7 @@ const addHeader = async (doc: jsPDF, pageWidth: number, logoBase64?: string, sho
     // Title - centered (only for price summary and combined PDFs)
     if (showTitle) {
         doc.setFontSize(12);
-        doc.setFont(fontName, 'bold');
+        doc.setFont('helvetica', 'bold');
         doc.setTextColor(0, 0, 0); // Black
         doc.text('Price Summary for Control Valves & Accessories', pageWidth / 2, 35, { align: 'center' });
     }
@@ -154,7 +136,7 @@ const addHeader = async (doc: jsPDF, pageWidth: number, logoBase64?: string, sho
 const addHeaderSync = (doc: jsPDF, pageWidth: number) => {
     // Title - centered
     doc.setFontSize(12);
-    doc.setFont('NotoSans', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.setTextColor(0, 0, 0); // Black
     doc.text('Price Summary for Control Valves & Accessories', pageWidth / 2, 35, { align: 'center' });
 
@@ -165,16 +147,16 @@ const addHeaderSync = (doc: jsPDF, pageWidth: number) => {
 };
 
 // Function to add footer with company address (like reference PDF)
-const addFooter = (doc: jsPDF, pageWidth: number, pageHeight: number, fontName: string = 'NotoSans') => {
+const addFooter = (doc: jsPDF, pageWidth: number, pageHeight: number) => {
     const footerY = pageHeight - 40;
 
     // Company name and address
     doc.setFontSize(8);
-    doc.setFont(fontName, 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.setTextColor(0, 0, 0); // Black
     doc.text('Unicorn Valves Private Limited', pageWidth / 2, footerY, { align: 'center' });
 
-    doc.setFont(fontName, 'normal');
+    doc.setFont('helvetica', 'normal');
     doc.text(
         'SF No : 100/2B, Valukkuparai P.O., Marichettipathy Road, Nachipalayam,',
         pageWidth / 2,
@@ -312,9 +294,6 @@ export async function generateCoverLetterPDF(quote: Quote, customerDetails: any)
     // Load logo
     const logoBase64 = await loadLogoBase64();
 
-    // Load NotoSans font for ₹ symbol support
-    await loadNotoSansFont(doc);
-
     // Add header with logo only (no title for cover letter)
     await addHeader(doc, pageWidth, logoBase64, false);
 
@@ -322,7 +301,7 @@ export async function generateCoverLetterPDF(quote: Quote, customerDetails: any)
 
     // Date and Location (Left side) - no title for cover letter
     doc.setFontSize(10);
-    doc.setFont('NotoSans', 'normal');
+    doc.setFont('helvetica', 'normal');
     doc.setTextColor(0, 0, 0);
     doc.text('Coimbatore, INDIA', 50, yPos);
     yPos += 15;
@@ -332,9 +311,9 @@ export async function generateCoverLetterPDF(quote: Quote, customerDetails: any)
 
 
     // Customer Details (To Section)
-    doc.setFont('NotoSans', 'bold');
+    doc.setFont('helvetica', 'bold');
     yPos += 15;
-    doc.setFont('NotoSans', 'normal');
+    doc.setFont('helvetica', 'normal');
     doc.text(customerDetails.name || quote.customerName, 50, yPos);
     yPos += 15;
 
@@ -371,11 +350,11 @@ export async function generateCoverLetterPDF(quote: Quote, customerDetails: any)
     yPos += 20;
 
     // Offer comprises section
-    doc.setFont('NotoSans', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.text('Our Offer comprises of the following:', 50, yPos);
     yPos += 20;
 
-    doc.setFont('NotoSans', 'normal');
+    doc.setFont('helvetica', 'normal');
     const offerItems = [
         '1.  Covering Letter',
         '2.  Priced Bid with Commercial Terms and Conditions',
@@ -409,7 +388,7 @@ export async function generateCoverLetterPDF(quote: Quote, customerDetails: any)
     yPos += 30;
 
     // Thanking you
-    doc.setFont('NotoSans', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.text('Thanking you,', 50, yPos);
     yPos += 15;
     doc.text('Yours faithfully,', 50, yPos);
@@ -417,24 +396,24 @@ export async function generateCoverLetterPDF(quote: Quote, customerDetails: any)
     yPos += 30;
 
     // For company
-    doc.setFont('NotoSans', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.text(`For ${COMPANY.name}`, 50, yPos);
 
     yPos += 40;
 
     // Signature space
-    doc.setFont('NotoSans', 'normal');
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.text('_________________________', 50, yPos);
 
     yPos += 15;
 
     // Employee details
-    doc.setFont('NotoSans', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
     doc.text(quote.createdByName, 50, yPos);
     yPos += 13;
-    doc.setFont('NotoSans', 'normal');
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.text('Assistant Manager - Application Engineering', 50, yPos);
     yPos += 12;
@@ -460,9 +439,6 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
     // Load logo
     const logoBase64 = await loadLogoBase64();
 
-    // Load NotoSans font for ₹ symbol support
-    await loadNotoSansFont(doc);
-
     // Add header with logo
     await addHeader(doc, pageWidth, logoBase64);
 
@@ -473,7 +449,7 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
     doc.setFontSize(9);
 
     // Customer info - clean text layout (no table)
-    doc.setFont('NotoSans', 'normal');
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(0, 0, 0);
     const leftX = 50;
@@ -482,37 +458,37 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
     const rightLabelOffset = 80;
 
     // Row 1: Customer + Unicorn Ref
-    doc.setFont('NotoSans', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.text('Customer:', leftX, yPos);
-    doc.setFont('NotoSans', 'normal');
+    doc.setFont('helvetica', 'normal');
     doc.text(customerDetails.name || quote.customerName, leftX + labelOffset, yPos);
-    doc.setFont('NotoSans', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.text('Unicorn Ref:', rightX, yPos);
-    doc.setFont('NotoSans', 'normal');
+    doc.setFont('helvetica', 'normal');
     doc.text(quote.quoteNumber, rightX + rightLabelOffset, yPos);
     yPos += 15;
 
     // Row 2: Enquiry Ref + Date
-    doc.setFont('NotoSans', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.text('Enquiry Ref:', leftX, yPos);
-    doc.setFont('NotoSans', 'normal');
+    doc.setFont('helvetica', 'normal');
     doc.text(quote.enquiryId || 'N/A', leftX + labelOffset, yPos);
-    doc.setFont('NotoSans', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.text('Date:', rightX, yPos);
-    doc.setFont('NotoSans', 'normal');
+    doc.setFont('helvetica', 'normal');
     doc.text(formatDate(quote.createdAt), rightX + rightLabelOffset, yPos);
     yPos += 15;
 
     // Row 3: Project
-    doc.setFont('NotoSans', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.text('Project:', leftX, yPos);
-    doc.setFont('NotoSans', 'normal');
+    doc.setFont('helvetica', 'normal');
     doc.text(quote.projectName || '-', leftX + labelOffset, yPos);
     yPos += 25;
 
     // Products Table Header
     doc.setFontSize(11);
-    doc.setFont('NotoSans', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.text('ITEM DETAILS', 50, yPos);
 
     yPos += 15;
@@ -731,7 +707,7 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
 
     // Commercial Terms & Conditions
     doc.setFontSize(12);
-    doc.setFont('NotoSans', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.setTextColor(0, 0, 0);
     doc.text('COMMERCIAL TERMS & CONDITIONS', 50, yPos);
 
@@ -788,16 +764,16 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
 
     // Signature Section
     doc.setFontSize(10);
-    doc.setFont('NotoSans', 'normal');
+    doc.setFont('helvetica', 'normal');
     doc.setTextColor(0, 0, 0);
     doc.text('For Unicorn Valves Private Limited,', 50, yPos);
 
     yPos += 40;
 
-    doc.setFont('NotoSans', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.text(quote.createdByName, 50, yPos);
     yPos += 13;
-    doc.setFont('NotoSans', 'normal');
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.text('Assistant Manager - Application Engineering', 50, yPos);
     yPos += 12;
@@ -822,9 +798,6 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
     const pageWidth = coverLetterDoc.internal.pageSize.getWidth();
     const pageHeight = coverLetterDoc.internal.pageSize.getHeight();
 
-    // Load NotoSans font for ₹ symbol support
-    await loadNotoSansFont(coverLetterDoc);
-
     // Add header with logo only (no title for cover letter)
     await addHeader(coverLetterDoc, pageWidth, logoBase64, false);
 
@@ -832,7 +805,7 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
 
     // Date and Location (Left side) - no title for cover letter
     coverLetterDoc.setFontSize(10);
-    coverLetterDoc.setFont('NotoSans', 'normal');
+    coverLetterDoc.setFont('helvetica', 'normal');
     coverLetterDoc.setTextColor(0, 0, 0);
     coverLetterDoc.text('Coimbatore, INDIA', 50, yPos);
     yPos += 15;
@@ -842,9 +815,9 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
 
 
     // Customer Details (To Section)
-    coverLetterDoc.setFont('NotoSans', 'bold');
+    coverLetterDoc.setFont('helvetica', 'bold');
     yPos += 15;
-    coverLetterDoc.setFont('NotoSans', 'normal');
+    coverLetterDoc.setFont('helvetica', 'normal');
     coverLetterDoc.text(customerDetails.name || quote.customerName, 50, yPos);
     yPos += 15;
 
@@ -879,11 +852,11 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
     yPos += 20;
 
     // Offer comprises section
-    coverLetterDoc.setFont('NotoSans', 'bold');
+    coverLetterDoc.setFont('helvetica', 'bold');
     coverLetterDoc.text('Our Offer comprises of the following:', 50, yPos);
     yPos += 20;
 
-    coverLetterDoc.setFont('NotoSans', 'normal');
+    coverLetterDoc.setFont('helvetica', 'normal');
     const offerItems = [
         '1.  Covering Letter',
         '2.  Priced Bid with Commercial Terms and Conditions',
@@ -917,7 +890,7 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
     yPos += 30;
 
     // Thanking you
-    coverLetterDoc.setFont('NotoSans', 'bold');
+    coverLetterDoc.setFont('helvetica', 'bold');
     coverLetterDoc.text('Thanking you,', 50, yPos);
     yPos += 15;
     coverLetterDoc.text('Yours faithfully,', 50, yPos);
@@ -925,24 +898,24 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
     yPos += 30;
 
     // For company
-    coverLetterDoc.setFont('NotoSans', 'bold');
+    coverLetterDoc.setFont('helvetica', 'bold');
     coverLetterDoc.text(`For ${COMPANY.name}`, 50, yPos);
 
     yPos += 40;
 
     // Signature space
-    coverLetterDoc.setFont('NotoSans', 'normal');
+    coverLetterDoc.setFont('helvetica', 'normal');
     coverLetterDoc.setFontSize(9);
     coverLetterDoc.text('_________________________', 50, yPos);
 
     yPos += 15;
 
     // Employee details
-    coverLetterDoc.setFont('NotoSans', 'bold');
+    coverLetterDoc.setFont('helvetica', 'bold');
     coverLetterDoc.setFontSize(10);
     coverLetterDoc.text(quote.createdByName, 50, yPos);
     yPos += 13;
-    coverLetterDoc.setFont('NotoSans', 'normal');
+    coverLetterDoc.setFont('helvetica', 'normal');
     coverLetterDoc.setFontSize(9);
     coverLetterDoc.text('Assistant Manager - Application Engineering', 50, yPos);
     yPos += 12;
@@ -959,9 +932,6 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
     const pricePageWidth = priceSummaryDoc.internal.pageSize.getWidth();
     const pricePageHeight = priceSummaryDoc.internal.pageSize.getHeight();
 
-    // Load NotoSans font for ₹ symbol support
-    await loadNotoSansFont(priceSummaryDoc);
-
     await addHeader(priceSummaryDoc, pricePageWidth, logoBase64);
 
     yPos = 70;
@@ -971,7 +941,7 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
     priceSummaryDoc.setFontSize(9);
 
     // Customer info - clean text layout (no table)
-    priceSummaryDoc.setFont('NotoSans', 'normal');
+    priceSummaryDoc.setFont('helvetica', 'normal');
     priceSummaryDoc.setFontSize(9);
     priceSummaryDoc.setTextColor(0, 0, 0);
     const leftXCombined = 50;
@@ -980,37 +950,37 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
     const rightLabelOffsetCombined = 80;
 
     // Row 1: Customer + Unicorn Ref
-    priceSummaryDoc.setFont('NotoSans', 'bold');
+    priceSummaryDoc.setFont('helvetica', 'bold');
     priceSummaryDoc.text('Customer:', leftXCombined, yPos);
-    priceSummaryDoc.setFont('NotoSans', 'normal');
+    priceSummaryDoc.setFont('helvetica', 'normal');
     priceSummaryDoc.text(customerDetails.name || quote.customerName, leftXCombined + labelOffsetCombined, yPos);
-    priceSummaryDoc.setFont('NotoSans', 'bold');
+    priceSummaryDoc.setFont('helvetica', 'bold');
     priceSummaryDoc.text('Unicorn Ref:', rightXCombined, yPos);
-    priceSummaryDoc.setFont('NotoSans', 'normal');
+    priceSummaryDoc.setFont('helvetica', 'normal');
     priceSummaryDoc.text(quote.quoteNumber, rightXCombined + rightLabelOffsetCombined, yPos);
     yPos += 15;
 
     // Row 2: Enquiry Ref + Date
-    priceSummaryDoc.setFont('NotoSans', 'bold');
+    priceSummaryDoc.setFont('helvetica', 'bold');
     priceSummaryDoc.text('Enquiry Ref:', leftXCombined, yPos);
-    priceSummaryDoc.setFont('NotoSans', 'normal');
+    priceSummaryDoc.setFont('helvetica', 'normal');
     priceSummaryDoc.text(quote.enquiryId || 'N/A', leftXCombined + labelOffsetCombined, yPos);
-    priceSummaryDoc.setFont('NotoSans', 'bold');
+    priceSummaryDoc.setFont('helvetica', 'bold');
     priceSummaryDoc.text('Date:', rightXCombined, yPos);
-    priceSummaryDoc.setFont('NotoSans', 'normal');
+    priceSummaryDoc.setFont('helvetica', 'normal');
     priceSummaryDoc.text(formatDate(quote.createdAt), rightXCombined + rightLabelOffsetCombined, yPos);
     yPos += 15;
 
     // Row 3: Project
-    priceSummaryDoc.setFont('NotoSans', 'bold');
+    priceSummaryDoc.setFont('helvetica', 'bold');
     priceSummaryDoc.text('Project:', leftXCombined, yPos);
-    priceSummaryDoc.setFont('NotoSans', 'normal');
+    priceSummaryDoc.setFont('helvetica', 'normal');
     priceSummaryDoc.text(quote.projectName || '-', leftXCombined + labelOffsetCombined, yPos);
     yPos += 25;
 
     // Products Table Header
     priceSummaryDoc.setFontSize(11);
-    priceSummaryDoc.setFont('NotoSans', 'bold');
+    priceSummaryDoc.setFont('helvetica', 'bold');
     priceSummaryDoc.text('ITEM DETAILS', 50, yPos);
 
     yPos += 15;
@@ -1221,7 +1191,7 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
 
     // Commercial Terms & Conditions
     priceSummaryDoc.setFontSize(12);
-    priceSummaryDoc.setFont('NotoSans', 'bold');
+    priceSummaryDoc.setFont('helvetica', 'bold');
     priceSummaryDoc.setTextColor(0, 0, 0);
     priceSummaryDoc.text('COMMERCIAL TERMS & CONDITIONS', 50, yPos);
 
@@ -1279,16 +1249,16 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
 
     // Signature Section
     priceSummaryDoc.setFontSize(10);
-    priceSummaryDoc.setFont('NotoSans', 'normal');
+    priceSummaryDoc.setFont('helvetica', 'normal');
     priceSummaryDoc.setTextColor(0, 0, 0);
     priceSummaryDoc.text('For Unicorn Valves Private Limited,', 50, yPos);
 
     yPos += 40;
 
-    priceSummaryDoc.setFont('NotoSans', 'bold');
+    priceSummaryDoc.setFont('helvetica', 'bold');
     priceSummaryDoc.text(quote.createdByName, 50, yPos);
     yPos += 13;
-    priceSummaryDoc.setFont('NotoSans', 'normal');
+    priceSummaryDoc.setFont('helvetica', 'normal');
     priceSummaryDoc.setFontSize(9);
     priceSummaryDoc.text('Assistant Manager - Application Engineering', 50, yPos);
     yPos += 12;
@@ -1340,16 +1310,13 @@ async function generateUnpricedSummaryPDF(quote: Quote, customerDetails: any) {
     // Load logo
     const logoBase64 = await loadLogoBase64();
 
-    // Load NotoSans font for ₹ symbol support
-    await loadNotoSansFont(doc);
-
     await addHeader(doc, pageWidth, logoBase64);
 
     let yPos = 70;
 
     // Title
     doc.setFontSize(16);
-    doc.setFont('NotoSans', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.setTextColor(0, 0, 0);
     doc.text('PRICE SUMMARY (UNPRICED)', pageWidth / 2, yPos, { align: 'center' });
 
@@ -1357,7 +1324,7 @@ async function generateUnpricedSummaryPDF(quote: Quote, customerDetails: any) {
 
     // Quote Info Box
     doc.setFontSize(9);
-    doc.setFont('NotoSans', 'normal');
+    doc.setFont('helvetica', 'normal');
     doc.setTextColor(0, 0, 0);
 
     const quoteInfoData = [
@@ -1384,7 +1351,7 @@ async function generateUnpricedSummaryPDF(quote: Quote, customerDetails: any) {
 
     // ITEM DETAILS Header
     doc.setFontSize(12);
-    doc.setFont('NotoSans', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.setTextColor(0, 0, 0);
     doc.text('ITEM DETAILS', 50, yPos);
 
@@ -1562,7 +1529,7 @@ async function generateUnpricedSummaryPDF(quote: Quote, customerDetails: any) {
 
     // Commercial Terms & Conditions - same as priced
     doc.setFontSize(12);
-    doc.setFont('NotoSans', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.setTextColor(0, 0, 0);
     doc.text('COMMERCIAL TERMS & CONDITIONS', 50, yPos);
 
@@ -1617,16 +1584,16 @@ async function generateUnpricedSummaryPDF(quote: Quote, customerDetails: any) {
 
     // Signature Section
     doc.setFontSize(10);
-    doc.setFont('NotoSans', 'normal');
+    doc.setFont('helvetica', 'normal');
     doc.setTextColor(0, 0, 0);
     doc.text('For Unicorn Valves Private Limited,', 50, yPos);
 
     yPos += 40;
 
-    doc.setFont('NotoSans', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.text(quote.createdByName, 50, yPos);
     yPos += 13;
-    doc.setFont('NotoSans', 'normal');
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.text('Assistant Manager - Application Engineering', 50, yPos);
     yPos += 12;
