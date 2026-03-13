@@ -691,13 +691,16 @@ export function useProductConfig({ initialProduct, series, materials, pricingMod
             updatedProduct.productTotalCost = updatedProduct.unitCost / negMarginFactor;
             updatedProduct.negotiationMarginAmount = updatedProduct.productTotalCost - updatedProduct.unitCost;
 
-            // Dealer/Agent Commission (deduction from price)
-            // Formula: Agent Price = Price * (1 - AgentCommission%)
+            // Dealer/Agent Commission (margin on selling price — INCREASES price)
+            // Formula: SellingPrice = Price / (1 - Commission%)
+            // Example: Price=100,000, Commission=10% → Selling=100,000/0.90 = 111,111
+            //          Agent gets 11,111 (which is 10% of 111,111)
             if (dealerMarginPercentage && dealerMarginPercentage > 0) {
                 updatedProduct.dealerMarginPercentage = dealerMarginPercentage;
+                const dealerMarginFactor = dealerMarginPercentage >= 100 ? 1 : (1 - dealerMarginPercentage / 100);
                 const priceBeforeDealer = updatedProduct.productTotalCost;
-                updatedProduct.dealerMarginAmount = (priceBeforeDealer * dealerMarginPercentage) / 100;
-                updatedProduct.productTotalCost = priceBeforeDealer - updatedProduct.dealerMarginAmount;
+                updatedProduct.productTotalCost = priceBeforeDealer / dealerMarginFactor;
+                updatedProduct.dealerMarginAmount = updatedProduct.productTotalCost - priceBeforeDealer;
                 console.log(`🤝 Agent commission applied: ${dealerMarginPercentage}% = ₹${updatedProduct.dealerMarginAmount}`);
             }
 

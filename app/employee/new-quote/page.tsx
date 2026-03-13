@@ -97,13 +97,18 @@ export default function NewQuotePage() {
       const negFactor = negMargin >= 100 ? 1 : (1 - negMargin / 100);
       let totalCost = unitCost / negFactor;
 
-      // Agent commission: Price * (1 - AgentCommission%)
+      // Agent commission: margin on selling price — INCREASES price
+      // Formula: SellingPrice = Price / (1 - Commission%)
+      let dealerMarginAmount = 0;
       if (agentCommission > 0) {
-        const commissionAmount = (totalCost * agentCommission) / 100;
-        totalCost = totalCost - commissionAmount;
+        const dealerFactor = agentCommission >= 100 ? 1 : (1 - agentCommission / 100);
+        const priceBeforeDealer = totalCost;
+        totalCost = priceBeforeDealer / dealerFactor;
+        dealerMarginAmount = totalCost - priceBeforeDealer;
       }
 
-      // Per-product discount
+      // Per-product discount: DECREASES price
+      // Formula: DiscountedPrice = Price * (1 - Discount%)
       const discPct = p.discountPercentage || 0;
       let discountAmount = 0;
       if (discPct > 0) {
@@ -117,7 +122,7 @@ export default function NewQuotePage() {
       return {
         ...p,
         dealerMarginPercentage: agentCommission,
-        dealerMarginAmount: agentCommission > 0 ? (unitCost / negFactor) * agentCommission / 100 : 0,
+        dealerMarginAmount,
         discountAmount,
         productTotalCost: totalCost,
         lineTotal,
