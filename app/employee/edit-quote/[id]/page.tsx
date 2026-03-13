@@ -86,58 +86,56 @@ export default function EditQuotePage() {
     }
   }, [params.id]);
 
+  // ========== SHARED RECALCULATION HELPER ==========
+  // Recalculates productTotalCost and lineTotal from unitCost through the full chain:
+  // unitCost → negotiation margin → agent commission → discount → round
+  const roundToTen = (n: number): number => Math.ceil(n / 10) * 10;
+
+  const recalcProduct = (p: QuoteProduct, commission: number, discPct: number): QuoteProduct => {
+    const unitCost = p.unitCost || 0;
+    const negMargin = p.negotiationMarginPercentage || 0;
+    const negFactor = negMargin >= 100 ? 1 : (1 - negMargin / 100);
+    let totalCost = unitCost / negFactor;
+
+    // Agent commission: margin on selling price — INCREASES price
+    let dealerMarginAmount = 0;
+    if (commission > 0) {
+      const dealerFactor = commission >= 100 ? 1 : (1 - commission / 100);
+      const priceBeforeDealer = totalCost;
+      totalCost = priceBeforeDealer / dealerFactor;
+      dealerMarginAmount = totalCost - priceBeforeDealer;
+    }
+
+    // Per-product discount: DECREASES price
+    let discountAmount = 0;
+    if (discPct > 0) {
+      discountAmount = (totalCost * discPct) / 100;
+      totalCost = totalCost - discountAmount;
+    }
+
+    totalCost = roundToTen(totalCost);
+    const lineTotal = roundToTen(totalCost * (p.quantity || 1));
+
+    return {
+      ...p,
+      dealerMarginPercentage: commission,
+      dealerMarginAmount,
+      discountPercentage: discPct,
+      discountAmount,
+      productTotalCost: totalCost,
+      lineTotal,
+    };
+  };
+
   // Recalculate all products when agentCommission changes
   const initialLoadDone = useRef(false);
   useEffect(() => {
     if (!initialLoadDone.current) {
-      // Skip first render — products will be loaded with correct values
       initialLoadDone.current = true;
       return;
     }
     if (products.length === 0) return;
-
-    const roundToTen = (n: number): number => Math.ceil(n / 10) * 10;
-
-    const recalculated = products.map(p => {
-      // Start from unitCost and reapply negotiation margin → agent commission → discount
-      const unitCost = p.unitCost || 0;
-      const negMargin = p.negotiationMarginPercentage || 0;
-      const negFactor = negMargin >= 100 ? 1 : (1 - negMargin / 100);
-      let totalCost = unitCost / negFactor;
-
-      // Agent commission: margin on selling price — INCREASES price
-      // Formula: SellingPrice = Price / (1 - Commission%)
-      let dealerMarginAmount = 0;
-      if (agentCommission > 0) {
-        const dealerFactor = agentCommission >= 100 ? 1 : (1 - agentCommission / 100);
-        const priceBeforeDealer = totalCost;
-        totalCost = priceBeforeDealer / dealerFactor;
-        dealerMarginAmount = totalCost - priceBeforeDealer;
-      }
-
-      // Per-product discount: DECREASES price
-      // Formula: DiscountedPrice = Price * (1 - Discount%)
-      const discPct = p.discountPercentage || 0;
-      let discountAmount = 0;
-      if (discPct > 0) {
-        discountAmount = (totalCost * discPct) / 100;
-        totalCost = totalCost - discountAmount;
-      }
-
-      totalCost = roundToTen(totalCost);
-      const lineTotal = roundToTen(totalCost * (p.quantity || 1));
-
-      return {
-        ...p,
-        dealerMarginPercentage: agentCommission,
-        dealerMarginAmount,
-        discountAmount,
-        productTotalCost: totalCost,
-        lineTotal,
-      };
-    });
-
-    setProducts(recalculated);
+    setProducts(products.map(p => recalcProduct(p, agentCommission, p.discountPercentage || 0)));
   }, [agentCommission]);
 
   const fetchInitialData = async () => {
@@ -495,11 +493,7 @@ export default function EditQuotePage() {
                 </div>
                 <button
                   onClick={() => {
-                    const updatedProducts = products.map(p => ({
-                      ...p,
-                      discountPercentage: discount,
-                    }));
-                    setProducts(updatedProducts);
+                    setProducts(products.map(p => recalcProduct(p, agentCommission, discount)));
                   }}
                   className="bg-orange-500 text-white px-4 py-1.5 rounded-lg hover:bg-orange-600 text-sm font-medium"
                 >
@@ -509,11 +503,7 @@ export default function EditQuotePage() {
                   <button
                     onClick={() => {
                       setDiscount(0);
-                      const updatedProducts = products.map(p => ({
-                        ...p,
-                        discountPercentage: 0,
-                      }));
-                      setProducts(updatedProducts);
+                      setProducts(products.map(p => recalcProduct(p, agentCommission, 0)));
                     }}
                     className="text-red-600 hover:text-red-800 text-sm underline"
                   >
@@ -531,10 +521,7 @@ export default function EditQuotePage() {
             onRemove={handleRemoveProduct}
             onDiscountChange={(index, discountPct) => {
               const updatedProducts = [...products];
-              updatedProducts[index] = {
-                ...updatedProducts[index],
-                discountPercentage: discountPct,
-              };
+              updatedProducts[index] = recalcProduct(updatedProducts[index], agentCommission, discountPct);
               setProducts(updatedProducts);
             }}
             showDiscount={true}
