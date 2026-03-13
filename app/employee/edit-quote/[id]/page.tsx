@@ -286,17 +286,16 @@ export default function EditQuotePage() {
     setSaving(true);
 
     try {
-      // Calculate totals using per-product discounts
+      // lineTotal already includes per-product discounts (applied in useProductConfig.ts)
+      // So we use lineTotal directly — NO additional discount subtraction needed
       const productSubtotal = products.reduce((sum, p) => sum + (p.lineTotal || 0), 0);
-      const totalDiscount = products.reduce((sum, p) => {
-        const pDiscount = p.discountPercentage || 0;
-        return sum + ((p.lineTotal || 0) * pDiscount / 100);
-      }, 0);
-      const discountedProductTotal = productSubtotal - totalDiscount;
+      // Track total discount for reference only (already applied in lineTotal)
+      const totalDiscount = products.reduce((sum, p) => sum + (p.discountAmount || 0), 0);
+
       // Additional charges based on pricing type
       const freightToIncludeCalc = pricingType === 'F.O.R. Site' ? freightPrice : 0;
       const customChargesToInclude = pricingType === 'Custom' ? customPricingCharges.reduce((sum, c) => sum + (c.price || 0), 0) : 0;
-      const subtotalWithPackageAndFreight = discountedProductTotal + packagePrice + freightToIncludeCalc + customChargesToInclude;
+      const subtotalWithPackageAndFreight = productSubtotal + packagePrice + freightToIncludeCalc + customChargesToInclude;
       const taxAmountWithPackageAndFreight = (subtotalWithPackageAndFreight * tax) / 100;
       const totalWithPackageAndFreight = subtotalWithPackageAndFreight + taxAmountWithPackageAndFreight;
 
@@ -359,16 +358,12 @@ export default function EditQuotePage() {
     }
   };
 
-  // Calculate totals using per-product discounts for display
+  // lineTotal already includes per-product discounts — use directly
   const productSubtotalForDisplay = products.reduce((sum, p) => sum + (p.lineTotal || 0), 0);
-  const displayDiscountAmount = products.reduce((sum, p) => {
-    const pDiscount = p.discountPercentage || 0;
-    return sum + ((p.lineTotal || 0) * pDiscount / 100);
-  }, 0);
-  const discountedProductTotal = productSubtotalForDisplay - displayDiscountAmount;
+  const displayDiscountAmount = products.reduce((sum, p) => sum + (p.discountAmount || 0), 0);
   const freightToInclude = pricingType === 'F.O.R. Site' ? freightPrice : 0;
   const displayCustomCharges = pricingType === 'Custom' ? customPricingCharges.reduce((sum, c) => sum + (c.price || 0), 0) : 0;
-  const displaySubtotal = discountedProductTotal + packagePrice + freightToInclude + displayCustomCharges;
+  const displaySubtotal = productSubtotalForDisplay + packagePrice + freightToInclude + displayCustomCharges;
   const displayTaxAmount = (displaySubtotal * tax) / 100;
   const displayTotal = displaySubtotal + displayTaxAmount;
 
