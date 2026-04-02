@@ -690,19 +690,25 @@ export default function EditQuotePage() {
               />
             </div>
 
-            {/* Agent/Dealer Commission */}
-            <div>
-              <label className="block text-sm font-medium mb-2">🤝 Agent Commission (%)</label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={agentCommission || ''}
-                onChange={(e) => setAgentCommission(parseFloat(e.target.value) || 0)}
-                className="w-full px-3 py-2 border rounded-lg border-amber-300 focus:ring-amber-500 focus:border-amber-500"
-                placeholder="0"
-              />
-            </div>
+            {/* Agent/Dealer Commission — only visible for dealer/agent customers */}
+            {(() => {
+              const customer = customers.find(c => c.id === quote?.customerId);
+              return customer?.customerType === 'dealer';
+            })() && (
+              <div>
+                <label className="block text-sm font-medium mb-2">🤝 Agent Commission (%) *</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={agentCommission || ''}
+                  onChange={(e) => setAgentCommission(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-2 border rounded-lg border-amber-300 focus:ring-amber-500 focus:border-amber-500"
+                  placeholder="Enter commission % (0 is acceptable)"
+                />
+                <p className="text-xs text-amber-600 mt-1">Required for dealer/agent customers. 0% is acceptable.</p>
+              </div>
+            )}
 
           </div>
 

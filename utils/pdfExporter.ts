@@ -551,9 +551,9 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
             0: { halign: 'center', cellWidth: 35 },
             1: { halign: 'left', cellWidth: 60 },
             2: { halign: 'left', cellWidth: 175 },
-            3: { halign: 'left', cellWidth: 105 },
-            4: { halign: 'left', cellWidth: 30 },
-            5: { halign: 'left', cellWidth: 100 },
+            3: { halign: 'right', cellWidth: 105 },
+            4: { halign: 'center', cellWidth: 30 },
+            5: { halign: 'right', cellWidth: 100 },
         },
         margin: { left: 40, right: 40 },
         // Add footer row with total quantity
@@ -568,6 +568,7 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
             textColor: [0, 0, 0],
             fontStyle: 'bold',
             fontSize: 9,
+            halign: 'center',
         },
     });
 
@@ -614,8 +615,8 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
     // Calculate actual products subtotal (before any discount)
     const productsSubtotal = quote.products.reduce((sum, p) => sum + (p.lineTotal || 0), 0);
 
-    // Show price label based on pricing type
-    const priceLabel = isFOR ? 'F.O.R. Site Price' : isCustom ? `${customLabel} Price` : 'Ex-Works Price Coimbatore';
+    // Always show Ex-Works Price Coimbatore as the first label
+    const priceLabel = 'Ex-Works Price Coimbatore';
 
     summaryRows.push([priceLabel, formatCurrency(productsSubtotal, quote)]);
 
@@ -717,8 +718,8 @@ export async function generatePriceSummaryPDF(quote: Quote, customerDetails: any
     const termsData: string[][] = [
         ['Prices', `${quote.pricingType === 'Custom' ? ((quote as any).customPricingLabel || 'Custom') : (quote.pricingType || 'Ex-Works')} ${currencyCode(quote)} each net`],
         ['Validity', `${quote.validity || '30 days'} from the date of quotation`],
-        // For F.O.R., show just "Delivery"; for Ex-Works, show "Delivery (Ex-Works)"
-        [isFOR ? 'Delivery' : 'Delivery\n(Ex-Works)', `${quote.deliveryDays || '4-6'} working weeks from the date of receipt of advance payment and approved technical documents (whichever comes later)`],
+        // Always show "Delivery (Ex-Works)"
+        ['Delivery\n(Ex-Works)', `${quote.deliveryDays || '4-6'} working weeks from the date of receipt of advance payment and approved technical documents (whichever comes later)`],
 
         ['Warranty', `UVPL Standard Warranty - ${quote.warrantyTerms?.shipmentDays || 18} months from shipping or ${quote.warrantyTerms?.installationDays || 12} months from installation, whichever is earlier (on material & workmanship)`],
         ['Payment Terms', formatPaymentTerms(quote.paymentTerms)],
@@ -1060,6 +1061,7 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
             textColor: [0, 0, 0],
             fontStyle: 'bold',
             fontSize: 9,
+            halign: 'center',
         },
     });
 
@@ -1101,8 +1103,8 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
     // Calculate actual products subtotal (before any discount)
     const productsSubtotalCombined = quote.products.reduce((sum, p) => sum + (p.lineTotal || 0), 0);
 
-    // Show price label based on pricing type
-    const priceLabelCombined = isFORCombined ? 'F.O.R. Site Price' : isCustomCombined ? `${customLabelCombined} Price` : 'Ex-Works Price Coimbatore';
+    // Always show Ex-Works Price Coimbatore as the first label
+    const priceLabelCombined = 'Ex-Works Price Coimbatore';
     summaryRowsCombined.push([priceLabelCombined, formatCurrency(productsSubtotalCombined, quote)]);
 
 
@@ -1145,7 +1147,7 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
         },
         columnStyles: {
             0: { cellWidth: 405, halign: 'left' },
-            1: { cellWidth: 110, halign: 'left', fontStyle: 'bold' },
+            1: { cellWidth: 110, halign: 'right', fontStyle: 'bold' },
         },
         margin: { left: 40, right: 40 },
     });
@@ -1201,8 +1203,8 @@ export async function generateCombinedPDF(quote: Quote, customerDetails: any) {
     const termsDataCombined: string[][] = [
         ['Prices', `${quote.pricingType === 'Custom' ? ((quote as any).customPricingLabel || 'Custom') : (quote.pricingType || 'Ex-Works')} ${currencyCode(quote)} each net`],
         ['Validity', `${quote.validity || '30 days'} from the date of quotation`],
-        // For F.O.R., show just "Delivery"; for Ex-Works, show "Delivery (Ex-Works)"
-        [isFORCombined ? 'Delivery' : 'Delivery\n(Ex-Works)', `${quote.deliveryDays || '4-6'} working weeks from the date of receipt of advance payment and approved technical documents (whichever comes later)`],
+        // Always show "Delivery (Ex-Works)"
+        ['Delivery\n(Ex-Works)', `${quote.deliveryDays || '4-6'} working weeks from the date of receipt of advance payment and approved technical documents (whichever comes later)`],
 
         ['Warranty', `UVPL Standard Warranty - ${quote.warrantyTerms?.shipmentDays || 18} months from shipping or ${quote.warrantyTerms?.installationDays || 12} months from installation, whichever is earlier (on material & workmanship)`],
         ['Payment Terms', formatPaymentTerms(quote.paymentTerms)],
@@ -1424,6 +1426,7 @@ async function generateUnpricedSummaryPDF(quote: Quote, customerDetails: any) {
             textColor: [0, 0, 0],
             fontStyle: 'bold',
             fontSize: 9,
+            halign: 'center',
         },
     });
 
@@ -1539,8 +1542,8 @@ async function generateUnpricedSummaryPDF(quote: Quote, customerDetails: any) {
     const unpricedTermsData: string[][] = [
         ['Prices', `${quote.pricingType === 'Custom' ? ((quote as any).customPricingLabel || 'Custom') : (quote.pricingType || 'Ex-Works')} ${currencyCode(quote)} each net`],
         ['Validity', `${quote.validity || '30 days'} from the date of quotation`],
-        // For F.O.R., show just "Delivery"; for Ex-Works, show "Delivery (Ex-Works)"
-        [isFOR ? 'Delivery' : 'Delivery\n(Ex-Works)', `${quote.deliveryDays || '4-6'} working weeks from the date of receipt of advance payment and approved technical documents (whichever comes later)`],
+        // Always show "Delivery (Ex-Works)"
+        ['Delivery\n(Ex-Works)', `${quote.deliveryDays || '4-6'} working weeks from the date of receipt of advance payment and approved technical documents (whichever comes later)`],
 
         ['Warranty', `UVPL Standard Warranty - ${quote.warrantyTerms?.shipmentDays || 18} months from shipping or ${quote.warrantyTerms?.installationDays || 12} months from installation, whichever is earlier (on material & workmanship)`],
         ['Payment Terms', formatPaymentTerms(quote.paymentTerms)],

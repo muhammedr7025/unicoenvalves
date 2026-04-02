@@ -396,7 +396,12 @@ export default function NewQuotePage() {
                   onChange={(value) => {
                     const customer = customers.find(c => c.id === value);
                     setSelectedCustomer(customer || null);
-                    setAgentCommission(customer?.dealerMarginPercentage || 0);
+                    // Only set agent commission for dealer/agent customers
+                    if (customer?.customerType === 'dealer') {
+                      setAgentCommission(customer.dealerMarginPercentage ?? 0);
+                    } else {
+                      setAgentCommission(0);
+                    }
                     // International customers: no Indian GST/tax
                     if (customer && customer.country && customer.country !== 'India') {
                       setTax(0);
@@ -719,19 +724,22 @@ export default function NewQuotePage() {
                 />
               </div>
 
-              {/* Agent/Dealer Commission */}
-              <div>
-                <label className="block text-sm font-medium mb-2">🤝 Agent Commission (%)</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={agentCommission || ''}
-                  onChange={(e) => setAgentCommission(parseFloat(e.target.value) || 0)}
-                  className="w-full px-3 py-2 border rounded-lg border-amber-300 focus:ring-amber-500 focus:border-amber-500"
-                  placeholder="0"
-                />
-              </div>
+              {/* Agent/Dealer Commission — only visible for dealer/agent customers */}
+              {selectedCustomer?.customerType === 'dealer' && (
+                <div>
+                  <label className="block text-sm font-medium mb-2">🤝 Agent Commission (%) *</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={agentCommission || ''}
+                    onChange={(e) => setAgentCommission(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-2 border rounded-lg border-amber-300 focus:ring-amber-500 focus:border-amber-500"
+                    placeholder="Enter commission % (0 is acceptable)"
+                  />
+                  <p className="text-xs text-amber-600 mt-1">Required for dealer/agent customers. 0% is acceptable.</p>
+                </div>
+              )}
 
             </div>
 
